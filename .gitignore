@@ -10,8 +10,8 @@ Thumbs.db
 desktop.ini
 
 # Legacy files (not for deployment)
-index.html
 mentoring-hub.html
 mentoring-hub-fixed(codex).html
+mentoring-hub-supabase.html
 migration-guide.sql
 supabase-functions-only.sql
