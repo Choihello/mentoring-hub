@@ -1,0 +1,4382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>멘토링 허브 — 광운대학교</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --bg: #F5F7FA;
+  --surface: #FFFFFF;
+  --surface2: #EEF1F6;
+  --surface3: #E0E4EA;
+  --accent: #2E4066;
+  --accent2: #3A5080;
+  --accent3: #4A6499;
+  --accent-light: #C8D4E8;
+  --accent-ultra: #EEF1F6;
+  --text: #1E2D45;
+  --text2: #6B7A8D;
+  --text3: #9AABB8;
+  --border: #E0E4EA;
+  --border2: #CCD2DC;
+  --danger: #A32D2D;
+  --danger-bg: #FDECEA;
+  --warn: #7A5A00;
+  --warn-bg: #FFF8EC;
+  --info: #1A6EA8;
+  --info-bg: #EBF4FB;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --radius-xs: 6px;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.05);
+  --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  --shadow-md: 0 6px 28px rgba(0,0,0,0.11);
+  --shadow-lg: 0 12px 48px rgba(0,0,0,0.15);
+  --transition: 0.16s ease;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ── 로그인 (Living Atelier Design) ── */
+#screen-login.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px 24px 80px;
+  background: #f4f1ec;
+  font-family: 'Plus Jakarta Sans', 'Pretendard', sans-serif;
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+/* ── Leaf Icon (replaces orbit) ── */
+.login-leaf-icon {
+  width: 72px; height: 72px;
+  background: linear-gradient(145deg, #173901, #2d5016);
+  border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 40px 60px -20px rgba(28, 28, 25, 0.08);
+  animation: leaf-breathe 4s ease-in-out infinite;
+}
+.login-leaf-icon .material-symbols-outlined {
+  font-size: 36px; color: #c4efa3;
+  font-variation-settings: 'FILL' 1, 'wght' 400;
+}
+@keyframes leaf-breathe {
+  0%, 100% { box-shadow: 0 40px 60px -20px rgba(28, 28, 25, 0.08); transform: scale(1); }
+  50% { box-shadow: 0 48px 70px -20px rgba(28, 28, 25, 0.12); transform: scale(1.03); }
+}
+
+.login-brand h1 {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+  font-weight: 800;
+  color: #2D5016;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.login-brand .login-subtitle {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: #43493d;
+  letter-spacing: -0.01em;
+}
+.login-brand .login-credit {
+  font-size: 0.75rem;
+  color: #73796c;
+  letter-spacing: 0.01em;
+}
+
+/* ── Role Cards (demo mode) ── */
+.role-cards {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  justify-content: center; max-width: 600px; width: 100%;
+}
+.role-card {
+  flex: 1; min-width: 160px;
+  background: #ffffff;
+  border: none;
+  border-radius: 1.5rem;
+  padding: 36px 22px 30px;
+  cursor: pointer; text-align: center;
+  transition: all 0.3s ease-out;
+  box-shadow: 0 40px 60px -20px rgba(28, 28, 25, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+.role-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  border: 1px solid rgba(195, 201, 185, 0.2);
+  border-radius: 1.5rem;
+  pointer-events: none;
+  transition: border-color 0.3s ease-out;
+}
+.role-card:hover {
+  box-shadow: 0 48px 70px -20px rgba(28, 28, 25, 0.10);
+  transform: translateY(-4px);
+  background: #f6f3ee;
+}
+.role-card:hover::before {
+  border-color: rgba(45, 80, 22, 0.25);
+}
+.role-card .icon { font-size: 36px; display: block; margin-bottom: 16px; line-height: 1; }
+.role-card h3 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.1rem; font-weight: 700; margin-bottom: 8px;
+  color: #1c1c19; letter-spacing: -0.02em;
+}
+.role-card p { font-size: 0.8rem; color: #43493d; line-height: 1.7; }
+
+.demo-notice {
+  margin-top: 36px; font-size: 0.75rem; color: #73796c;
+  background: #f0ede8; padding: 10px 22px;
+  border-radius: 9999px; border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* ── Google 로그인 모드 ── */
+.google-login-box {
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+  background: #ffffff;
+  border: none;
+  border-radius: 1.5rem;
+  padding: 48px 52px;
+  box-shadow: 0 40px 60px -20px rgba(28, 28, 25, 0.06);
+  max-width: 420px; width: 100%;
+  text-align: center;
+  position: relative;
+}
+.google-login-box::before {
+  content: '';
+  position: absolute; inset: 0;
+  border: 1px solid rgba(195, 201, 185, 0.15);
+  border-radius: 1.5rem;
+  pointer-events: none;
+}
+.google-login-box h3 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.15rem; font-weight: 700;
+  color: #1c1c19; letter-spacing: -0.02em;
+}
+.google-login-box p {
+  font-size: 0.875rem; color: #43493d; line-height: 1.7;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.google-login-info {
+  background: #f6f3ee;
+  border: none;
+  border-radius: 1rem;
+  padding: 14px 18px;
+  font-size: 0.8rem;
+  color: #43493d;
+  text-align: left;
+  line-height: 1.8;
+  width: 100%;
+}
+.google-login-info strong {
+  color: #2D5016;
+}
+.google-login-info a {
+  color: #2D5016; font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(45, 80, 22, 0.3);
+}
+.google-login-info a:hover {
+  border-bottom-color: #2D5016;
+}
+.google-login-error {
+  margin-top: 16px; font-size: 0.8rem; color: #93000a;
+  background: #ffdad6; border: none;
+  border-radius: 1rem; padding: 12px 18px;
+  display: none; max-width: 420px; width: 100%; text-align: center;
+}
+
+/* ── 앱 레이아웃 ── */
+.app-layout {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  min-height: 100vh;
+}
+
+/* ── 사이드바 ── */
+.sidebar {
+  background: #1E2D45;
+  border-right: none;
+  position: sticky; top: 0; height: 100vh;
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.sidebar-brand {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.sidebar-logo-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.sidebar-logo-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(145deg, #E8B84B, #D4A43A);
+  border-radius: 9px; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; font-size: 16px;
+}
+.brand-name { font-size: 15px; font-weight: 700; letter-spacing: -0.4px; color: #E8B84B; }
+.role-badge {
+  display: inline-block; padding: 3px 10px;
+  background: rgba(232,184,75,0.15); color: #E8B84B;
+  border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.sidebar-menu { padding: 12px 10px; flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; }
+.menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  cursor: pointer; color: rgba(255,255,255,0.6); font-size: 13px;
+  font-weight: 500; transition: all var(--transition);
+  margin-bottom: 1px; user-select: none;
+}
+.menu-item:hover { background: #2E4066; color: #FFFFFF; }
+.menu-item.active { background: #2E4066; color: #FFFFFF; font-weight: 600; }
+.menu-item .icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.sidebar-bottom { padding: 12px 20px 16px; border-top: 1px solid rgba(255,255,255,0.1); }
+.user-info-card {
+  background: rgba(255,255,255,0.08); border-radius: var(--radius-sm);
+  padding: 10px 12px; margin-bottom: 0;
+}
+.user-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; color: #FFFFFF; }
+.user-role { font-size: 11px; color: rgba(255,255,255,0.5); }
+.btn-logout {
+  font-size: 12px; color: rgba(255,255,255,0.6); cursor: pointer;
+  background: none; border: none; padding: 0;
+  font-family: inherit; display: flex; align-items: center; gap: 4px;
+  transition: color var(--transition);
+}
+.btn-logout:hover { color: #E8B84B; }
+
+/* ── 메인 콘텐츠 ── */
+.main-content { padding: 28px 32px; min-height: 100vh; }
+.content-inner { width: 100%; }
+.page { display: none; }
+.page.active { display: block; }
+.page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.page-grid-wide { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; align-items: start; }
+.page-col { min-width: 0; }
+.page-header {
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.page-header h2 {
+  font-size: 24px; font-weight: 700;
+  letter-spacing: -0.6px; margin-bottom: 4px;
+}
+.page-header p { color: var(--text2); font-size: 14px; }
+
+/* ── 카드 ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+  box-shadow: var(--shadow-sm); transition: box-shadow var(--transition);
+}
+.card:hover { box-shadow: var(--shadow); }
+.card-title {
+  font-size: 13px; font-weight: 700; margin-bottom: 18px;
+  display: flex; align-items: center; gap: 8px; letter-spacing: -0.2px;
+}
+
+/* ── 통계 ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+  box-shadow: var(--shadow-sm); transition: all var(--transition);
+  position: relative; overflow: hidden;
+}
+.stat-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #2E4066, #E8B84B);
+}
+.stat-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.stat-value {
+  font-size: 30px; font-weight: 800; color: #2E4066;
+  letter-spacing: -2px; line-height: 1; margin-bottom: 6px;
+}
+.stat-label { font-size: 12px; color: var(--text2); font-weight: 500; }
+.stat-warn { border-color: var(--warn); background: var(--warn-bg); }
+.stat-warn::before { background: linear-gradient(90deg, #E8B84B, #D4A43A); }
+.stat-warn .stat-value { color: var(--warn); }
+
+/* ── 버튼 ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 9px 18px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+  transition: all var(--transition); font-family: inherit;
+  text-decoration: none; letter-spacing: -0.2px; white-space: nowrap;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 2px 8px rgba(46,64,102,0.2);
+}
+.btn-primary:hover { background: var(--accent2); box-shadow: 0 4px 14px rgba(46,64,102,0.3); }
+.btn-secondary {
+  background: var(--surface); color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.btn-secondary:hover { background: var(--surface2); border-color: var(--border2); }
+.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: var(--radius-xs); }
+.btn-danger {
+  background: var(--danger-bg); color: var(--danger);
+  border: 1.5px solid #E8C0BC;
+}
+.btn-danger:hover { background: #F9DDD9; }
+
+/* ── 배지 ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1px;
+}
+.badge-green { background: #E8F7F0; color: #1B6B47; }
+.badge-warn { background: var(--warn-bg); color: var(--warn); }
+.badge-blue { background: var(--info-bg); color: var(--info); }
+.badge-gray { background: var(--surface2); color: var(--text2); }
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+
+/* ── 폼 ── */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block; font-size: 11px; font-weight: 700;
+  color: var(--text2); margin-bottom: 7px;
+  text-transform: uppercase; letter-spacing: 0.6px;
+}
+.form-control {
+  width: 100%; padding: 10px 14px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 14px; color: var(--text);
+  background: var(--surface); transition: all var(--transition);
+  outline: none; appearance: none; -webkit-appearance: none;
+}
+.form-control:focus {
+  border-color: var(--accent2);
+  box-shadow: 0 0 0 3px rgba(74,124,47,0.12);
+}
+.form-control:hover:not(:focus) { border-color: var(--border2); }
+textarea.form-control { resize: vertical; min-height: 90px; line-height: 1.6; }
+select.form-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%235A5A50' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  background-size: 14px; padding-right: 36px; cursor: pointer;
+}
+
+/* ── 테이블 ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  font-size: 11px; font-weight: 700; color: var(--text3);
+  text-align: left; padding: 10px 16px;
+  border-bottom: 2px solid var(--border);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+td {
+  padding: 13px 16px; border-bottom: 1px solid var(--surface2);
+  font-size: 13px; color: var(--text); vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--accent-ultra); }
+
+/* ── 시간 슬롯 ── */
+.time-slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.time-slot {
+  padding: 8px 16px; border: 1.5px solid var(--border);
+  border-radius: 24px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all var(--transition);
+  background: var(--surface); color: var(--text2); user-select: none;
+}
+.time-slot:hover { border-color: var(--accent2); color: var(--accent); background: var(--accent-ultra); }
+.time-slot.selected { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(46,64,102,0.25); }
+.time-slot.booked { background: var(--surface2); color: var(--text3); cursor: not-allowed; }
+.time-slot.large {
+  padding: 12px 20px; font-size: 13px;
+  border-radius: var(--radius-sm);
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+}
+
+/* ── 모달 ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(10,10,8,0.5);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 32px; max-width: 520px; width: 100%;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.12s cubic-bezier(0.34,1.3,0.64,1);
+  border: 1px solid var(--border);
+  max-height: 90vh; overflow-y: auto;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
+.modal-close {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--surface2); border: none; cursor: pointer;
+  font-size: 13px; display: flex; align-items: center; justify-content: center;
+  color: var(--text2); transition: all var(--transition);
+}
+.modal-close:hover { background: var(--danger-bg); color: var(--danger); }
+
+/* ── 토스트 ── */
+#toast {
+  position: fixed; bottom: 28px; right: 28px;
+  background: var(--text); color: #fff;
+  padding: 13px 20px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; z-index: 9999;
+  opacity: 0; transform: translateY(10px);
+  transition: all 0.22s cubic-bezier(0.34,1.2,0.64,1);
+  max-width: 300px; box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.success { background: var(--accent); }
+#toast.error { background: var(--danger); }
+
+/* ── 빈 상태 ── */
+.empty-state { text-align: center; padding: 52px 20px; color: var(--text3); }
+.empty-state .icon { font-size: 44px; display: block; margin-bottom: 14px; opacity: 0.7; line-height: 1; }
+.empty-state h4 { font-size: 15px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.empty-state p { font-size: 13px; line-height: 1.6; }
+
+/* ── 달력 ── */
+.calendar-nav {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 16px;
+}
+.calendar-nav-title { font-size: 14px; font-weight: 700; letter-spacing: -0.3px; }
+.cal-nav-btn {
+  width: 28px; height: 28px; border: 1.5px solid var(--border);
+  border-radius: 7px; background: var(--surface); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--text2); transition: all var(--transition);
+}
+.cal-nav-btn:hover { background: var(--surface2); border-color: var(--border2); }
+.calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-header {
+  font-size: 11px; font-weight: 700; color: var(--text3);
+  text-align: center; padding: 6px 0;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.cal-day {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; font-size: 12px; cursor: pointer;
+  transition: all var(--transition); color: var(--text2);
+  font-weight: 500; position: relative;
+}
+.cal-day:hover { background: var(--surface2); color: var(--text); }
+.cal-day.today { font-weight: 800; color: var(--accent); background: var(--accent-light); }
+.cal-day.has-slot { background: var(--accent-ultra); color: var(--accent); }
+.cal-day.has-slot::after {
+  content: ''; position: absolute; bottom: 3px;
+  left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent2);
+}
+.cal-day.selected { background: var(--accent); color: #fff; }
+.cal-day.other-month { color: var(--text3); opacity: 0.4; }
+.cal-day.booked { background: var(--warn-bg); color: var(--warn); }
+.cal-day.booked::after { background: var(--warn); }
+
+/* ── 멘토 카드 (멘티 예약) ── */
+.mentor-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  cursor: pointer; transition: all var(--transition);
+  box-shadow: var(--shadow-sm); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 14px;
+}
+.mentor-card:hover { border-color: var(--accent2); box-shadow: var(--shadow); transform: translateX(2px); }
+.mentor-card.selected { border-color: var(--accent); background: var(--accent-ultra); box-shadow: 0 0 0 3px rgba(74,124,47,0.1); }
+.mentor-avatar {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent2), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; font-weight: 700; flex-shrink: 0;
+}
+.mentor-card-info { flex: 1; min-width: 0; }
+.mentor-card-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; letter-spacing: -0.3px; }
+.mentor-card-meta { font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── 세션 카드 ── */
+.session-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 22px; margin-bottom: 12px;
+  box-shadow: var(--shadow-sm); transition: box-shadow var(--transition);
+}
+.session-card:hover { box-shadow: var(--shadow); }
+.session-card-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; margin-bottom: 12px; gap: 12px;
+}
+.session-main-info { flex: 1; }
+.session-name { font-size: 15px; font-weight: 700; margin-bottom: 5px; letter-spacing: -0.3px; }
+.session-meta { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.session-topic {
+  font-size: 13px; color: var(--text2); background: var(--surface2);
+  border-radius: var(--radius-sm); padding: 9px 12px;
+  border-left: 3px solid var(--accent2); line-height: 1.5;
+}
+
+/* ── 일지 항목 ── */
+.journal-pending-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 0; border-bottom: 1px solid var(--surface2); gap: 12px;
+}
+.journal-pending-item:last-child { border-bottom: none; padding-bottom: 0; }
+.journal-pending-item:first-child { padding-top: 0; }
+
+/* ── 설정 안내 ── */
+.setup-box {
+  background: var(--info-bg); border: 1px solid #B8D8F0;
+  border-radius: var(--radius); padding: 18px 22px; margin-bottom: 24px;
+}
+.setup-box h4 { font-size: 13px; font-weight: 700; color: var(--info); margin-bottom: 8px; }
+.setup-box p { font-size: 13px; color: #1F618D; line-height: 1.7; }
+.setup-box code { background: #D1ECF8; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+
+/* ── 모바일 하단 네비 ── */
+#mobile-nav {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+}
+#mobile-nav-items {
+  display: flex; justify-content: center; gap: 4px;
+  max-width: 480px; margin: 0 auto; padding: 0 12px;
+}
+.mobile-nav-item {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 8px 0; border-radius: var(--radius-sm);
+  cursor: pointer; flex: 1; max-width: 96px;
+  transition: all var(--transition);
+}
+.mobile-nav-item:hover { background: var(--surface2); }
+.mobile-nav-item .icon { font-size: 20px; line-height: 1; }
+.mobile-nav-item .label { font-size: 10px; font-weight: 600; color: var(--text3); }
+.mobile-nav-item.active {
+  background: var(--accent-ultra);
+}
+.mobile-nav-item.active .label { color: var(--accent); }
+.mobile-nav-item.active .icon { transform: scale(1.15); }
+
+/* ── 테이블 텍스트 넘침 방지 ── */
+.table-wrap td { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.table-wrap td strong { display: block; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── 유틸리티 ── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.flex { display: flex; align-items: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.mt-12 { margin-top: 12px; }
+.mt-20 { margin-top: 20px; }
+.text-muted { color: var(--text2); font-size: 12px; }
+.fw-600 { font-weight: 600; }
+
+/* ── 반응형 ── */
+@media (max-width: 680px) {
+  .app-layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .main-content { padding: 16px 12px 90px; }
+  #mobile-nav { display: block; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .page-grid, .page-grid-wide { grid-template-columns: 1fr; }
+  #toast { bottom: 80px; right: 16px; left: 16px; max-width: none; }
+  .role-cards { gap: 12px; }
+  .role-card { min-width: 140px; padding: 28px 16px 22px; }
+  .google-login-box { padding: 36px 28px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ 로그인 ═══ -->
+<div id="screen-login" class="screen active">
+  <div class="login-brand">
+    <div class="login-leaf-icon">
+      <span class="material-symbols-outlined">eco</span>
+    </div>
+    <h1>Mentoring Hub</h1>
+    <p class="login-subtitle">광운대학교 멘토링 관리 시스템</p>
+    <p class="login-credit">made by NCI창업패키지사업단 최광범(neo@kw.ac.kr)</p>
+  </div>
+
+  <!-- Google 로그인 모드 -->
+  <div id="login-google-mode" style="display:none">
+    <div class="google-login-box">
+      <h3>Google 계정으로 로그인</h3>
+      <p>등록된 Google 계정으로 접속하세요<br>역할이 자동으로 설정됩니다</p>
+      <div class="google-login-info">
+        <strong>처음 접속하시나요?</strong><br>
+        관리자에게 계정 등록을 먼저 요청하세요.<br>
+        문의: <a href="mailto:neo@kw.ac.kr">neo@kw.ac.kr</a>
+      </div>
+      <div id="google-signin-btn"></div>
+      <div id="google-login-loading" style="display:none;font-size:13px;color:var(--text2)">로그인 중...</div>
+    </div>
+    <div class="google-login-error" id="google-login-error"></div>
+  </div>
+
+  <!-- 데모 모드 -->
+  <div id="login-demo-mode">
+    <div class="role-cards">
+      <div class="role-card" onclick="enterAs('mentor')">
+        <span class="icon">🎓</span>
+        <h3>멘토</h3>
+        <p>가용 일정 등록<br>멘토링 일지 작성</p>
+      </div>
+      <div class="role-card" onclick="enterAs('mentee')">
+        <span class="icon">🚀</span>
+        <h3>멘티</h3>
+        <p>멘토 선택 및 예약<br>세션 내역 확인</p>
+      </div>
+      <div class="role-card" onclick="enterAs('admin')">
+        <span class="icon">📊</span>
+        <h3>담당자</h3>
+        <p>전체 현황 대시보드<br>매칭 관리</p>
+      </div>
+    </div>
+    <p class="demo-notice">⚡ 데모 모드 — Supabase 연동 없이도 모든 기능 체험 가능</p>
+  </div>
+</div>
+
+<!-- ═══ 앱 ═══ -->
+<div id="screen-app" class="screen">
+  <div class="app-layout">
+
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-logo-row">
+          <div class="sidebar-logo-icon">🌱</div>
+          <span class="brand-name">멘토링 허브</span>
+        </div>
+        <span class="role-badge" id="role-badge">멘토</span>
+        <div class="user-info-card" style="margin-top:10px">
+          <div class="user-name" id="user-name-text">—</div>
+          <div class="user-role" id="user-role-text">—</div>
+        </div>
+      </div>
+      <nav class="sidebar-menu" id="sidebar-nav"></nav>
+      <div class="sidebar-bottom">
+        <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.1);color:#EF4444;border:1px solid rgba(239,68,68,0.25)">🚪 로그아웃</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="content-inner">
+
+        <!-- ══ 멘토 ══ -->
+        <div id="page-mentor-schedule" class="page">
+          <div class="page-header flex-between">
+            <div>
+              <h2>가용 일정 등록</h2>
+              <p>멘티가 예약할 수 있는 시간을 설정하세요</p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddSlotModal()">+ 시간 추가</button>
+          </div>
+          <div class="page-grid">
+            <div class="page-col">
+              <div class="card">
+                <div class="calendar-nav">
+                  <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+                  <span class="calendar-nav-title" id="calendar-month-title"></span>
+                  <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+                </div>
+                <div class="calendar" id="mentor-calendar"></div>
+              </div>
+            </div>
+            <div class="page-col">
+              <div class="card">
+                <div class="card-title">⏰ 등록된 시간 목록</div>
+                <div id="slot-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-mentor-sessions" class="page">
+          <div class="page-header">
+            <h2>예약 현황</h2>
+            <p>멘티들이 예약한 세션을 확인하세요</p>
+          </div>
+          <div class="page-grid" id="mentor-sessions-list"></div>
+        </div>
+
+        <div id="page-mentor-journal" class="page">
+          <div class="page-header">
+            <h2>멘토링 일지 작성</h2>
+            <p>완료된 세션의 멘토링 일지를 작성하고 제출하세요</p>
+          </div>
+          <div class="page-grid" id="journal-session-select"></div>
+        </div>
+
+        <!-- ══ 멘티 ══ -->
+        <div id="page-mentee-book" class="page">
+          <div class="page-header">
+            <h2>멘토 예약하기</h2>
+            <p>원하는 멘토와 시간을 선택하세요</p>
+          </div>
+          <div class="page-grid">
+            <div class="page-col">
+              <div class="card">
+                <div class="card-title">👥 멘토 선택</div>
+                <div id="mentor-select-list"></div>
+              </div>
+            </div>
+            <div class="page-col">
+              <div class="card" id="slot-picker-card" style="display:none">
+                <div class="card-title">⏰ 가용 시간 선택</div>
+                <div id="mentee-slots"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-mentee-sessions" class="page">
+          <div class="page-header">
+            <h2>내 멘토링 내역</h2>
+            <p>예약 및 완료된 세션 목록</p>
+          </div>
+          <div class="page-grid" id="mentee-sessions-list"></div>
+        </div>
+
+        <!-- ══ 관리자 ══ -->
+        <div id="page-admin-dashboard" class="page">
+          <div class="page-header flex-between">
+            <div>
+              <h2>전체 현황 대시보드</h2>
+              <p>멘토링 프로그램 운영 현황</p>
+            </div>
+            <a id="supabase-dashboard-btn" href="#" target="_blank" class="btn btn-secondary" style="display:none;gap:6px">
+              📊 Supabase 대시보드
+            </a>
+          </div>
+          <div class="stats-grid" id="admin-stats"></div>
+          <div class="page-grid-wide">
+            <div class="page-col">
+              <div id="admin-pair-section"></div>
+              <div class="card" style="margin-bottom:16px">
+                <div class="card-title" style="margin-bottom:12px">📅 기간별 실적 요약</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="period-tab-bar">
+                  <button class="btn btn-sm btn-primary" id="ptab-week"   onclick="setPeriodTab('week')"   style="border-radius:999px">이번 주</button>
+                  <button class="btn btn-sm btn-secondary" id="ptab-month"  onclick="setPeriodTab('month')"  style="border-radius:999px">이번 달</button>
+                  <button class="btn btn-sm btn-secondary" id="ptab-custom-month" onclick="setPeriodTab('custom-month')" style="border-radius:999px">월별 조회</button>
+                  <button class="btn btn-sm btn-secondary" id="ptab-custom-week"  onclick="setPeriodTab('custom-week')"  style="border-radius:999px">주차별 조회</button>
+                  <button class="btn btn-sm btn-secondary" id="ptab-all"   onclick="setPeriodTab('all')"    style="border-radius:999px">전체 누적</button>
+                </div>
+                <div id="period-custom-controls" style="display:none;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
+                <div id="admin-period-stats"></div>
+              </div>
+              <div id="admin-journal-missing-section"></div>
+            </div>
+            <div class="page-col">
+              <div class="card">
+                <div class="flex-between" style="margin-bottom:12px">
+                  <div class="card-title" style="margin-bottom:0">📋 전체 세션 목록</div>
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <select id="admin-session-filter" class="form-control" style="width:auto;padding:4px 10px;font-size:12px" onchange="renderAdminDashboard()">
+                      <option value="all">전체 기간</option>
+                      <option value="week">이번 주</option>
+                      <option value="month">이번 달</option>
+                    </select>
+                    <select id="admin-status-filter" class="form-control" style="width:auto;padding:4px 10px;font-size:12px" onchange="renderAdminDashboard()">
+                      <option value="all">전체 상태</option>
+                      <option value="pending">대기</option>
+                      <option value="upcoming">확정</option>
+                      <option value="completed">완료</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>멘토</th><th>멘티</th><th>일시</th><th>상태</th><th>일지</th><th></th></tr></thead>
+                    <tbody id="admin-sessions-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-admin-mentors" class="page">
+          <div class="page-header flex-between">
+            <div>
+              <h2>멘토 관리</h2>
+              <p>등록된 멘토 목록과 활동 현황</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('modal-add-mentor')">+ 멘토 추가</button>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>이름</th><th>분야</th><th>소속</th><th>전체</th><th>완료</th><th>일지율</th><th>상태</th><th></th></tr></thead>
+                <tbody id="admin-mentors-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-admin-mentees" class="page">
+          <div class="page-header flex-between">
+            <div>
+              <h2>멘티 관리</h2>
+              <p>등록된 멘티 목록과 세션 현황</p>
+            </div>
+            <button class="btn btn-primary" onclick="openModal('modal-add-mentee')">+ 멘티 추가</button>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>이름</th><th>팀명</th><th>이메일</th><th>세션수</th><th>예정/완료</th><th></th></tr></thead>
+                <tbody id="admin-mentees-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="page-admin-journals" class="page">
+          <div class="page-header flex-between">
+            <div>
+              <h2>멘토링 일지 목록</h2>
+              <p>제출된 멘토링 일지를 조회합니다</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <select id="journal-mentor-filter" class="form-control" style="width:auto;padding:4px 10px;font-size:13px" onchange="renderAdminJournals()">
+                <option value="all">전체 멘토</option>
+              </select>
+              <select id="journal-mentee-filter" class="form-control" style="width:auto;padding:4px 10px;font-size:13px" onchange="renderAdminJournals()">
+                <option value="all">전체 멘티</option>
+              </select>
+              <input type="date" id="journal-date-from" class="form-control" style="width:auto;padding:4px 10px;font-size:13px" onchange="renderAdminJournals()" title="시작일">
+              <span style="font-size:13px;color:var(--text3)">~</span>
+              <input type="date" id="journal-date-to" class="form-control" style="width:auto;padding:4px 10px;font-size:13px" onchange="renderAdminJournals()" title="종료일">
+              <button class="btn btn-sm btn-secondary" onclick="document.getElementById('journal-mentor-filter').value='all';document.getElementById('journal-mentee-filter').value='all';document.getElementById('journal-date-from').value='';document.getElementById('journal-date-to').value='';renderAdminJournals()">초기화</button>
+            </div>
+          </div>
+          <div id="journals-list"></div>
+        </div>
+
+        <!-- ── 멘토/멘티 공용: 요청하기 ── -->
+        <div id="page-mentor-request" class="page">
+          <div class="page-header"><h2>📨 요청하기</h2><p>관리자에게 문의 또는 요청 사항을 전달합니다</p></div>
+          <div class="page-grid" id="mentor-request-content"></div>
+        </div>
+        <div id="page-mentee-request" class="page">
+          <div class="page-header"><h2>📨 요청하기</h2><p>관리자에게 문의 또는 요청 사항을 전달합니다</p></div>
+          <div class="page-grid" id="mentee-request-content"></div>
+        </div>
+
+        <!-- ── 멘토/멘티 공용: 공지사항 ── -->
+        <div id="page-mentor-notices" class="page">
+          <div class="page-header"><h2>📢 공지사항</h2><p>관리자가 등록한 공지를 확인합니다</p></div>
+          <div id="mentor-notices-content"></div>
+        </div>
+        <div id="page-mentee-notices" class="page">
+          <div class="page-header"><h2>📢 공지사항</h2><p>관리자가 등록한 공지를 확인합니다</p></div>
+          <div id="mentee-notices-content"></div>
+        </div>
+
+        <!-- ── 관리자: 요청 관리 ── -->
+        <div id="page-admin-requests" class="page">
+          <div class="page-header"><h2>📬 요청 관리</h2><p>멘토·멘티의 요청을 확인하고 회신합니다</p></div>
+          <div class="page-grid" id="admin-requests-content"></div>
+        </div>
+
+        <!-- ── 관리자: 공지 작성 ── -->
+        <div id="page-admin-notices" class="page">
+          <div class="page-header"><h2>📢 공지 작성</h2><p>멘토·멘티에게 공지를 전달합니다</p></div>
+          <div class="page-grid" id="admin-notices-content"></div>
+        </div>
+
+        <div id="page-settings" class="page">
+          <div class="page-header">
+            <h2>Supabase 연동</h2>
+            <p>데이터를 Supabase (PostgreSQL)에 실시간 저장합니다</p>
+          </div>
+          <div class="setup-box">
+            <h4>📌 연동 방법</h4>
+            <p>
+              1. <a href="https://supabase.com" target="_blank">supabase.com</a>에서 프로젝트 생성 → URL과 anon key 입력<br>
+              2. SQL Editor에서 스키마 및 RLS 정책 실행<br>
+              3. Authentication → Providers에서 Google OAuth 활성화<br>
+              4. Google Cloud Console에서 OAuth 클라이언트 ID 발급 → 아래 입력<br>
+              5. 저장 후 재접속하면 Google 로그인 화면으로 전환됩니다
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-title">🔗 Supabase 연동 설정</div>
+            <div class="form-group">
+              <label class="form-label">Supabase Project URL</label>
+              <input type="url" class="form-control" id="supabase-url" placeholder="https://xxxxxxxx.supabase.co">
+              <div style="margin-top:6px;font-size:11px;color:var(--text3)">Supabase Dashboard → Settings → API → Project URL</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Supabase Anon Key</label>
+              <input type="text" class="form-control" id="supabase-key" placeholder="eyJhbGciOiJIUzI1NiIs...">
+              <div style="margin-top:6px;font-size:11px;color:var(--text3)">Supabase Dashboard → Settings → API → anon public</div>
+            </div>
+            <div class="flex gap-8 mt-12">
+              <button class="btn btn-secondary" onclick="testConnection()">연결 테스트</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🔐 Google 로그인 설정</div>
+            <div class="form-group">
+              <label class="form-label">Google OAuth 클라이언트 ID</label>
+              <input type="text" class="form-control" id="google-client-id" placeholder="000000000000-xxxxxxxx.apps.googleusercontent.com">
+              <div style="margin-top:6px;font-size:11px;color:var(--text3)">Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 발급. Supabase Auth에도 동일하게 등록</div>
+            </div>
+            <div class="flex gap-8 mt-12">
+              <button class="btn btn-primary" onclick="saveSettings()">설정 저장</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">📊 데이터 테이블 구조</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>테이블명</th><th>저장 내용</th></tr></thead>
+                <tbody>
+                  <tr><td><code>users</code></td><td>로그인 계정 (이메일, 역할, 이름, linked_id)</td></tr>
+                  <tr><td><code>mentors</code></td><td>멘토 정보 (이름, 분야, 소속, 이메일)</td></tr>
+                  <tr><td><code>mentees</code></td><td>멘티 정보 (이름, 팀명, 연락처)</td></tr>
+                  <tr><td><code>slots</code></td><td>멘토 가용 일정</td></tr>
+                  <tr><td><code>sessions</code></td><td>예약 세션 정보</td></tr>
+                  <tr><td><code>journals</code></td><td>멘토링 일지 전체</td></tr>
+                  <tr><td><code>feedbacks</code></td><td>멘티 피드백</td></tr>
+                  <tr><td><code>session_log</code></td><td>세션 이력 (취소 로그)</td></tr>
+                  <tr><td><code>requests</code></td><td>요청/메시지</td></tr>
+                  <tr><td><code>notices</code></td><td>공지사항</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ═══ 모바일 하단 네비 ═══ -->
+<nav id="mobile-nav">
+  <div id="mobile-nav-items"></div>
+</nav>
+
+<!-- ═══ 모달 ═══ -->
+<div class="modal-overlay" id="modal-add-slot">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">가용 시간 추가</div>
+      <button class="modal-close" onclick="closeModal('modal-add-slot')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">날짜</label>
+      <input type="date" class="form-control" id="slot-date" onchange="renderTimeSlots()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">시간대 (중복 선택 가능)</label>
+      <div class="time-slots" id="modal-time-slots"></div>
+      <div id="no-time-msg" style="display:none;text-align:center;padding:16px;color:var(--text3);font-size:13px">⏰ 선택한 날짜에 등록 가능한 시간이 없습니다</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">장소 / 방식</label>
+      <select class="form-control" id="slot-location">
+        <option value="Zoom">Zoom 화상</option>
+        <option value="Google Meet">Google Meet</option>
+        <option value="대면 (센터 회의실)">대면 — 센터 회의실</option>
+        <option value="대면 (멘토 사무실)">대면 — 멘토 사무실</option>
+        <option value="기타">기타</option>
+      </select>
+    </div>
+    <div class="flex gap-8 mt-20">
+      <button class="btn btn-primary" onclick="addSlots()">추가하기</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-slot')">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-journal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title">멘토링 일지 작성</div>
+      <button class="modal-close" onclick="closeModal('modal-journal')">✕</button>
+    </div>
+    <div id="journal-session-info" style="margin-bottom:18px;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--text2)"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">멘토링 유형</label>
+        <select class="form-control" id="j-type">
+          <option value="창업전략">🎯 창업전략</option>
+          <option value="기술개발">💻 기술개발</option>
+          <option value="마케팅/영업">📣 마케팅/영업</option>
+          <option value="투자/재무">💰 투자/재무</option>
+          <option value="법률/특허">⚖️ 법률/특허</option>
+          <option value="기타">📌 기타</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">실제 소요 시간</label>
+        <select class="form-control" id="j-duration">
+          <option value="30분">30분</option>
+          <option value="1시간" selected>1시간</option>
+          <option value="1시간 30분">1시간 30분</option>
+          <option value="2시간">2시간</option>
+          <option value="2시간 이상">2시간 이상</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">세부 장소 <span style="font-size:11px;color:var(--text3)">(오프라인인 경우)</span></label>
+      <input type="text" class="form-control" id="j-detail-location" placeholder="예: 광운대학교 창업지원단 2층 회의실">
+    </div>
+    <div class="form-group">
+      <label class="form-label">주요 상담 내용</label>
+      <textarea class="form-control" id="j-content" placeholder="오늘 멘토링에서 다룬 주요 내용을 입력하세요..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">멘티 현황 및 문제점</label>
+      <textarea class="form-control" id="j-issues" placeholder="멘티의 현재 상황, 어려움, 개선이 필요한 점..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">다음 멘토링 계획</label>
+      <textarea class="form-control" id="j-next" placeholder="다음 세션 목표 및 준비 사항..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">종합 평가</label>
+      <select class="form-control" id="j-rating">
+        <option value="매우좋음">⭐⭐⭐⭐⭐ 매우 좋음</option>
+        <option value="좋음" selected>⭐⭐⭐⭐ 좋음</option>
+        <option value="보통">⭐⭐⭐ 보통</option>
+        <option value="개선필요">⭐⭐ 개선 필요</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">사진 첨부 <span style="font-size:11px;color:var(--text3)">(Supabase Storage에 저장)</span></label>
+      <div id="j-photo-area" style="border:2px dashed var(--border2);border-radius:var(--radius-sm);padding:16px;text-align:center;cursor:pointer;transition:border-color 0.15s" onclick="document.getElementById('j-photo-input').click()">
+        <div id="j-photo-preview" style="display:none;margin-bottom:8px">
+          <img id="j-photo-img" style="max-width:100%;max-height:200px;border-radius:var(--radius-xs);object-fit:cover">
+        </div>
+        <div id="j-photo-placeholder" style="color:var(--text3);font-size:13px">
+          📷 클릭하여 사진 선택
+        </div>
+        <input type="file" id="j-photo-input" accept="image/*" style="display:none" onchange="previewJournalPhoto(this)">
+      </div>
+      <div id="j-photo-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
+    </div>
+    <div id="j-error-box" style="display:none;background:#fdf0ef;border:1px solid var(--danger);border-radius:var(--radius-xs);padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:12px"></div>
+    <input type="hidden" id="j-session-id">
+    <div id="j-draft-notice" style="display:none;background:var(--warn-bg);border:1px solid var(--warn);border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--warn);margin-bottom:12px">
+      📝 임시 저장된 내용을 불러왔습니다 (<span id="j-draft-time"></span>) — 이어서 작성하거나 수정 후 제출하세요
+    </div>
+    <div id="j-edit-notice" style="display:none;background:var(--info-bg);border:1px solid var(--info);border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--info);margin-bottom:12px">
+      ✏️ 제출된 일지를 수정 중입니다. 수정 후 다시 제출하세요.
+    </div>
+    <div class="flex gap-8 mt-20">
+      <button class="btn btn-primary" id="j-submit-btn" onclick="submitJournal()">제출하기</button>
+      <button class="btn btn-secondary" onclick="saveDraft()" style="background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)">💾 임시 저장</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-journal')">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-book">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">멘토링 예약하기</div>
+      <button class="modal-close" onclick="closeModal('modal-book')">✕</button>
+    </div>
+    <div id="book-summary" style="margin-bottom:18px;padding:14px 16px;background:var(--accent-ultra);border:1px solid var(--accent-light);border-radius:var(--radius-sm);font-size:13px;color:var(--accent);line-height:1.8"></div>
+    <div class="form-group">
+      <label class="form-label">멘토링 주제 / 요청사항 <span style="color:var(--danger)">*</span></label>
+      <textarea class="form-control" id="book-topic" placeholder="이번 멘토링에서 도움받고 싶은 내용을 구체적으로 적어주세요..." rows="3"></textarea>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">멘토가 사전 준비를 위해 확인합니다</div>
+    </div>
+    <input type="hidden" id="book-slot-id">
+    <div class="flex gap-8 mt-20">
+      <button class="btn btn-primary" onclick="confirmBooking()">예약 확정</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-book')">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-feedback">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">멘토링 피드백</div>
+      <button class="modal-close" onclick="closeModal('modal-feedback')">✕</button>
+    </div>
+    <div id="feedback-session-info" style="margin-bottom:18px;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--text2)"></div>
+    <div class="form-group">
+      <label class="form-label">멘토링 만족도</label>
+      <select class="form-control" id="fb-rating">
+        <option value="매우만족">⭐⭐⭐⭐⭐ 매우 만족</option>
+        <option value="만족" selected>⭐⭐⭐⭐ 만족</option>
+        <option value="보통">⭐⭐⭐ 보통</option>
+        <option value="아쉬움">⭐⭐ 아쉬움</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">도움이 된 점</label>
+      <textarea class="form-control" id="fb-good" placeholder="멘토링에서 가장 도움이 된 내용을 적어주세요..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">개선 바라는 점 (선택)</label>
+      <textarea class="form-control" id="fb-improve" placeholder="더 나아졌으면 하는 점이 있다면 작성해주세요..."></textarea>
+    </div>
+    <input type="hidden" id="fb-session-id">
+    <div class="flex gap-8 mt-20">
+      <button class="btn btn-primary" onclick="submitFeedback()">제출하기</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-feedback')">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-mentor">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">멘토 추가</div>
+      <button class="modal-close" onclick="closeModal('modal-add-mentor')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">이름</label>
+      <input type="text" class="form-control" id="new-mentor-name" placeholder="홍길동">
+    </div>
+    <div class="form-group">
+      <label class="form-label">전문 분야</label>
+      <input type="text" class="form-control" id="new-mentor-field" placeholder="마케팅, 투자, 기술 등">
+    </div>
+    <div class="form-group">
+      <label class="form-label">소속 / 직함</label>
+      <input type="text" class="form-control" id="new-mentor-org" placeholder="OO투자사 파트너">
+    </div>
+    <div class="form-group">
+      <label class="form-label">이메일</label>
+      <input type="email" class="form-control" id="new-mentor-email" placeholder="mentor@email.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">멘토 소개 <span style="font-size:11px;color:var(--text3)">(멘티에게 표시)</span></label>
+      <textarea class="form-control" id="new-mentor-bio" placeholder="주요 경력, 강점, 멘토링 가능 분야 등을 간략히 소개해주세요..." rows="3"></textarea>
+    </div>
+    <div class="flex gap-8 mt-20">
+      <button class="btn btn-primary" onclick="addMentor()">추가</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-mentor')">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-mentee">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">멘티 추가</div>
+      <button class="modal-close" onclick="closeModal('modal-add-mentee')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">이름</label>
+      <input type="text" class="form-control" id="new-mentee-name" placeholder="홍길동">
+    </div>
+    <div class="form-group">
+      <label class="form-label">팀명</label>
+      <input type="text" class="form-control" id="new-mentee-team" placeholder="팀 그린루트">
+    </div>
+    <div class="form-group">
+      <label class="form-label">이메일</label>
+      <input type="email" class="form-control" id="new-mentee-email" placeholder="mentee@startup.com">
+    </div>
+    <div class="flex gap-8 mt-20">
+      <button class="btn btn-primary" onclick="addMentee()">추가</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-mentee')">취소</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-notice-detail">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title" id="notice-detail-title"></div>
+      <button class="modal-close" onclick="closeModal('modal-notice-detail')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px" id="notice-detail-meta"></div>
+    <div style="white-space:pre-wrap;font-size:14px;line-height:1.7" id="notice-detail-body"></div>
+    <div class="flex gap-8 mt-20">
+      <button class="btn btn-secondary" onclick="closeModal('modal-notice-detail')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-journal-view">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title">멘토링 일지 상세</div>
+      <button class="modal-close" onclick="closeModal('modal-journal-view')">✕</button>
+    </div>
+    <div id="journal-detail"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══ 데이터 ═══
+let currentRole = null;
+let currentUser = null;
+let currentLinkedId = null;
+let currentAuth = null;
+let isDemoMode = false;
+let selectedTimes = [];
+let selectedMentorId = null;
+let bookingSlotId = null;
+let journalSessionId = null;
+let feedbackSessionId = null;
+let calYear, calMonth;
+
+// 삭제된 멘토/멘티 포함 이름 조회 맵 (세션 표시용)
+const _nameMap = { mentors: {}, mentees: {} };
+
+// 조회 캐시 — applyLoadedData() 후 _rebuildIndex()로 갱신
+const _idx = {
+  mentor: {},    // id → mentor obj
+  mentee: {},    // id → mentee obj
+  session: {},   // id → session obj
+  slot: {},      // id → slot obj
+  sessByMentor: {},  // mentorId → [session, ...]
+  sessByMentee: {},  // menteeId → [session, ...]
+  slotsByMentor: {}, // mentorId → [slot, ...]
+};
+
+function _rebuildIndex() {
+  _idx.mentor = {}; _idx.mentee = {}; _idx.session = {}; _idx.slot = {};
+  _idx.sessByMentor = {}; _idx.sessByMentee = {}; _idx.slotsByMentor = {};
+  DB.mentors.forEach(m  => { _idx.mentor[m.id] = m; });
+  DB.mentees.forEach(m  => { _idx.mentee[m.id] = m; });
+  DB.sessions.forEach(s => {
+    _idx.session[s.id] = s;
+    (_idx.sessByMentor[s.mentorId] ||= []).push(s);
+    (_idx.sessByMentee[s.menteeId] ||= []).push(s);
+  });
+  DB.slots.forEach(s => {
+    _idx.slot[s.id] = s;
+    (_idx.slotsByMentor[s.mentorId] ||= []).push(s);
+  });
+}
+
+const DB = {
+  mentors: [],
+  mentees: [],
+  slots: [],
+  sessions: [],
+  journals: [],
+  feedbacks: [],
+  requests: [],
+  notices: [],
+  settings: {
+    // ─── Supabase 설정 (본인 프로젝트 값으로 교체) ───
+    supabaseUrl: 'https://YOUR_PROJECT_ID.supabase.co',
+    supabaseAnonKey: 'YOUR_ANON_KEY',
+    googleClientId: '145328200507-ncmfg4glqscmgnj6k3i0cjq2g2v4f498.apps.googleusercontent.com',
+  }
+};
+
+// localStorage 설정 복원
+(function() {
+  try {
+    const s = localStorage.getItem('mh_settings');
+    if (s) {
+      const saved = JSON.parse(s);
+      if (saved.supabaseUrl) DB.settings.supabaseUrl = saved.supabaseUrl;
+      if (saved.supabaseAnonKey) DB.settings.supabaseAnonKey = saved.supabaseAnonKey;
+    }
+  } catch(e) {}
+})();
+
+// ═══ Supabase 클라이언트 초기화 ═══
+let _supabase = null;
+function getSupabase() {
+  if (!_supabase && DB.settings.supabaseUrl && DB.settings.supabaseAnonKey
+      && !DB.settings.supabaseUrl.includes('YOUR_PROJECT')) {
+    _supabase = window.supabase.createClient(DB.settings.supabaseUrl, DB.settings.supabaseAnonKey);
+  }
+  return _supabase;
+}
+function hasSupabaseIntegration() {
+  return Boolean(getSupabase());
+}
+
+// ═══ 관리자 역할 전환 설정 ═══
+const TEST_ACCOUNTS = {
+  mentor: { id: 'm_preview', name: '미리보기(멘토)', field: '테스트', org: '관리자미리보기', email: '' },
+  mentee: { id: 'me_preview', name: '미리보기(멘티)', team: '테스트팀', email: '' }
+};
+let _adminPreviewRole = null;   // 'mentor' | 'mentee' | null
+let _adminLastPage   = null;    // 관리자 복귀 시 돌아올 페이지 ID
+
+
+function normalizeRoleKey(role) {
+  const value = String(role || '').trim();
+  if (!value) return '';
+  const map = {
+    mentor: 'mentor',
+    '멘토': 'mentor',
+    mentee: 'mentee',
+    '멘티': 'mentee',
+    admin: 'admin',
+    '관리자': 'admin',
+    '담당자': 'admin'
+  };
+  return map[value] || value;
+}
+
+function localDateString(date = new Date()) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function todayStr() {
+  return localDateString(new Date());
+}
+
+function serverTimestamp() {
+  return new Date().toISOString();
+}
+
+function addLocalDays(date, days) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function mondayStart(date = new Date()) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dow = d.getDay();
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return d;
+}
+
+function getBookableMentors() {
+  return DB.mentors.filter(m => m && m.active !== false);
+}
+
+function isPreviewMode() {
+  return _adminPreviewRole !== null;
+}
+
+function ensureAuthorized(actionLabel, allowedRoles = []) {
+  if (!hasSupabaseIntegration() || isDemoMode) return true;
+  if (isPreviewMode()) {
+    toast(`미리보기에서는 ${actionLabel}할 수 없습니다`, 'error');
+    return false;
+  }
+  if (!currentAuth?.token) {
+    toast(`${actionLabel} 전에 Google 로그인이 필요합니다`, 'error');
+    return false;
+  }
+  if (allowedRoles.length && !allowedRoles.includes(currentAuth.role)) {
+    toast(`${actionLabel} 권한이 없습니다`, 'error');
+    return false;
+  }
+  return true;
+}
+
+function canEnterRole(role, linkedId) {
+  const normalizedRole = normalizeRoleKey(role);
+  if (!hasSupabaseIntegration() || isDemoMode) return true;
+  if (normalizedRole === 'admin') return normalizeRoleKey(currentAuth?.role) === 'admin';
+  return normalizeRoleKey(currentAuth?.role) === normalizedRole && String(currentAuth?.linkedId || '') === String(linkedId || currentAuth?.linkedId || '');
+}
+
+function persistSession(role, linkedId, googleName) {
+  try {
+    sessionStorage.setItem('mh_session', JSON.stringify({
+      role,
+      linkedId: linkedId || null,
+      googleName: googleName || null,
+      auth: currentAuth ? {
+        token: currentAuth.token,
+        role: currentAuth.role,
+        linkedId: currentAuth.linkedId,
+        email: currentAuth.email || '',
+        name: currentAuth.name || ''
+      } : null,
+      isDemoMode
+    }));
+  } catch(e) {}
+}
+
+function clearSessionState() {
+  try { sessionStorage.removeItem('mh_session'); } catch(e) {}
+}
+
+function seedDemoData() {
+  const base = new Date();
+  const d1 = localDateString(addLocalDays(base, 1));
+  const d2 = localDateString(addLocalDays(base, 2));
+  const d3 = localDateString(addLocalDays(base, 3));
+  const y1 = localDateString(addLocalDays(base, -3));
+
+  DB.mentors = [
+    { id: 'm_demo_1', name: '김민서', field: '사업 전략', org: '멘토링 허브', email: 'mentor1@example.com', bio: '초기 창업팀의 전략 수립과 발표 자료 피드백을 돕습니다.', active: true },
+    { id: 'm_demo_2', name: '박지훈', field: '서비스 기획', org: '멘토링 허브', email: 'mentor2@example.com', bio: '멘티가 바로 실행 가능한 액션 아이템 중심으로 멘토링합니다.', active: true }
+  ];
+  DB.mentees = [
+    { id: 'me_demo_1', name: '이서윤', team: '팀 알파', email: 'mentee1@example.com' },
+    { id: 'me_demo_2', name: '정하준', team: '팀 베타', email: 'mentee2@example.com' }
+  ];
+  DB.slots = [
+    { id: 'slot_demo_1', mentorId: 'm_demo_1', date: d1, time: '10:00', location: 'Zoom', status: 'available' },
+    { id: 'slot_demo_2', mentorId: 'm_demo_1', date: d2, time: '14:00', location: 'Google Meet', status: 'available' },
+    { id: 'slot_demo_3', mentorId: 'm_demo_2', date: d3, time: '16:00', location: '대면(센터 회의실)', status: 'available' },
+    { id: 'slot_demo_4', mentorId: 'm_demo_2', date: d1, time: '19:00', location: 'Zoom', status: 'booked', sessionId: 'sess_demo_1' }
+  ];
+  DB.sessions = [
+    { id: 'sess_demo_1', mentorId: 'm_demo_2', menteeId: 'me_demo_1', slotId: 'slot_demo_4', date: d1, time: '19:00', location: 'Zoom', topic: '데모데이 발표 구조 점검', status: 'upcoming', hasJournal: false, hasFeedback: false },
+    { id: 'sess_demo_2', mentorId: 'm_demo_1', menteeId: 'me_demo_2', slotId: 'slot_demo_done', date: y1, time: '15:00', location: '대면(멘토 사무실)', topic: '고객 인터뷰 정리와 다음 실험 계획', status: 'completed', hasJournal: true, hasFeedback: true }
+  ];
+  DB.journals = [
+    { id: 'j_demo_1', sessionId: 'sess_demo_2', mentorId: 'm_demo_1', menteeId: 'me_demo_2', date: y1, type: '사업 전략', duration: '1시간', detailLocation: '창업센터 2층 회의실', content: '멘티 팀의 최근 고객 인터뷰 결과를 기반으로 문제 정의와 우선순위를 재정리했습니다. 다음 미팅 전까지 실험 가설을 2개로 좁히기로 했습니다.', issues: '핵심 고객군이 넓어서 검증 메시지가 분산되고 있습니다. 인터뷰 결과 정리가 미흡해 의사결정 속도가 느립니다.', next: '다음 멘토링 전까지 상위 고객군 1개를 선정하고, 인터뷰 문항을 재구성해 재검증하기로 했습니다.', rating: '좋음', photoUrl: '', submittedAt: new Date().toLocaleString('ko-KR') }
+  ];
+  DB.feedbacks = [
+    { id: 'fb_demo_1', sessionId: 'sess_demo_2', mentorId: 'm_demo_1', menteeId: 'me_demo_2', rating: '만족', good: '실행 항목이 명확해져 바로 다음 액션으로 이어졌습니다.', improve: '', submittedAt: new Date().toLocaleString('ko-KR') }
+  ];
+  DB.requests = [];
+  DB.notices = [
+    { id: 'notice_demo_1', target: '전체', title: '데모 안내', content: '현재는 데모 데이터로 동작 중입니다.', isImportant: true, createdAt: new Date().toLocaleString('ko-KR') }
+  ];
+}
+
+function ensureDemoData() {
+  isDemoMode = true;
+  if (DB.mentors.length || DB.mentees.length || DB.slots.length || DB.sessions.length || DB.journals.length || DB.feedbacks.length || DB.requests.length || DB.notices.length) return;
+  seedDemoData();
+  _rebuildIndex();
+}
+
+// ═══ Supabase snake_case ↔ camelCase 변환 ═══
+const _snakeMap = {
+  mentorId:'mentor_id', menteeId:'mentee_id', slotId:'slot_id', sessionId:'session_id',
+  hasJournal:'has_journal', hasFeedback:'has_feedback', isImportant:'is_important',
+  is_deleted:'is_deleted', createdAt:'created_at', submittedAt:'submitted_at',
+  authorId:'author_id', authorName:'author_name', authorRole:'author_role',
+  receiverId:'receiver_id', receiverRole:'receiver_role', replyRead:'reply_read',
+  reply_read:'reply_read', messageType:'message_type', message_type:'message_type',
+  receiver_role:'receiver_role', detailLocation:'detail_location', photoUrl:'photo_url',
+  linkedId:'linked_id', cancelledBy:'cancelled_by', cancelledAt:'cancelled_at',
+  next:'next_plan'
+};
+const _camelMap = Object.fromEntries(Object.entries(_snakeMap).map(([k,v]) => [v,k]));
+
+function toSnake(obj) {
+  const out = {};
+  for (const [k,v] of Object.entries(obj)) {
+    out[_snakeMap[k] || k] = v;
+  }
+  return out;
+}
+function toCamel(obj) {
+  if (!obj) return obj;
+  const out = {};
+  for (const [k,v] of Object.entries(obj)) {
+    out[_camelMap[k] || k] = v;
+  }
+  return out;
+}
+function toCamelArray(arr) {
+  return (arr || []).map(toCamel);
+}
+
+function bundleArray(rows) {
+  return Array.isArray(rows) ? toCamelArray(rows) : [];
+}
+
+// ═══ Supabase 데이터 로드 ═══
+function applyLoadedData(bundle = {}) {
+  const { mentors, mentees, slots, sessions, journals, feedbacks, requests, notices } = bundle;
+
+  // 삭제된 엔티티 포함 이름맵 구축 (세션 표시용)
+  if (Array.isArray(mentors)) mentors.forEach(m => { _nameMap.mentors[m.id] = m.name || m.id; });
+  if (Array.isArray(mentees)) mentees.forEach(m => { _nameMap.mentees[m.id] = m.name || m.id; });
+
+  if (Array.isArray(mentors)) DB.mentors = mentors.filter(m => !m.is_deleted).map(m => ({ ...m, active: m.active !== false }));
+  if (Array.isArray(mentees)) DB.mentees = mentees.filter(m => !m.is_deleted);
+  if (Array.isArray(slots))   DB.slots   = slots.filter(s => s.status !== 'deleted');
+  if (Array.isArray(sessions)) DB.sessions = sessions.filter(s => s.status !== 'rejected' && s.status !== 'cancelled');
+  if (Array.isArray(journals))  DB.journals  = journals;
+  if (Array.isArray(feedbacks)) DB.feedbacks = feedbacks;
+  if (Array.isArray(requests))  DB.requests  = requests;
+  if (Array.isArray(notices))   DB.notices   = notices.filter(n => !n.is_deleted);
+  _rebuildIndex();
+}
+
+async function fetchAppBundle() {
+  const sb = getSupabase();
+  if (!sb) throw new Error('Supabase 미설정');
+
+  const { data, error } = await sb.rpc('get_app_bundle');
+  if (error) throw new Error(error.message);
+  if (!data?.ok) {
+    const message = data?.error === 'account_not_found'
+      ? '계정이 삭제되었거나 접근 권한이 없습니다.'
+      : (data?.error || '데이터 불러오기 실패');
+    throw new Error(message);
+  }
+
+  const bundle = data?.data || {};
+  applyLoadedData({
+    mentors:   bundleArray(bundle.mentors),
+    mentees:   bundleArray(bundle.mentees),
+    slots:     bundleArray(bundle.slots),
+    sessions:  bundleArray(bundle.sessions),
+    journals:  bundleArray(bundle.journals),
+    feedbacks: bundleArray(bundle.feedbacks),
+    requests:  bundleArray(bundle.requests),
+    notices:   bundleArray(bundle.notices)
+  });
+}
+
+async function resolveCurrentAccountFromSupabase(fallbackName = '') {
+  const sb = getSupabase();
+  if (!sb) throw new Error('Supabase 미설정');
+
+  const { data, error } = await sb.rpc('get_my_account');
+  if (error) throw new Error(error.message);
+  if (!data?.ok || !data?.account) {
+    if (data?.error === 'account_not_found') {
+      throw new Error('등록되지 않았거나 삭제된 계정입니다. 관리자에게 계정 상태를 확인해주세요.');
+    }
+    throw new Error(data?.error || '계정 정보를 확인할 수 없습니다.');
+  }
+
+  const account = data.account;
+  return {
+    email: String(account.email || '').trim().toLowerCase(),
+    role: normalizeRoleKey(account.role),
+    linkedId: account.linkedId || account.linked_id || '',
+    name: account.name || fallbackName || ''
+  };
+}
+
+
+function openAddSlotModal() {
+  document.getElementById('slot-date').value = todayStr();
+  renderTimeSlots();
+  openModal('modal-add-slot');
+}
+
+function adminPreviewAs(role) {
+  if (!isDemoMode && currentAuth?.role !== 'admin') {
+    toast('관리자만 미리보기를 사용할 수 있습니다', 'error');
+    return;
+  }
+  if (currentRole !== 'admin' && _adminPreviewRole === null) return;
+
+  // 관리자 전체 데이터 백업 (미리보기 복귀 시 복원용)
+  if (!window._adminFullDB) {
+    window._adminFullDB = {
+      sessions: DB.sessions,
+      slots: DB.slots,
+      mentors: DB.mentors,
+      mentees: DB.mentees,
+      journals: DB.journals,
+      feedbacks: DB.feedbacks,
+      requests: DB.requests,
+      notices: DB.notices
+    };
+  }
+
+  _adminPreviewRole = role;
+  // 실제 DB에서 첫 번째 멘토/멘티를 미리보기 계정으로 사용 (없으면 기본값)
+  currentUser = (role === 'mentor' ? DB.mentors[0] : DB.mentees[0]) ||
+                (role === 'mentor' ? TEST_ACCOUNTS.mentor : TEST_ACCOUNTS.mentee);
+  currentRole = role;
+  const uid = currentUser?.id;
+
+  // 역할 범위로 데이터 필터링 (실제 계정과 동일한 뷰)
+  const full = window._adminFullDB;
+  if (role === 'mentor' && uid) {
+    DB.sessions = full.sessions.filter(s => s.mentorId === uid);
+    DB.slots = full.slots.filter(s => s.mentorId === uid && s.status !== 'deleted');
+    DB.journals = full.journals.filter(j => j.mentorId === uid);
+    DB.feedbacks = full.feedbacks.filter(f => f.mentorId === uid);
+    DB.requests = full.requests.filter(r => r.authorId === uid || r.receiverId === uid);
+    DB.notices = full.notices.filter(n => n.target === '전체' || n.target === '멘토만');
+    // 멘티는 세션에 연결된 멘티만 표시
+    const linkedMenteeIds = new Set(DB.sessions.map(s => s.menteeId));
+    DB.mentees = full.mentees.filter(m => linkedMenteeIds.has(m.id));
+    DB.mentors = full.mentors.filter(m => m.id === uid);
+  } else if (role === 'mentee' && uid) {
+    DB.sessions = full.sessions.filter(s => s.menteeId === uid);
+    DB.slots = full.slots.filter(s => s.status !== 'deleted');
+    DB.journals = []; // 멘티는 일지 접근 불가
+    DB.feedbacks = full.feedbacks.filter(f => f.menteeId === uid);
+    DB.requests = full.requests.filter(r => r.authorId === uid || r.receiverId === uid);
+    DB.notices = full.notices.filter(n => n.target === '전체' || n.target === '멘티만');
+    DB.mentees = full.mentees.filter(m => m.id === uid);
+    // 멘토는 활성 멘토 + 세션 연결된 멘토만
+    const linkedMentorIds = new Set(DB.sessions.map(s => s.mentorId));
+    DB.mentors = full.mentors.filter(m => m.active !== false || linkedMentorIds.has(m.id));
+  }
+  _rebuildIndex();
+
+  // role-badge + user-info 갱신
+  const roleNames = { mentor: '멘토', mentee: '멘티' };
+  document.getElementById('role-badge').textContent = roleNames[role];
+  document.getElementById('user-name-text').textContent = currentUser?.name || '';
+  document.getElementById('user-role-text').textContent = currentUser?.field || currentUser?.team || '';
+  buildSidebar();
+  _showPreviewBanner(role);
+  document.querySelector('.main-content').style.paddingTop = '44px';
+}
+
+function adminPreviewReturn() {
+  _adminPreviewRole = null;
+  currentRole = 'admin';
+  currentUser = null;
+  // 관리자 전체 데이터 복원
+  if (window._adminFullDB) {
+    Object.assign(DB, window._adminFullDB);
+    window._adminFullDB = null;
+    _rebuildIndex();
+  }
+  _hidePreviewBanner();
+  document.querySelector('.main-content').style.paddingTop = '';
+  // role-badge + user-info 복원
+  document.getElementById('role-badge').textContent = '담당자';
+  document.getElementById('user-name-text').textContent = '관리자';
+  document.getElementById('user-role-text').textContent = '전체 현황 관리';
+  buildSidebar();
+  // 마지막 관리자 페이지로 복귀
+  const target = _adminLastPage || 'page-admin-dashboard';
+  setTimeout(() => navigateTo(target), 50);
+}
+
+function _showPreviewBanner(role) {
+  const roleName = role === 'mentor' ? '멘토' : '멘티';
+  let banner = document.getElementById('admin-preview-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'admin-preview-banner';
+    document.body.appendChild(banner);
+  }
+  banner.style.cssText = `
+    position:fixed;top:0;left:232px;right:0;z-index:10000;
+    background:#E67E22;color:#fff;
+    padding:0 16px;height:36px;
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:13px;font-weight:600;
+  `;
+  banner.innerHTML = `
+    <span>👁 [${roleName}] 화면 미리보기 중 — 현재 화면은 읽기 전용입니다</span>
+    <button onclick="adminPreviewReturn()" style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);color:#fff;padding:3px 10px;border-radius:999px;font-size:12px;cursor:pointer;font-weight:600">관리자로 돌아가기 ×</button>
+  `;
+}
+
+function _hidePreviewBanner() {
+  const banner = document.getElementById('admin-preview-banner');
+  if (banner) banner.remove();
+}
+
+// ═══ 역할 진입 ═══
+function enterAs(role, linkedId, googleName) {
+  role = normalizeRoleKey(role);
+  if (!hasSupabaseIntegration()) ensureDemoData();
+  if (!canEnterRole(role, linkedId)) {
+    toast('승인된 계정으로만 해당 화면에 접근할 수 있습니다', 'error');
+    return;
+  }
+  currentRole = role;
+  currentLinkedId = linkedId || null;
+  const roleNames = { mentor: '멘토', mentee: '멘티', admin: '담당자' };
+  if (linkedId) {
+    currentUser = role === 'mentor'
+      ? DB.mentors.find(m => m.id === linkedId)
+      : role === 'mentee'
+        ? DB.mentees.find(m => m.id === linkedId)
+        : null;
+  } else {
+    const roleUsers = { mentor: DB.mentors[0], mentee: DB.mentees[0] };
+    currentUser = roleUsers[role] || null;
+  }
+  if (googleName && currentUser) currentUser._googleName = googleName;
+
+  persistSession(role, linkedId, googleName);
+
+  const today = new Date();
+  calYear = today.getFullYear();
+  calMonth = today.getMonth();
+
+  document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('screen-app').classList.add('active');
+  document.getElementById('role-badge').textContent = roleNames[role];
+
+  if (currentUser) {
+    document.getElementById('user-name-text').textContent = currentUser.name;
+    document.getElementById('user-role-text').textContent = currentUser.field || currentUser.team || '';
+  } else {
+    document.getElementById('user-name-text').textContent = '관리자';
+    document.getElementById('user-role-text').textContent = '전체 현황 관리';
+  }
+
+  buildSidebar();
+  buildMobileNav();
+  if (hasSupabaseIntegration() && !isDemoMode) loadData();
+  startRealtime();
+}
+
+function logout() {
+  clearSessionState();
+  stopRealtime();
+  document.getElementById('screen-app').classList.remove('active');
+  document.getElementById('screen-login').classList.add('active');
+  document.getElementById('mobile-nav').style.display = 'none';
+  currentRole = null; currentUser = null; currentLinkedId = null;
+  currentAuth = null; isDemoMode = false; _adminPreviewRole = null;
+  // Supabase 연결 시 완전 로그아웃 처리
+  const sb = getSupabase();
+  if (sb) sb.auth.signOut().catch(() => {});
+}
+
+async function fullLogout() {
+  try {
+    const sb = getSupabase();
+    if (sb) await sb.auth.signOut();
+  } catch(e) { console.warn('signOut error:', e); }
+  _supabase = null;
+  logout();
+  toast('완전히 로그아웃되었습니다. 다른 계정으로 로그인하세요.', 'success');
+}
+
+let _autoRefreshTimer = null;
+let _realtimeChannel = null;
+const AUTO_REFRESH_INTERVAL = 60000; // fallback 폴링 (Realtime 실패 시)
+
+function startRealtime() {
+  stopRealtime();
+  const sb = getSupabase();
+  if (!sb) return;
+
+  // ─── Supabase Realtime 구독 ───
+  _realtimeChannel = sb.channel('db-realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'slots' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'mentors' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'mentees' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'feedbacks' }, _handleRealtimeChange)
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Realtime 구독 성공');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.warn('Realtime 실패 — 폴링 fallback 활성화');
+        _autoRefreshTimer = setInterval(() => _silentRefresh(), AUTO_REFRESH_INTERVAL);
+      }
+    });
+}
+
+// Realtime 변경 수신 시 데이터 재로드 (디바운스)
+let _rtDebounce = null;
+function _handleRealtimeChange(payload) {
+  clearTimeout(_rtDebounce);
+  _rtDebounce = setTimeout(() => _silentRefresh(), 500);
+}
+
+function stopRealtime() {
+  if (_autoRefreshTimer) { clearInterval(_autoRefreshTimer); _autoRefreshTimer = null; }
+  if (_realtimeChannel) {
+    getSupabase()?.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
+  }
+  _hideRefreshIndicator();
+}
+
+function _showRefreshIndicator() { /* Realtime 사용으로 제거됨 */ }
+function _hideRefreshIndicator(success) { /* Realtime 사용으로 제거됨 */ }
+
+async function _silentRefresh() {
+  await _syncData({ silent: true });
+}
+
+
+// ═══ 메뉴 ═══
+const menus = {
+  mentor: [
+    { id: 'page-mentor-schedule', icon: '📅', label: '가용 일정 등록' },
+    { id: 'page-mentor-sessions', icon: '📋', label: '예약 현황' },
+    { id: 'page-mentor-journal', icon: '📝', label: '멘토링 일지' },
+    { id: 'page-mentor-notices',  icon: '📢', label: '공지사항', badgeType: 'notices' },
+    { id: 'page-mentor-request',  icon: '📨', label: '요청하기', badgeType: 'myRequests' },
+  ],
+  mentee: [
+    { id: 'page-mentee-book',     icon: '🔍', label: '멘토 예약하기' },
+    { id: 'page-mentee-sessions', icon: '📋', label: '내 멘토링 내역' },
+    { id: 'page-mentee-notices',  icon: '📢', label: '공지사항', badgeType: 'notices' },
+    { id: 'page-mentee-request',  icon: '📨', label: '요청하기', badgeType: 'myRequests' },
+  ],
+  admin: [
+    { id: 'page-admin-dashboard', icon: '📊', label: '전체 현황' },
+    { id: 'page-admin-mentors',   icon: '🎓', label: '멘토 관리' },
+    { id: 'page-admin-mentees',   icon: '🚀', label: '멘티 관리' },
+    { id: 'page-admin-journals',  icon: '📝', label: '일지 목록' },
+    { id: 'page-admin-requests',  icon: '📬', label: '요청 관리', badgeType: 'pendingRequests' },
+    { id: 'page-admin-notices',   icon: '📢', label: '공지 작성' },
+    { id: 'page-settings',        icon: '⚙️', label: 'Supabase 연동' },
+  ]
+};
+
+function buildSidebar() {
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = '';
+  (menus[currentRole] || []).forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'menu-item' + (i === 0 ? ' active' : '');
+    el.dataset.pageId = m.id;
+    // 뱃지
+    let badge = '';
+    const badgeStyle = `background:var(--danger);color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;font-weight:700`;
+    if (m.id === 'page-mentor-sessions') {
+      const cnt = getSessionsByMentor(currentUser?.id).filter(s => s.status === 'pending').length;
+      if (cnt > 0) badge = ` <span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (m.id === 'page-admin-dashboard') {
+      const cnt = DB.sessions.filter(s => s.status === 'pending').length;
+      if (cnt > 0) badge = ` <span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (m.badgeType === 'notices') {
+      const read = _getReadNoticeIds();
+      const myRole = currentRole;
+      const cnt = DB.notices.filter(n => (n.target === '전체' || n.target === (myRole === 'mentor' ? '멘토만' : '멘티만')) && !read.has(n.id)).length;
+      if (cnt > 0) badge = ` <span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (m.badgeType === 'pendingRequests') {
+      const cnt = DB.requests.filter(r => r.status === '대기중').length;
+      if (cnt > 0) badge = ` <span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (m.badgeType === 'myRequests') {
+      const _norm = s => (s || '').trim().replace(/\s+/g, ' ');
+      const myName = currentUser?.name || '';
+      const myId   = currentUser?.id || '';
+      const myRole = currentRole;
+      const replyCnt = DB.requests.filter(r => {
+        const matchById = myId && r.authorId && r.authorId === myId;
+        const matchByName = r.authorName === myName;
+        return (matchById || matchByName) && r.reply && !r.reply_read;
+      }).length;
+      const msgCnt = DB.requests.filter(r => {
+        if (r.type !== '관리자발신' || r.reply_read) return false;
+        const matchById = myId && r.receiverId && r.receiverId === myId;
+        const matchByName = _norm(r.receiver) === _norm(myName);
+        return (matchById || matchByName) && (normalizeRoleKey(r.receiver_role) === myRole || !r.receiver_role);
+      }).length;
+      const cnt = replyCnt + msgCnt;
+      if (cnt > 0) badge = ` <span style="background:var(--danger);color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;font-weight:700">${cnt}</span>`;
+    }
+    el.innerHTML = `<span class="icon">${m.icon}</span>${m.label}${badge}`;
+    el.onclick = () => navigateTo(m.id);
+    nav.appendChild(el);
+  });
+
+  // 관리자일 때 역할 전환 메뉴를 사이드바 nav에 직접 추가
+  if (currentRole === 'admin') {
+    const divider = document.createElement('div');
+    divider.style.cssText = 'border-top:1px solid var(--border);margin:8px 4px;';
+    nav.appendChild(divider);
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:var(--text3);padding:4px 12px;font-weight:600;letter-spacing:0.5px;';
+    label.textContent = '👁 역할 전환 미리보기';
+    nav.appendChild(label);
+
+    [{ role: 'mentor', icon: '🎓', label: '멘토로 보기' },
+     { role: 'mentee', icon: '🚀', label: '멘티로 보기' }].forEach(p => {
+      const pel = document.createElement('div');
+      pel.className = 'menu-item';
+      pel.style.cssText = 'color:var(--warn);font-weight:500;';
+      pel.innerHTML = `<span class="icon">${p.icon}</span>${p.label}`;
+      pel.onclick = () => _saveAdminPageAndPreview(p.role);
+      nav.appendChild(pel);
+    });
+  }
+
+  navigateTo(menus[currentRole][0].id);
+}
+
+// 관리자 페이지 저장 후 미리보기 진입
+function _saveAdminPageAndPreview(role) {
+  try {
+    const activePage = document.querySelector('.page.active');
+    _adminLastPage = activePage?.id || 'page-admin-dashboard';
+    const roleLabel = role === 'mentor' ? '멘토' : '멘티';
+    adminPreviewAs(role);
+    toast(`👁 [${roleLabel}] 화면 미리보기 전환 완료`, 'success');
+  } catch(e) {
+    toast('미리보기 전환 오류: ' + e.message, 'error');
+    console.error('adminPreview error:', e);
+  }
+}
+
+// 사이드바 뱃지만 조용히 갱신 (navigateTo 호출 없음)
+function _updateSidebarBadges() {
+  if (!currentRole) return; // 관리자는 currentUser가 null일 수 있으므로 role만 확인
+  const badgeStyle = `background:var(--danger);color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;font-weight:700`;
+  const nav = document.getElementById('sidebar-nav');
+  if (!nav) return;
+  nav.querySelectorAll('.menu-item').forEach(el => {
+    const pageId = el.dataset.pageId;
+    const menu   = (menus[currentRole] || []).find(m => m.id === pageId);
+    if (!menu) return;
+    // 기존 뱃지 제거 후 재계산
+    el.querySelectorAll('span[style*="border-radius:999px"]').forEach(b => b.remove());
+    let badge = '';
+    if (pageId === 'page-mentor-sessions') {
+      const cnt = getSessionsByMentor(currentUser?.id).filter(s => s.status === 'pending').length;
+      if (cnt > 0) badge = `<span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (pageId === 'page-admin-dashboard') {
+      const cnt = DB.sessions.filter(s => s.status === 'pending').length;
+      if (cnt > 0) badge = `<span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (menu.badgeType === 'notices') {
+      const read = _getReadNoticeIds();
+      const cnt  = DB.notices.filter(n => (n.target === '전체' || n.target === (currentRole === 'mentor' ? '멘토만' : '멘티만')) && !read.has(n.id)).length;
+      if (cnt > 0) badge = `<span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (menu.badgeType === 'pendingRequests') {
+      const cnt = DB.requests.filter(r => r.status === '대기중').length;
+      if (cnt > 0) badge = `<span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (menu.badgeType === 'myRequests') {
+      const _norm = s => (s || '').trim().replace(/\s+/g, ' ');
+      const myName = currentUser?.name || '';
+      const myId   = currentUser?.id || '';
+      const myRole = currentRole;
+      const replyCnt = DB.requests.filter(r => {
+        const matchById = myId && r.authorId && r.authorId === myId;
+        const matchByName = r.authorName === myName;
+        return (matchById || matchByName) && r.reply && !r.reply_read;
+      }).length;
+      const msgCnt = DB.requests.filter(r => {
+        if (r.type !== '관리자발신' || r.reply_read) return false;
+        const matchById = myId && r.receiverId && r.receiverId === myId;
+        const matchByName = _norm(r.receiver) === _norm(myName);
+        return (matchById || matchByName) && (normalizeRoleKey(r.receiver_role) === myRole || !r.receiver_role);
+      }).length;
+      const cnt = replyCnt + msgCnt;
+      if (cnt > 0) badge = `<span style="background:var(--danger);color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;font-weight:700">${cnt}</span>`;
+    }
+    if (badge) el.insertAdjacentHTML('beforeend', badge);
+  });
+}
+
+function buildMobileNav() {
+  const mobileNav = document.getElementById('mobile-nav');
+  const items = document.getElementById('mobile-nav-items');
+  mobileNav.style.display = window.innerWidth <= 680 ? 'block' : 'none';
+  items.innerHTML = '';
+  (menus[currentRole] || []).forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'mobile-nav-item' + (i === 0 ? ' active' : '');
+    el.dataset.pageId = m.id;
+    el.innerHTML = `<span class="icon">${m.icon}</span><span class="label">${m.label}</span>`;
+    el.onclick = () => navigateTo(m.id);
+    items.appendChild(el);
+  });
+}
+
+function navigateTo(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById(pageId);
+  if (page) { page.classList.add('active'); renderPage(pageId); }
+  document.querySelectorAll('#sidebar-nav .menu-item').forEach(m => {
+    m.classList.toggle('active', m.dataset.pageId === pageId);
+  });
+  document.querySelectorAll('#mobile-nav-items .mobile-nav-item').forEach(m => {
+    m.classList.toggle('active', m.dataset.pageId === pageId);
+  });
+}
+
+// ═══ 페이지 렌더 ═══
+function renderPage(id) {
+  switch(id) {
+    case 'page-mentor-schedule':  renderMentorSchedule(); break;
+    case 'page-mentor-sessions':  renderMentorSessions(); break;
+    case 'page-mentor-journal':   renderJournalPage(); break;
+    case 'page-mentor-notices':   renderNoticesPage('mentor'); break;
+    case 'page-mentor-request':   renderRequestPage('mentor'); break;
+    case 'page-mentee-book':      renderMenteeBook(); break;
+    case 'page-mentee-sessions':  renderMenteeSessions(); break;
+    case 'page-mentee-notices':   renderNoticesPage('mentee'); break;
+    case 'page-mentee-request':   renderRequestPage('mentee'); break;
+    case 'page-admin-dashboard':  renderAdminDashboard(); break;
+    case 'page-admin-mentors':    renderAdminMentors(); break;
+    case 'page-admin-mentees':    renderAdminMentees(); break;
+    case 'page-admin-journals':   renderAdminJournals(); break;
+    case 'page-admin-requests':   renderAdminRequests(); break;
+    case 'page-admin-notices':    renderAdminNotices(); break;
+    case 'page-settings':         renderSettings(); break;
+  }
+}
+
+// ── 멘토: 일정 ──
+function renderMentorSchedule() {
+  const today = todayStr();
+  const mySlots = getSlotsByMentor(currentUser?.id).filter(s => s.date >= today);
+  renderMiniCalendar(mySlots);
+  renderSlotList(mySlots);
+}
+
+function changeMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  const today = todayStr();
+  const mySlots = getSlotsByMentor(currentUser?.id).filter(s => s.date >= today);
+  renderMiniCalendar(mySlots);
+}
+
+function renderMiniCalendar(slots) {
+  const cal = document.getElementById('mentor-calendar');
+  const titleEl = document.getElementById('calendar-month-title');
+  const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  titleEl.textContent = `${calYear}년 ${monthNames[calMonth]}`;
+
+  const headers = ['월','화','수','목','금','토','일'];
+  let html = headers.map(h => `<div class="cal-header">${h}</div>`).join('');
+
+  const today = new Date();
+  const firstDay = new Date(calYear, calMonth, 1);
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  let startDow = firstDay.getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1;
+
+  for (let i = 0; i < startDow; i++) html += `<div class="cal-day other-month"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hasAvail = slots.some(s => s.date === dateStr && s.status === 'available');
+    const hasBooked = slots.some(s => s.date === dateStr && s.status === 'booked');
+    const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+    let cls = 'cal-day';
+    if (isToday) cls += ' today';
+    if (hasBooked) cls += ' booked';
+    else if (hasAvail) cls += ' has-slot';
+    html += `<div class="${cls}">${d}</div>`;
+  }
+  cal.innerHTML = html;
+}
+
+function renderSlotList(slots) {
+  const el = document.getElementById('slot-list');
+  const availSlots   = slots.filter(s => s.status === 'available').sort((a,b) => a.date.localeCompare(b.date));
+  const matchedSlots = slots.filter(s => s.status === 'pending' || s.status === 'booked').sort((a,b) => a.date.localeCompare(b.date));
+
+  let html = '';
+
+  if (!availSlots.length) {
+    html += `<div class="empty-state"><span class="icon">📭</span><h4>등록된 가용 시간 없음</h4><p>상단 버튼으로 시간을 추가해보세요</p></div>`;
+  } else {
+    html += `<div class="table-wrap"><table>
+      <thead><tr><th>날짜</th><th>시간</th><th>장소</th><th>상태</th><th></th></tr></thead>
+      <tbody>
+      ${availSlots.map(s => `<tr>
+        <td>${formatDate(s.date)}</td>
+        <td><strong>${s.time}</strong></td>
+        <td><span class="text-muted">${s.location}</span></td>
+        <td><span class="badge badge-green">예약 가능</span></td>
+        <td><button class="btn btn-sm btn-danger" onclick="deleteSlot('${s.id}')">삭제</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>`;
+  }
+
+  if (matchedSlots.length) {
+    html += `<div class="card-title" style="margin-top:20px;font-size:14px;color:var(--warn)">🔒 매칭된 시간 (예약 불가)</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>날짜</th><th>시간</th><th>장소</th><th>멘티</th><th>상태</th></tr></thead>
+      <tbody>
+      ${matchedSlots.map(s => {
+        const sess = DB.sessions.find(x => x.slotId === s.id);
+        const mentee = sess ? _idx.mentee[sess.menteeId] : null;
+        const badge = s.status === 'pending'
+          ? '<span class="badge badge-warn">신청 대기</span>'
+          : '<span class="badge badge-blue">확정</span>';
+        return `<tr style="background:var(--warn-bg)">
+          <td>${formatDate(s.date)}</td>
+          <td><strong>${s.time}</strong></td>
+          <td><span class="text-muted">${s.location}</span></td>
+          <td>${mentee ? mentee.name : '—'}</td>
+          <td>${badge}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ── 멘토: 예약 현황 ──
+function renderMentorSessions() {
+  const el = document.getElementById('mentor-sessions-list');
+  const mySessions = getSessionsByMentor(currentUser?.id);
+  if (!mySessions.length) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>신청된 세션 없음</h4><p>멘티가 신청하면 여기에 표시됩니다</p></div></div>`;
+    return;
+  }
+  const sessionCard = (s, buttons) => {
+    const mentee = _idx.mentee[s.menteeId];
+    return `<div class="session-card">
+      <div class="session-card-header">
+        <div class="session-main-info">
+          <div class="session-name">${getMenteeName(s.menteeId)} <span class="text-muted fw-600">· ${mentee?.team || ''}</span></div>
+          <div class="session-meta">
+            <span>📅 ${formatDate(s.date)}</span>
+            <span>⏰ ${s.time}</span>
+            <span>📍 ${s.location}</span>
+            ${mentee?.email ? `<span>✉️ ${mentee.email}</span>` : ''}
+          </div>
+          <div class="session-topic" style="margin-top:6px">📌 ${s.topic}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">${buttons}</div>
+      </div>
+    </div>`;
+  };
+
+  const pending  = mySessions.filter(s => s.status === 'pending');
+  const upcoming = mySessions.filter(s => s.status === 'upcoming');
+  const completed= mySessions.filter(s => s.status === 'completed');
+
+  let leftHtml = '';
+  let rightHtml = '';
+  if (pending.length) {
+    leftHtml += `<div class="card"><div class="card-title">🔔 신청 대기 <span class="badge badge-warn" style="margin-left:4px">${pending.length}</span></div>`;
+    leftHtml += pending.map(s => sessionCard(s,
+      `<span class="badge badge-warn">대기</span>
+       <button class="btn btn-sm btn-primary" onclick="confirmSession('${s.id}')">✅ 수락</button>
+       <button class="btn btn-sm btn-danger" onclick="rejectSession('${s.id}')">거절</button>`
+    )).join('');
+    leftHtml += '</div>';
+  }
+  if (upcoming.length) {
+    leftHtml += `<div class="card"><div class="card-title">📅 확정 세션 <span class="badge badge-blue" style="margin-left:4px">${upcoming.length}</span></div>`;
+    leftHtml += upcoming.map(s => sessionCard(s,
+      `<span class="badge badge-blue">확정</span>
+       <button class="btn btn-sm btn-secondary" onclick="completeSession('${s.id}')">완료 처리</button>
+       <button class="btn btn-sm btn-danger" onclick="cancelSession('${s.id}', 'mentor')">취소</button>`
+    )).join('');
+    leftHtml += '</div>';
+  }
+  if (!leftHtml) leftHtml = `<div class="card"><div class="empty-state"><span class="icon">✅</span><h4>대기/확정 세션 없음</h4></div></div>`;
+  if (completed.length) {
+    rightHtml += `<div class="card"><div class="card-title">✅ 완료 세션 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>`;
+    rightHtml += completed.map(s => sessionCard(s,
+      `<span class="badge badge-green">완료</span>
+       ${!s.hasJournal ? `<button class="btn btn-sm btn-primary" onclick="openJournalModal('${s.id}')">일지 작성</button>` : `<button class="btn btn-sm btn-secondary" onclick="viewJournal('${s.id}')">일지 보기</button>`}
+       ${(() => { const fb = DB.feedbacks.find(f => f.sessionId === s.id); return fb ? `<span class="badge badge-blue" title="멘티 피드백: ${fb.good?.substring(0,30)}..." style="cursor:default">⭐ 멘티평가: ${fb.rating}</span>` : ''; })()}`
+    )).join('');
+    rightHtml += '</div>';
+  }
+  if (!rightHtml) rightHtml = `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>완료 세션 없음</h4></div></div>`;
+  el.innerHTML = `<div class="page-col">${leftHtml}</div><div class="page-col">${rightHtml}</div>`;
+}
+
+// ── 멘토: 일지 ──
+function renderJournalPage() {
+  const el = document.getElementById('journal-session-select');
+  const myS = getSessionsByMentor(currentUser?.id);
+  const pending = myS.filter(s => s.status === 'completed' && !s.hasJournal);
+  const done = myS.filter(s => s.hasJournal);
+  let leftHtml = '';
+  let rightHtml = '';
+
+  if (!pending.length) {
+    leftHtml += `<div class="card"><div class="empty-state"><span class="icon">✅</span><h4>작성 대기 일지 없음</h4><p>모든 세션의 일지가 제출되었습니다</p></div></div>`;
+  } else {
+    leftHtml += `<div class="card"><div class="card-title">📝 작성 대기 <span class="badge badge-warn" style="margin-left:4px">${pending.length}</span></div>`;
+    leftHtml += pending.map(s => {
+      return `<div class="journal-pending-item">
+        <div>
+          <div class="fw-600" style="font-size:14px">${getMenteeName(s.menteeId)}</div>
+          <div class="text-muted">${formatDate(s.date)} ${s.time}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openJournalModal('${s.id}')">일지 작성</button>
+      </div>`;
+    }).join('');
+    leftHtml += `</div>`;
+  }
+
+  if (done.length) {
+    rightHtml += `<div class="card"><div class="card-title">✅ 제출 완료 <span class="badge badge-green" style="margin-left:4px">${done.length}</span></div>`;
+    rightHtml += done.map(s => {
+      return `<div class="journal-pending-item">
+        <div>
+          <div class="fw-600" style="font-size:14px">${getMenteeName(s.menteeId)}</div>
+          <div class="text-muted">${formatDate(s.date)} ${s.time}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-secondary btn-sm" onclick="viewJournal('${s.id}')">상세 보기</button>
+          <button class="btn btn-sm" style="background:var(--accent-ultra);color:var(--accent);border:1px solid var(--accent-light)" onclick="openJournalModal('${s.id}')">✏️ 수정</button>
+        </div>
+      </div>`;
+    }).join('');
+    rightHtml += `</div>`;
+  } else {
+    rightHtml += `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>제출된 일지 없음</h4></div></div>`;
+  }
+  el.innerHTML = `<div class="page-col">${leftHtml}</div><div class="page-col">${rightHtml}</div>`;
+}
+
+// ── 멘티: 예약 ──
+function _isFutureSlot(s) {
+  if (!s.date || !s.time) return false;
+  return new Date(`${s.date}T${s.time}:00+09:00`) > new Date();
+}
+
+function renderMenteeBook() {
+  const el = document.getElementById('mentor-select-list');
+  // 가용 슬롯 있는 멘토 먼저 정렬 (과거 시간 제외)
+  const sorted = [...getBookableMentors()].sort((a, b) => {
+    const aSlots = getSlotsByMentor(a.id).filter(s => s.status === 'available' && _isFutureSlot(s)).length;
+    const bSlots = getSlotsByMentor(b.id).filter(s => s.status === 'available' && _isFutureSlot(s)).length;
+    return bSlots - aSlots;
+  });
+  if (!sorted.length) {
+    el.innerHTML = `<div class="empty-state"><span class="icon">📭</span><h4>예약 가능한 멘토 없음</h4><p>현재 예약 가능한 멘토가 없습니다</p></div>`;
+    document.getElementById('slot-picker-card').style.display = 'none';
+    return;
+  }
+  el.innerHTML = sorted.map(m => {
+    const availSlots = getSlotsByMentor(m.id).filter(s => s.status === 'available' && _isFutureSlot(s));
+    const initials = m.name.slice(0, 2);
+    const bioHtml = m.bio ? `<div style="margin-top:6px;font-size:12px;color:var(--text2);line-height:1.5;border-top:1px solid var(--border);padding-top:6px">${m.bio}</div>` : '';
+    return `<div class="mentor-card ${selectedMentorId === m.id ? 'selected' : ''}" style="flex-direction:column;align-items:stretch;cursor:pointer">
+      <div style="display:flex;align-items:center;gap:12px" onclick="selectMentor('${m.id}')">
+        <div class="mentor-avatar">${initials}</div>
+        <div class="mentor-card-info" style="flex:1">
+          <div class="mentor-card-name">${m.name}</div>
+          <div class="mentor-card-meta">${m.field} · ${m.org}</div>
+        </div>
+        <span class="badge ${availSlots.length > 0 ? 'badge-green' : 'badge-gray'}">가용 ${availSlots.length}</span>
+      </div>
+      ${bioHtml}
+    </div>`;
+  }).join('');
+}
+
+function selectMentor(id) {
+  selectedMentorId = id;
+  renderMenteeBook();
+  const slots = getSlotsByMentor(id).filter(s => s.status === 'available' && _isFutureSlot(s));
+  const card = document.getElementById('slot-picker-card');
+  const el = document.getElementById('mentee-slots');
+  card.style.display = 'block';
+  if (!slots.length) {
+    el.innerHTML = `<div class="empty-state"><span class="icon">📭</span><h4>예약 가능한 시간 없음</h4><p>현재 가용 슬롯이 없습니다</p></div>`;
+    return;
+  }
+  const sorted = [...slots].sort((a, b) =>
+    (a.date + a.time).localeCompare(b.date + b.time)
+  );
+  // 날짜별 그룹핑
+  const groups = {};
+  sorted.forEach(s => { if (!groups[s.date]) groups[s.date] = []; groups[s.date].push(s); });
+  const dayNames = ['일','월','화','수','목','금','토'];
+  el.innerHTML = Object.entries(groups).map(([date, slotList]) => {
+    const d = new Date(date + 'T00:00:00');
+    const dayLabel = `${d.getMonth()+1}월 ${d.getDate()}일 (${dayNames[d.getDay()]})`;
+    const timeRows = slotList.map(s => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-xs);margin-bottom:6px;cursor:pointer;transition:background 0.1s" onclick="openBookModal('${s.id}')" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <span style="font-size:20px;font-weight:800;color:var(--accent);min-width:52px">${s.time}</span>
+        <span style="font-size:13px;color:var(--text2)">${s.location}</span>
+        <span class="badge badge-green" style="margin-left:auto">예약 가능</span>
+      </div>`).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;padding:4px 0;border-bottom:2px solid var(--accent-light)">📅 ${dayLabel}</div>
+      ${timeRows}
+    </div>`;
+  }).join('');
+}
+
+function renderMenteeSessions() {
+  const el = document.getElementById('mentee-sessions-list');
+  const mySessions = getSessionsByMentee(currentUser?.id);
+  if (!mySessions.length) {
+    el.innerHTML = `<div class="page-col"><div class="card"><div class="empty-state"><span class="icon">📭</span><h4>예약한 세션 없음</h4><p>멘토 예약하기에서 세션을 신청해보세요</p></div></div></div><div class="page-col"></div>`;
+    return;
+  }
+  const sessionCardHtml = s => {
+    const mentor = _idx.mentor[s.mentorId];
+    const badgeMap = { pending: '<span class="badge badge-warn">대기중</span>', upcoming: '<span class="badge badge-blue">확정</span>', completed: '<span class="badge badge-green">완료</span>' };
+    return `<div class="session-card">
+      <div class="session-card-header">
+        <div class="session-main-info">
+          <div class="session-name">${mentor?.name} 멘토 <span class="text-muted fw-600">· ${mentor?.field}</span></div>
+          <div class="session-meta">
+            <span>📅 ${formatDate(s.date)}</span>
+            <span>⏰ ${s.time}</span>
+            <span>📍 ${s.location}</span>
+          </div>
+          ${s.status === 'pending' ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:var(--warn-bg);border:1px solid #E8D4A0;border-radius:var(--radius-xs);padding:6px 10px;font-size:12px;color:var(--warn)">⏳ 멘토 확인 대기 중입니다</div>` : ''}
+          ${s.status === 'upcoming' ? `<div style="margin-top:8px;background:var(--info-bg);border:1px solid #B8D8F0;border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--info);line-height:1.7">✅ <strong>멘토링이 확정되었습니다!</strong><br>📍 장소/방식: <strong>${s.location}</strong><br><span style="color:var(--text3)">일정 변경이 필요하면 신청 취소 후 재예약하세요</span></div>` : ''}
+          <div style="margin-top:6px;font-size:12px;color:var(--text2)">📌 ${s.topic}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
+          ${badgeMap[s.status] || ''}
+          ${(s.status === 'pending' || s.status === 'upcoming') ? `<button class="btn btn-sm btn-danger" onclick="cancelSession('${s.id}', 'mentee')">신청 취소</button>` : ''}
+          ${s.status === 'completed' && !s.hasFeedback ? `<button class="btn btn-sm btn-primary" onclick="openFeedbackModal('${s.id}')">피드백 작성</button>` : ''}
+          ${s.status === 'completed' && s.hasFeedback ? `<span class="text-muted" style="font-size:11px">✅ 피드백 완료</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  };
+  const active = mySessions.filter(s => s.status === 'pending' || s.status === 'upcoming');
+  const completed = mySessions.filter(s => s.status === 'completed');
+  let leftHtml = active.length
+    ? `<div class="card"><div class="card-title">📅 진행 중 <span class="badge badge-blue" style="margin-left:4px">${active.length}</span></div>${active.map(sessionCardHtml).join('')}</div>`
+    : `<div class="card"><div class="empty-state"><span class="icon">✅</span><h4>진행 중인 세션 없음</h4></div></div>`;
+  let rightHtml = completed.length
+    ? `<div class="card"><div class="card-title">✅ 완료 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>${completed.map(sessionCardHtml).join('')}</div>`
+    : `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>완료 세션 없음</h4></div></div>`;
+  el.innerHTML = `<div class="page-col">${leftHtml}</div><div class="page-col">${rightHtml}</div>`;
+}
+
+// ── 관리자 ──
+function renderAdminDashboard() {
+  // ── Supabase 대시보드 바로가기 버튼 ──
+  const dashboardBtn = document.getElementById('supabase-dashboard-btn');
+  if (hasSupabaseIntegration()) {
+    dashboardBtn.style.display = 'inline-flex';
+    // Supabase URL에서 프로젝트 ID 추출 → 대시보드 링크
+    const projMatch = DB.settings.supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+    if (projMatch) {
+      dashboardBtn.href = `https://supabase.com/dashboard/project/${projMatch[1]}`;
+    } else {
+      dashboardBtn.href = DB.settings.supabaseUrl;
+    }
+    dashboardBtn.textContent = '📊 Supabase 대시보드';
+  } else {
+    dashboardBtn.style.display = 'none';
+  }
+
+  // ── 날짜 범위 계산 ──
+  const now = new Date();
+  const todayDateStr = localDateString(now);
+  const weekStart = mondayStart(now);
+  const weekStartStr = localDateString(weekStart);
+  const monthStartStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+
+  const sessWeek  = DB.sessions.filter(s => s.date >= weekStartStr && s.date <= todayDateStr);
+  const sessMonth = DB.sessions.filter(s => s.date >= monthStartStr && s.date <= todayDateStr);
+
+  const statBlock = (label, sess) => {
+    const c = sess.filter(s => s.status === 'completed').length;
+    const u = sess.filter(s => s.status === 'upcoming').length;
+    const p = sess.filter(s => s.status === 'pending').length;
+    const j = sess.filter(s => s.hasJournal).length;
+    // 멘토별 집계
+    const mentorMap = {};
+    sess.forEach(s => { mentorMap[s.mentorId] = (mentorMap[s.mentorId] || 0) + 1; });
+    const mentorRows = Object.entries(mentorMap).map(([mid, cnt]) => {
+      return `<tr><td>${getMentorName(mid)}</td><td style="text-align:center">${cnt}</td><td style="text-align:center">${sess.filter(s => s.mentorId === mid && s.hasJournal).length}</td></tr>`;
+    }).join('') || '<tr><td colspan="3" style="color:var(--text3)">데이터 없음</td></tr>';
+    return `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px 16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">${label}</div>
+      ${!sess.length ? `<p style="color:var(--text3);font-size:13px">해당 기간에 멘토링 세션이 없습니다</p>` : `
+      <div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:6px">${sess.length}건</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <span class="badge badge-green">완료 ${c}</span>
+        <span class="badge badge-blue">확정 ${u}</span>
+        <span class="badge badge-warn">대기 ${p}</span>
+        <span class="badge" style="background:var(--surface3)">일지 ${j}</span>
+      </div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="color:var(--text3)"><th style="text-align:left">멘토</th><th style="text-align:center">세션</th><th style="text-align:center">일지</th></tr></thead>
+        <tbody>${mentorRows}</tbody>
+      </table>`}
+    </div>`;
+  };
+  // 현재 선택 탭 기반 렌더
+  window._renderPeriodStats = () => {
+    const tab = window._periodTab || 'week';
+    let label = '', sess = [];
+    if (tab === 'week')  { label = '이번 주 실적'; sess = sessWeek; }
+    else if (tab === 'month') { label = '이번 달 실적'; sess = sessMonth; }
+    else if (tab === 'all')   { label = '전체 누적';    sess = DB.sessions; }
+    else if (tab === 'custom-month') {
+      const y = parseInt(document.getElementById('csel-year')?.value || now.getFullYear());
+      const m = parseInt(document.getElementById('csel-month')?.value || (now.getMonth()+1));
+      sess = DB.sessions.filter(s => { const d = new Date(s.date); return d.getFullYear()===y && d.getMonth()+1===m; });
+      label = `${y}년 ${m}월 실적`;
+    } else if (tab === 'custom-week') {
+      const y = parseInt(document.getElementById('csel-year-w')?.value || now.getFullYear());
+      const m = parseInt(document.getElementById('csel-month-w')?.value || (now.getMonth()+1));
+      const w = parseInt(document.getElementById('csel-week')?.value || 1);
+      sess = DB.sessions.filter(s => { const d = new Date(s.date); return d.getFullYear()===y && d.getMonth()+1===m && Math.ceil(d.getDate()/7)===w; });
+      label = `${y}년 ${m}월 ${w}주차 실적`;
+    }
+    document.getElementById('admin-period-stats').innerHTML = statBlock(label, sess);
+  };
+  if (!window._periodTab) window._periodTab = 'week';
+  window._renderPeriodStats();
+
+  const pendingSessions = DB.sessions.filter(s => s.status === 'pending').length;
+  const upcoming = DB.sessions.filter(s => s.status === 'upcoming').length;
+  const completed = DB.sessions.filter(s => s.status === 'completed').length;
+  const availSlots = DB.slots.filter(s => s.status === 'available').length;
+  const journalPending = DB.sessions.filter(s => s.status === 'completed' && !s.hasJournal).length;
+
+  document.getElementById('admin-stats').innerHTML = [
+    { label: '등록 멘토', value: DB.mentors.length },
+    { label: '등록 멘티', value: DB.mentees.length },
+    { label: '가용 슬롯', value: availSlots },
+    { label: '신청 대기', value: pendingSessions, warn: pendingSessions > 0 },
+    { label: '확정 세션', value: upcoming },
+    { label: '완료 세션', value: completed },
+    { label: '제출된 일지', value: DB.journals.length },
+    { label: '일지 미제출', value: journalPending, warn: journalPending > 0 },
+  ].map(s => `<div class="stat-card${s.warn ? ' stat-warn' : ''}">
+    <div class="stat-value">${s.value}</div>
+    <div class="stat-label">${s.label}</div>
+  </div>`).join('');
+
+  // ── 일지 미제출 멘토 목록 ──
+  const missingJournalSessions = DB.sessions.filter(s => s.status === 'completed' && !s.hasJournal);
+  const missingSection = document.getElementById('admin-journal-missing-section');
+  if (missingJournalSessions.length > 0) {
+    const rows = missingJournalSessions.map(s => {
+      const mentee = _idx.mentee[s.menteeId];
+      return `<tr>
+        <td><strong>${getMentorName(s.mentorId)}</strong></td>
+        <td>${getMenteeName(s.menteeId)} <span class="text-muted">(${mentee?.team || ''})</span></td>
+        <td>${formatDate(s.date)} ${s.time}</td>
+        <td><span style="font-size:11px;color:var(--text3)">${s.id}</span></td>
+      </tr>`;
+    }).join('');
+    missingSection.innerHTML = `<div class="card" style="border:1px solid var(--warn);margin-bottom:16px">
+      <div class="card-title" style="color:var(--warn)">⚠️ 일지 미제출 목록 (${missingJournalSessions.length}건) — 멘토에게 제출 요청하세요</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>멘토</th><th>멘티</th><th>멘토링 일시</th><th>세션 ID</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>`;
+  } else {
+    missingSection.innerHTML = '';
+  }
+
+  // ── 멘토-멘티 매칭 현황 테이블 ──
+  const pairMap = {};
+  DB.sessions.forEach(s => {
+    const key = `${s.mentorId}__${s.menteeId}`;
+    if (!pairMap[key]) pairMap[key] = { mentorId: s.mentorId, menteeId: s.menteeId, total: 0, completed: 0, upcoming: 0, pending: 0 };
+    pairMap[key].total++;
+    if (s.status === 'completed') pairMap[key].completed++;
+    else if (s.status === 'upcoming') pairMap[key].upcoming++;
+    else if (s.status === 'pending') pairMap[key].pending++;
+  });
+  const pairs = Object.values(pairMap).sort((a,b) => b.total - a.total);
+
+  const pairRows = pairs.length ? pairs.map(p => {
+    const mentor = _idx.mentor[p.mentorId];
+    const mentee = _idx.mentee[p.menteeId];
+    return `<tr>
+      <td><strong>${getMentorName(p.mentorId)}</strong><br><span class="text-muted">${mentor?.field || ''}</span></td>
+      <td>${getMenteeName(p.menteeId)}<br><span class="text-muted">${mentee?.team || ''}</span></td>
+      <td style="text-align:center"><strong>${p.total}</strong></td>
+      <td style="text-align:center"><span class="badge badge-green">${p.completed}</span></td>
+      <td style="text-align:center"><span class="badge badge-blue">${p.upcoming}</span></td>
+      <td style="text-align:center"><span class="badge badge-warn">${p.pending}</span></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">아직 매칭된 세션 없음</td></tr>`;
+
+  const pairSection = `<div class="card" style="margin-bottom:20px">
+    <div class="card-title">🤝 멘토-멘티 매칭 현황</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>멘토</th><th>멘티</th><th style="text-align:center">총 횟수</th><th style="text-align:center">완료</th><th style="text-align:center">확정</th><th style="text-align:center">대기</th></tr></thead>
+      <tbody>${pairRows}</tbody>
+    </table></div>
+  </div>`;
+
+  // 기존 매칭 현황 섹션 업데이트 (없으면 추가)
+  let pairEl = document.getElementById('admin-pair-section');
+  if (!pairEl) {
+    const statsEl = document.getElementById('admin-stats');
+    const div = document.createElement('div');
+    div.id = 'admin-pair-section';
+    statsEl.after(div);
+    pairEl = div;
+  }
+  pairEl.innerHTML = pairSection;
+
+  // ── 세션 목록 필터 적용 ──
+  const periodFilter = document.getElementById('admin-session-filter')?.value || 'all';
+  const statusFilter = document.getElementById('admin-status-filter')?.value || 'all';
+  let filteredSessions = [...DB.sessions].sort((a,b) => b.date.localeCompare(a.date));
+  if (periodFilter === 'week') filteredSessions = filteredSessions.filter(s => s.date >= weekStartStr);
+  if (periodFilter === 'month') filteredSessions = filteredSessions.filter(s => s.date >= monthStartStr);
+  if (statusFilter !== 'all') filteredSessions = filteredSessions.filter(s => s.status === statusFilter);
+
+  document.getElementById('admin-sessions-body').innerHTML = filteredSessions.length
+    ? filteredSessions.map(s => {
+        const mentor = _idx.mentor[s.mentorId];
+        const mentee = _idx.mentee[s.menteeId];
+        return `<tr>
+          <td><strong>${getMentorName(s.mentorId)}</strong><br><span class="text-muted">${mentor?.field || ''}</span></td>
+          <td>${getMenteeName(s.menteeId)}<br><span class="text-muted">${mentee?.team || ''}</span></td>
+          <td>${formatDate(s.date)} ${s.time}<br><span class="text-muted">${s.location}</span></td>
+          <td>${s.status === 'pending' ? '<span class="badge badge-warn">대기</span>' : s.status === 'upcoming' ? '<span class="badge badge-blue">확정</span>' : '<span class="badge badge-green">완료</span>'}</td>
+          <td>${s.hasJournal
+            ? `<span class="badge badge-green" style="cursor:pointer" onclick="viewJournal('${s.id}')">📄 일지 보기</span>`
+            : '<span class="badge badge-gray">미제출</span>'}</td>
+          <td>${(s.status === 'pending' || s.status === 'upcoming')
+            ? `<button class="btn btn-sm btn-danger" onclick="adminCancelSession('${s.id}')">취소</button>`
+            : '—'}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">해당 조건의 세션 없음</td></tr>`;
+}
+
+function setPeriodTab(tab) {
+  window._periodTab = tab;
+  // 탭 버튼 스타일 갱신
+  ['week','month','custom-month','custom-week','all'].forEach(t => {
+    const btn = document.getElementById('ptab-' + t);
+    if (btn) { btn.className = `btn btn-sm ${t === tab ? 'btn-primary' : 'btn-secondary'}`; btn.style.borderRadius = '999px'; }
+  });
+  // 커스텀 컨트롤 표시/숨김
+  const ctrl = document.getElementById('period-custom-controls');
+  if (!ctrl) return;
+  const now = new Date();
+  const yOpts = [2025,2026,2027].map(y => `<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}년</option>`).join('');
+  const mOpts = Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i+1===now.getMonth()+1?'selected':''}>${i+1}월</option>`).join('');
+  const wOpts = [1,2,3,4,5].map(w=>`<option value="${w}">제${w}주</option>`).join('');
+  if (tab === 'custom-month') {
+    ctrl.style.display = 'flex';
+    ctrl.innerHTML = `<select class="form-control" id="csel-year" style="width:auto">${yOpts}</select>
+      <select class="form-control" id="csel-month" style="width:auto">${mOpts}</select>
+      <button class="btn btn-primary btn-sm" onclick="window._renderPeriodStats()">조회</button>`;
+  } else if (tab === 'custom-week') {
+    ctrl.style.display = 'flex';
+    ctrl.innerHTML = `<select class="form-control" id="csel-year-w" style="width:auto">${yOpts}</select>
+      <select class="form-control" id="csel-month-w" style="width:auto">${mOpts}</select>
+      <select class="form-control" id="csel-week" style="width:auto">${wOpts}</select>
+      <button class="btn btn-primary btn-sm" onclick="window._renderPeriodStats()">조회</button>`;
+  } else {
+    ctrl.style.display = 'none';
+  }
+  if (window._renderPeriodStats) window._renderPeriodStats();
+}
+
+function renderAdminMentors() {
+  document.getElementById('admin-mentors-body').innerHTML = DB.mentors.map(m => {
+    const mySessions = getSessionsByMentor(m.id);
+    const completed = mySessions.filter(s => s.status === 'completed').length;
+    const total = mySessions.length;
+    const journalCount = DB.journals.filter(j => j.mentorId === m.id).length;
+    const journalRate = completed > 0 ? Math.round((journalCount / completed) * 100) : 0;
+    const rateColor = journalRate === 100 ? 'badge-green' : journalRate >= 50 ? 'badge-warn' : 'badge-danger';
+    const isActive = m.active !== false;
+    return `<tr style="${!isActive ? 'opacity:0.5' : ''}">
+      <td><strong>${m.name}</strong><br><span class="text-muted">${m.email}</span></td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.field}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.org}</td>
+      <td style="text-align:center"><strong>${total}</strong></td>
+      <td style="text-align:center"><span class="badge badge-green">${completed}</span></td>
+      <td style="text-align:center"><span class="badge ${rateColor}">${completed > 0 ? journalRate + '%' : '—'}</span></td>
+      <td><span class="badge ${isActive ? 'badge-green' : 'badge-gray'}">${isActive ? '활성' : '비활성'}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm btn-secondary" onclick="toggleMentorActive('${m.id}')">${isActive ? '비활성화' : '활성화'}</button>
+        <button class="btn btn-sm btn-danger" style="margin-left:4px" onclick="deleteMentor('${m.id}')">노출 중단</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleMentorActive(id) {
+  if (!ensureAuthorized('멘토 상태 변경', ['admin'])) return;
+  const m = _idx.mentor[id];
+  if (!m) return;
+  const prevActive = m.active;
+  m.active = m.active === false ? true : false;
+  renderAdminMentors();
+  toast(`${m.name} 멘토가 ${m.active ? '활성화' : '비활성화'}되었습니다`, 'success');
+  try {
+    await syncUpdate('mentors', id, { active: String(m.active) });
+  } catch(e) {
+    m.active = prevActive;
+    renderAdminMentors();
+    toast('상태 변경 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function deleteMentor(id) {
+  if (!ensureAuthorized('멘토 노출 중단', ['admin'])) return;
+  const m = _idx.mentor[id];
+  if (!m) return;
+  if (!confirm(`${m.name} 멘토를 예약 화면에서 숨기시겠습니까?`)) return;
+  const prevActive = m.active;
+  m.active = false;
+  renderAdminMentors();
+  toast(`${m.name} 멘토가 예약 화면에서 숨겨졌습니다`);
+  try {
+    await syncUpdate('mentors', id, { active: 'false' });
+  } catch(e) {
+    m.active = prevActive;
+    renderAdminMentors();
+    toast('숨기기 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+function renderAdminMentees() {
+  document.getElementById('admin-mentees-body').innerHTML = DB.mentees.map(m => {
+    const sessions = getSessionsByMentee(m.id);
+    const upcoming = sessions.filter(s => s.status === 'upcoming').length;
+    const completed = sessions.filter(s => s.status === 'completed').length;
+    return `<tr>
+      <td><strong>${m.name}</strong></td>
+      <td>${m.team}</td>
+      <td><span class="text-muted">${m.email}</span></td>
+      <td><strong>${sessions.length}</strong></td>
+      <td><span class="badge badge-blue">${upcoming}예정</span> <span class="badge badge-green">${completed}완료</span></td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteMentee('${m.id}')">삭제</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function deleteMentee(id) {
+  if (!ensureAuthorized('멘티 삭제', ['admin'])) return;
+  const m = _idx.mentee[id];
+  if (!m) return;
+  const activeSessions = getSessionsByMentee(id).filter(s => s.status === 'pending' || s.status === 'upcoming');
+  const warnMsg = activeSessions.length > 0
+    ? `${m.name} 멘티를 삭제하시겠습니까?\n⚠️ 진행 중인 세션 ${activeSessions.length}건이 자동 취소됩니다.`
+    : `${m.name} 멘티를 삭제하시겠습니까?`;
+  if (!confirm(warnMsg)) return;
+
+  // 백업: 멘티, 세션, 슬롯
+  const backupMentees = DB.mentees.slice();
+  const backupSessions = DB.sessions.map(s => ({ ...s }));
+  const backupSlots = DB.slots.map(s => ({ ...s }));
+
+  // 로컬 즉시 반영: 멘티 삭제
+  DB.mentees = DB.mentees.filter(x => x.id !== id);
+
+  // 활성 세션 취소 + 슬롯 해제 (로컬)
+  activeSessions.forEach(s => {
+    s.status = 'cancelled';
+    const slot = s.slotId ? _idx.slot[s.slotId] : null;
+    if (slot) { slot.status = 'available'; slot.sessionId = ''; }
+  });
+
+  renderAdminMentees();
+  if (activeSessions.length > 0) {
+    toast(`${m.name} 멘티 삭제 + 세션 ${activeSessions.length}건 취소됨`);
+  } else {
+    toast(`${m.name} 멘티가 삭제되었습니다`);
+  }
+
+  try {
+    const ops = [{ action: 'update', sheet: 'mentees', id, updates: { is_deleted: true } }];
+    activeSessions.forEach(s => {
+      ops.push({ action: 'update', sheet: 'sessions', id: s.id, updates: { status: 'cancelled' } });
+      if (s.slotId) {
+        ops.push({ action: 'update', sheet: 'slots', id: s.slotId, updates: { status: 'available', session_id: '' } });
+      }
+      ops.push({ action: 'append', sheet: 'sessionLog', data: {
+        session_id: s.id, action: 'cancel', cancelled_by: 'admin(멘티삭제)', cancelled_at: new Date().toISOString()
+      }});
+    });
+    await syncBatch(ops);
+  } catch(e) {
+    DB.mentees = backupMentees;
+    DB.sessions = backupSessions;
+    DB.slots = backupSlots;
+    _rebuildIndex();
+    renderAdminMentees();
+    toast('삭제 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+// ═══ 읽은 공지 ID 관리 (localStorage, 사용자별 분리) ═══
+function _noticeStorageKey() {
+  const uid = currentUser?.id || currentAuth?.email || 'anon';
+  return `mh_read_notices_${uid}`;
+}
+function _getReadNoticeIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(_noticeStorageKey()) || '[]')); } catch(e) { return new Set(); }
+}
+function _markNoticeRead(id) {
+  const ids = _getReadNoticeIds(); ids.add(id);
+  try { localStorage.setItem(_noticeStorageKey(), JSON.stringify([...ids])); } catch(e) {}
+}
+
+// ── 멘토/멘티: 공지사항 페이지 ──
+function renderNoticesPage(role) {
+  const elId = role === 'mentor' ? 'mentor-notices-content' : 'mentee-notices-content';
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const read = _getReadNoticeIds();
+  const myNotices = DB.notices
+    .filter(n => n.target === '전체' || n.target === (role === 'mentor' ? '멘토만' : '멘티만'))
+    .sort((a, b) => {
+      if (a.isImportant && !b.isImportant) return -1;
+      if (!a.isImportant && b.isImportant) return 1;
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+  if (!myNotices.length) { el.innerHTML = `<div class="card text-muted" style="text-align:center;padding:40px">등록된 공지사항이 없습니다</div>`; return; }
+  el.innerHTML = `<div class="page-grid">${myNotices.map(n => {
+    const isRead = read.has(n.id);
+    const importantBadge = n.isImportant ? `<span class="badge" style="background:var(--danger);color:#fff;margin-left:6px">❗ 중요</span>` : '';
+    const unreadDot = !isRead ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--danger);display:inline-block;margin-right:6px"></span>` : '';
+    return `<div class="page-col"><div class="card" style="cursor:pointer;border-left:3px solid ${n.isImportant ? 'var(--danger)' : 'var(--accent)'};margin-bottom:10px" onclick="openNoticeDetail('${n.id}','${role}')">
+      <div class="flex-between">
+        <div style="font-weight:600;font-size:15px">${unreadDot}${n.title}${importantBadge}</div>
+        <div style="font-size:11px;color:var(--text3)">${n.createdAt || ''}</div>
+      </div>
+      <div style="margin-top:6px;font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(n.content || '').slice(0,80)}${(n.content || '').length > 80 ? '...' : ''}</div>
+    </div></div>`;
+  }).join('')}</div>`;
+  _updateSidebarBadges(); // 뱃지만 갱신 (navigateTo 없음)
+}
+
+function openNoticeDetail(noticeId, role) {
+  _markNoticeRead(noticeId);
+  const n = DB.notices.find(x => x.id === noticeId);
+  if (!n) return;
+  const importantBadge = n.isImportant ? `<span class="badge" style="background:var(--danger);color:#fff;margin-left:6px">❗ 중요</span>` : '';
+  document.getElementById('notice-detail-title').innerHTML = n.title + importantBadge;
+  document.getElementById('notice-detail-meta').textContent = `대상: ${n.target} · ${n.createdAt || ''}`;
+  document.getElementById('notice-detail-body').textContent = n.content || '';
+  openModal('modal-notice-detail');
+  renderNoticesPage(role);
+}
+
+// ── 멘토/멘티: 요청하기 페이지 ──
+function renderRequestPage(role) {
+  const elId = role === 'mentor' ? 'mentor-request-content' : 'mentee-request-content';
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const myName = currentUser?.name || '';
+  const myId   = currentUser?.id || '';
+  const myRequests  = DB.requests.filter(r => {
+    const matchById = myId && r.authorId && r.authorId === myId;
+    const matchByName = r.authorName === myName;
+    return (matchById || matchByName) && normalizeRoleKey(r.authorRole) === role;
+  });
+  const _norm = s => (s || '').trim().replace(/\s+/g, ' ');
+  const adminMsgsIn = DB.requests.filter(r => {
+    if (r.type !== '관리자발신') return false;
+    const matchById = myId && r.receiverId && r.receiverId === myId;
+    const matchByName = _norm(r.receiver) === _norm(myName);
+    return (matchById || matchByName) &&
+      (normalizeRoleKey(r.receiver_role) === role || !r.receiver_role);
+  });
+  const statusBadge = s => s === '대기중' ? `<span class="badge badge-warn">대기중</span>` : s === '처리중' ? `<span class="badge badge-blue">처리중</span>` : `<span class="badge badge-green">처리완료</span>`;
+  el.innerHTML = `
+    <div class="page-col">
+      ${adminMsgsIn.length ? `
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📬 관리자 메시지 <span class="badge" style="background:var(--danger);color:#fff">${adminMsgsIn.filter(r => !r.reply_read).length}새글</span></div>
+        ${adminMsgsIn.slice().reverse().map(r => `
+          <div style="border:1px solid ${r.reply_read === true || r.reply_read === 'true' ? 'var(--border)' : 'var(--accent)'};border-radius:var(--radius-xs);padding:12px;margin-bottom:8px;cursor:pointer" onclick="markReplyRead('${r.id}')">
+            <div class="flex-between" style="margin-bottom:4px">
+              <span style="font-weight:600">${r.reply_read === true || r.reply_read === 'true' ? '' : '🔴 '}${r.title}</span>
+              <span class="badge badge-blue">${r.message_type || '안내'}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text3)">${r.createdAt || ''}</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:6px">${r.content || ''}</div>
+          </div>`).join('')}
+      </div>` : ''}
+      <div class="card">
+        <div class="card-title">✉️ 새 요청 작성</div>
+        <div class="form-group">
+          <label class="form-label">요청 유형</label>
+          <select class="form-control" id="req-type-${role}">
+            <option>일정변경</option><option>멘토변경</option><option>기타문의</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">제목</label>
+          <input type="text" class="form-control" id="req-title-${role}" placeholder="요청 제목을 입력하세요">
+        </div>
+        <div class="form-group">
+          <label class="form-label">내용</label>
+          <textarea class="form-control" id="req-content-${role}" rows="4" placeholder="요청 내용을 자세히 적어주세요"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="submitRequest('${role}')">📨 제출하기</button>
+      </div>
+    </div>
+    <div class="page-col">
+      <div class="card">
+        <div class="card-title">📋 내 요청 내역 <span class="badge" style="background:var(--accent-ultra);color:var(--accent)">${myRequests.length}</span></div>
+        ${!myRequests.length ? `<p class="text-muted">아직 제출한 요청이 없습니다</p>` :
+          myRequests.slice().reverse().map(r => `
+            <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
+              <div class="flex-between" style="margin-bottom:4px">
+                <span style="font-weight:600">${r.title}</span>${statusBadge(r.status)}
+              </div>
+              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">유형: ${r.type} · ${r.createdAt || ''}</div>
+              <div style="font-size:13px;color:var(--text2)">${r.content || ''}</div>
+              ${r.reply ? `<div style="margin-top:8px;padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent);cursor:pointer" onclick="markReplyRead('${r.id}')">
+                <span style="font-size:11px;color:var(--accent);font-weight:600">관리자 회신 ${r.reply_read ? '✅ 읽음' : '🔴 새 회신'}</span>
+                <br><span style="font-size:13px">${r.reply}</span>
+              </div>` : ''}
+            </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+async function markReplyRead(reqId) {
+  if (!ensureAuthorized('메시지 읽음 처리', ['mentor', 'mentee'])) return;
+  const req = DB.requests.find(r => r.id === reqId);
+  if (!req || req.reply_read === true || req.reply_read === 'true') return;
+  req.reply_read = true;
+  _updateSidebarBadges();
+  // 현재 페이지 재렌더 (읽음 표시 반영)
+  const activePage = document.querySelector('.page.active');
+  if (activePage) renderPage(activePage.id);
+  try {
+    await syncUpdate('requests', reqId, { reply_read: 'true' });
+  } catch(e) {
+    req.reply_read = false;
+    _updateSidebarBadges();
+    if (activePage) renderPage(activePage.id);
+    toast('읽음 처리 동기화 실패', 'error');
+  }
+}
+
+async function submitRequest(role) {
+  if (!ensureAuthorized('요청 제출', [role])) return;
+  const type    = document.getElementById(`req-type-${role}`).value;
+  const title   = document.getElementById(`req-title-${role}`).value.trim();
+  const content = document.getElementById(`req-content-${role}`).value.trim();
+  if (!title || !content) { toast('제목과 내용을 모두 입력해주세요', 'error'); return; }
+  const req = {
+    id: 'rq' + Date.now(),
+    authorId: currentUser?.id || '',
+    authorName: currentUser?.name || '',
+    authorRole: role,
+    type, title, content,
+    status: '대기중',
+    reply: '',
+    reply_read: 'false',
+    sender: '',
+    receiverId: '',
+    receiver: '',
+    receiver_role: '',
+    message_type: '',
+    createdAt: serverTimestamp()
+  };
+  DB.requests.push(req);
+  document.getElementById(`req-title-${role}`).value = '';
+  document.getElementById(`req-content-${role}`).value = '';
+  renderRequestPage(role);
+  toast('요청이 제출되었습니다 ✅', 'success');
+  try {
+    await syncInsert('request', req);
+  } catch(e) {
+    DB.requests = DB.requests.filter(r => r.id !== req.id);
+    renderRequestPage(role);
+    toast('요청 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+// ── 관리자: 요청 관리 ──
+function renderAdminRequests() {
+  const el = document.getElementById('admin-requests-content');
+  if (!el) return;
+  const pending   = DB.requests.filter(r => r.status === '대기중');
+  const others    = DB.requests.filter(r => r.status !== '대기중');
+  const statusBadge = s => s === '대기중' ? `<span class="badge badge-warn">대기중</span>` : s === '처리중' ? `<span class="badge badge-blue">처리중</span>` : `<span class="badge badge-green">처리완료</span>`;
+  const cardHtml = (r) => `
+    <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
+      <div class="flex-between" style="margin-bottom:4px">
+        <span style="font-weight:600">${r.title}</span>${statusBadge(r.status)}
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">${normalizeRoleKey(r.authorRole) === 'mentor' ? '멘토' : '멘티'} ${r.authorName} · 유형: ${r.type} · ${r.createdAt || ''}</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${r.content || ''}</div>
+      ${r.reply ? `<div style="padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent);font-size:13px;margin-bottom:8px"><b style="font-size:11px;color:var(--accent)">회신 완료</b><br>${r.reply}</div>` : ''}
+      ${r.status !== '처리완료' ? `
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <textarea class="form-control" id="reply-${r.id}" rows="2" placeholder="회신 내용 입력..." style="flex:1">${r.reply || ''}</textarea>
+          <button class="btn btn-primary btn-sm" onclick="replyRequest('${r.id}')">회신 보내기</button>
+        </div>` : ''}
+    </div>`;
+  // 관리자 발신 메시지 / 일반 요청 분리
+  const adminMsgs = DB.requests.filter(r => r.type === '관리자발신');
+  const userReqs  = DB.requests.filter(r => r.type !== '관리자발신');
+  const pendingUser = userReqs.filter(r => r.status === '대기중');
+  const othersUser  = userReqs.filter(r => r.status !== '대기중');
+
+  // 수신자 옵션 생성
+  const receiverOptions = [
+    ...DB.mentors.map(m => `<option value="${m.name}|mentor|${m.id}">멘토 · ${m.name}</option>`),
+    ...DB.mentees.map(m => `<option value="${m.name}|mentee|${m.id}">멘티 · ${m.name}</option>`)
+  ].join('');
+
+  el.innerHTML = `
+    <div class="page-col">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📤 새 메시지 보내기</div>
+        <div class="form-group">
+          <label class="form-label">수신자</label>
+          <select class="form-control" id="admin-msg-receiver">${receiverOptions}</select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">메시지 유형</label>
+          <select class="form-control" id="admin-msg-type">
+            <option>일반 안내</option><option>일정 안내</option><option>주의사항</option><option>기타</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">제목</label>
+          <input type="text" class="form-control" id="admin-msg-title" placeholder="메시지 제목">
+        </div>
+        <div class="form-group">
+          <label class="form-label">내용</label>
+          <textarea class="form-control" id="admin-msg-content" rows="3" placeholder="메시지 내용을 입력하세요"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="sendAdminMessage()">📨 발송하기</button>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 발신 메시지 내역 <span class="badge" style="background:var(--accent-ultra);color:var(--accent)">${adminMsgs.length}</span></div>
+        ${!adminMsgs.length ? `<p class="text-muted">발신한 메시지가 없습니다</p>` :
+          adminMsgs.slice().reverse().map(r => `
+          <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
+            <div class="flex-between" style="margin-bottom:4px">
+              <span style="font-weight:600">${r.title}</span>
+              <span class="badge ${r.reply_read === true || r.reply_read === 'true' ? 'badge-green' : 'badge-warn'}">${r.reply_read ? '읽음' : '미확인'}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text3)">→ ${normalizeRoleKey(r.receiver_role) === 'mentor' ? '멘토' : '멘티'} ${r.receiver} · ${r.message_type} · ${r.createdAt || ''}</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:4px">${r.content || ''}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="page-col">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">⏳ 대기중 <span class="badge" style="background:var(--danger);color:#fff">${pendingUser.length}</span></div>
+        ${!pendingUser.length ? `<p class="text-muted">대기 중인 요청이 없습니다</p>` : pendingUser.map(cardHtml).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">✅ 처리완료 / 처리중 <span class="badge" style="background:var(--accent-ultra);color:var(--accent)">${othersUser.length}</span></div>
+        ${!othersUser.length ? `<p class="text-muted">처리된 요청이 없습니다</p>` : othersUser.slice().reverse().map(cardHtml).join('')}
+      </div>
+    </div>`;
+}
+
+async function replyRequest(reqId) {
+  if (!ensureAuthorized('요청 회신', ['admin'])) return;
+  const req = DB.requests.find(r => r.id === reqId);
+  if (!req) return;
+  const reply = (document.getElementById(`reply-${reqId}`)?.value || '').trim();
+  if (!reply) { toast('회신 내용을 입력하세요', 'error'); return; }
+  const prevReply = req.reply;
+  const prevStatus = req.status;
+  req.reply  = reply;
+  req.status = '처리완료';
+  renderAdminRequests();
+  _updateSidebarBadges();
+  toast('회신이 전송되었습니다 ✅', 'success');
+  try {
+    await syncUpdate('requests', reqId, { reply, status: '처리완료' });
+  } catch(e) {
+    req.reply = prevReply;
+    req.status = prevStatus;
+    renderAdminRequests();
+    _updateSidebarBadges();
+    toast('회신 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function sendAdminMessage() {
+  if (!ensureAuthorized('관리자 메시지 발송', ['admin'])) return;
+  const receiverRaw  = document.getElementById('admin-msg-receiver')?.value || '';
+  const parts = receiverRaw.split('|');
+  const receiver = (parts[0] || '').trim();
+  const receiver_role = normalizeRoleKey(parts[1]);
+  const receiverId = (parts[2] || '').trim();
+  const message_type = document.getElementById('admin-msg-type')?.value || '';
+  const title        = document.getElementById('admin-msg-title')?.value.trim() || '';
+  const content      = document.getElementById('admin-msg-content')?.value.trim() || '';
+  if (!receiver || !title || !content) { toast('수신자, 제목, 내용을 모두 입력하세요', 'error'); return; }
+  const msg = {
+    id: 'rq' + Date.now(),
+    authorId: '',
+    authorName: '',
+    authorRole: '',
+    type: '관리자발신',
+    title, content,
+    status: '전송완료',
+    reply: '',
+    reply_read: 'false',
+    sender: '관리자',
+    receiverId, receiver, receiver_role, message_type,
+    createdAt: serverTimestamp()
+  };
+  DB.requests.push(msg);
+  document.getElementById('admin-msg-title').value = '';
+  document.getElementById('admin-msg-content').value = '';
+  renderAdminRequests();
+  toast(`${normalizeRoleKey(receiver_role) === 'mentor' ? '멘토' : '멘티'} ${receiver}에게 메시지를 발송했습니다 ✅`, 'success');
+  try {
+    await syncInsert('request', msg);
+  } catch(e) {
+    DB.requests = DB.requests.filter(r => r.id !== msg.id);
+    renderAdminRequests();
+    toast('메시지 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+// ── 관리자: 공지 작성 ──
+function renderAdminNotices() {
+  const el = document.getElementById('admin-notices-content');
+  if (!el) return;
+  const sorted = DB.notices.slice().sort((a, b) => {
+    if (a.isImportant && !b.isImportant) return -1;
+    if (!a.isImportant && b.isImportant) return 1;
+    return (b.createdAt || '').localeCompare(a.createdAt || '');
+  });
+  el.innerHTML = `
+    <div class="page-col">
+      <div class="card">
+        <div class="card-title">✏️ 새 공지 작성</div>
+        <div class="form-group">
+          <label class="form-label">대상</label>
+          <select class="form-control" id="notice-target">
+            <option>전체</option><option>멘토만</option><option>멘티만</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">제목</label>
+          <input type="text" class="form-control" id="notice-title" placeholder="공지 제목">
+        </div>
+        <div class="form-group">
+          <label class="form-label">내용</label>
+          <textarea class="form-control" id="notice-content" rows="5" placeholder="공지 내용을 입력하세요"></textarea>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" id="notice-important" style="width:16px;height:16px">
+          <label for="notice-important" style="margin:0;font-size:13px;cursor:pointer">❗ 중요 공지로 등록 (상단 고정 + 빨간 뱃지)</label>
+        </div>
+        <button class="btn btn-primary" onclick="createNotice()">📢 공지 등록</button>
+      </div>
+    </div>
+    <div class="page-col">
+      <div class="card">
+        <div class="card-title">📋 등록된 공지 <span class="badge" style="background:var(--accent-ultra);color:var(--accent)">${sorted.length}</span></div>
+        ${!sorted.length ? `<p class="text-muted">등록된 공지가 없습니다</p>` :
+          sorted.map(n => `
+            <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:10px;margin-bottom:8px;border-left:3px solid ${n.isImportant ? 'var(--danger)' : 'var(--accent)'}">
+              <div class="flex-between">
+                <span style="font-weight:600">${n.isImportant ? '❗ ' : ''}${n.title}</span>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:11px;color:var(--text3)">${n.target} · ${n.createdAt || ''}</span>
+                  <button class="btn btn-sm" style="color:var(--danger);border:1px solid var(--danger);background:transparent;padding:2px 8px;font-size:11px" onclick="deleteNotice('${n.id}')">삭제</button>
+                </div>
+              </div>
+              <div style="font-size:13px;color:var(--text2);margin-top:4px">${(n.content || '').slice(0,100)}${(n.content || '').length > 100 ? '...' : ''}</div>
+            </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+async function createNotice() {
+  if (!ensureAuthorized('공지 등록', ['admin'])) return;
+  const target      = document.getElementById('notice-target').value;
+  const title       = document.getElementById('notice-title').value.trim();
+  const content     = document.getElementById('notice-content').value.trim();
+  const isImportant = document.getElementById('notice-important').checked;
+  if (!title || !content) { toast('제목과 내용을 모두 입력해주세요', 'error'); return; }
+  const notice = {
+    id: 'nt' + Date.now(),
+    target, title, content, isImportant,
+    createdAt: serverTimestamp()
+  };
+  DB.notices.push(notice);
+  document.getElementById('notice-title').value   = '';
+  document.getElementById('notice-content').value = '';
+  document.getElementById('notice-important').checked = false;
+  renderAdminNotices();
+  toast(`공지가 등록되었습니다 (대상: ${target}) ✅`, 'success');
+  try {
+    await syncInsert('notice', { ...notice, isImportant: String(isImportant) });
+  } catch(e) {
+    DB.notices = DB.notices.filter(n => n.id !== notice.id);
+    renderAdminNotices();
+    toast('공지 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function deleteNotice(noticeId) {
+  if (!ensureAuthorized('공지 삭제', ['admin'])) return;
+  if (!confirm('이 공지를 삭제하시겠습니까?\n멘토/멘티 화면에서도 즉시 사라집니다.')) return;
+  const backup = DB.notices.slice();
+  DB.notices = DB.notices.filter(n => n.id !== noticeId);
+  renderAdminNotices();
+  toast('공지가 삭제되었습니다', 'success');
+  try {
+    await syncUpdate('notices', noticeId, { is_deleted: 'true' });
+  } catch(e) {
+    DB.notices = backup;
+    renderAdminNotices();
+    toast('삭제 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function addMentee() {
+  if (!ensureAuthorized('멘티 추가', ['admin'])) return;
+  const name  = document.getElementById('new-mentee-name').value;
+  const team  = document.getElementById('new-mentee-team').value;
+  const email = document.getElementById('new-mentee-email').value.trim().toLowerCase();
+  if (!name || !team) { toast('이름과 팀명은 필수입니다', 'error'); return; }
+  if (!email) { toast('이메일을 입력해야 로그인 계정이 생성됩니다', 'error'); return; }
+  if (DB.mentees.some(m => String(m.email || '').toLowerCase() === email.toLowerCase())) {
+    toast('이미 등록된 멘티 이메일입니다', 'error');
+    return;
+  }
+  const newId = 'me' + Date.now();
+  const newMentee = { id: newId, name, team, email };
+  // 로컬 즉시 반영 (UX)
+  DB.mentees.push(newMentee);
+  ['new-mentee-name','new-mentee-team','new-mentee-email'].forEach(id => document.getElementById(id).value = '');
+  closeModal('modal-add-mentee');
+  renderAdminMentees();
+  toast('멘티 등록 중...', 'info');
+  try {
+    await syncBatch([
+      { action: 'append', sheet: 'mentees', data: { id: newId, name, team, email } },
+      { action: 'upsertUser', data: { email, role: 'mentee', name, linkedId: newId } }
+    ]);
+    toast(`${name} 멘티 추가 완료 — Google 로그인 계정도 자동 등록됐습니다 ✅`, 'success');
+  } catch(e) {
+    DB.mentees = DB.mentees.filter(m => m.id !== newId);
+    renderAdminMentees();
+    toast(`멘티 등록 실패: ${e.message || '서버 오류'} — 다시 시도해주세요`, 'error');
+  }
+}
+
+function renderAdminJournals() {
+  const el = document.getElementById('journals-list');
+
+  // 멘토 필터 옵션 갱신
+  const filterEl = document.getElementById('journal-mentor-filter');
+  if (filterEl) {
+    const currentVal = filterEl.value;
+    filterEl.innerHTML = `<option value="all">전체 멘토</option>` +
+      DB.mentors.map(m => `<option value="${m.id}" ${currentVal === m.id ? 'selected' : ''}>${m.name}</option>`).join('');
+    if (currentVal) filterEl.value = currentVal;
+  }
+
+  // 멘티 필터 옵션 갱신
+  const menteeFilterEl = document.getElementById('journal-mentee-filter');
+  if (menteeFilterEl) {
+    const cur = menteeFilterEl.value;
+    menteeFilterEl.innerHTML = `<option value="all">전체 멘티</option>` +
+      DB.mentees.map(m => `<option value="${m.id}" ${cur===m.id?'selected':''}>${m.name}</option>`).join('');
+    if (cur) menteeFilterEl.value = cur;
+  }
+
+  const selectedMentor = filterEl?.value || 'all';
+  const selectedMentee = menteeFilterEl?.value || 'all';
+  const dateFrom = document.getElementById('journal-date-from')?.value || '';
+  const dateTo   = document.getElementById('journal-date-to')?.value || '';
+
+  let journals = [...DB.journals].sort((a,b) => (b.submittedAt||b.date||'').localeCompare(a.submittedAt||a.date||''));
+  if (selectedMentor !== 'all') journals = journals.filter(j => j.mentorId === selectedMentor);
+  if (selectedMentee !== 'all') journals = journals.filter(j => j.menteeId === selectedMentee);
+  if (dateFrom) journals = journals.filter(j => (j.date||'') >= dateFrom);
+  if (dateTo)   journals = journals.filter(j => (j.date||'') <= dateTo);
+
+  if (!journals.length) {
+    el.innerHTML = `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>${selectedMentor === 'all' ? '제출된 일지 없음' : '해당 멘토의 일지 없음'}</h4><p>멘토가 일지를 제출하면 여기에 표시됩니다</p></div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="page-grid">${journals.map(j => {
+    return `<div class="page-col"><div class="card">
+      <div class="flex-between" style="margin-bottom:12px">
+        <div>
+          <div class="fw-600" style="font-size:15px">${getMentorName(j.mentorId)} → ${getMenteeName(j.menteeId)}</div>
+          <div class="text-muted">${formatDate(j.date)} · ${j.type || ''} ${j.duration || ''} · 제출: ${j.submittedAt}</div>
+        </div>
+        <div class="flex gap-8">
+          <span class="badge badge-blue">${j.rating}</span>
+          <button class="btn btn-sm btn-secondary" onclick="viewJournalById('${j.id}')">상세 보기</button>
+        </div>
+      </div>
+      <div class="session-topic">${(j.content || '').substring(0, 80)}…</div>
+    </div></div>`;
+  }).join('')}</div>`;
+}
+
+function renderSettings() {
+  document.getElementById('supabase-url').value = DB.settings.supabaseUrl || '';
+  document.getElementById('supabase-key').value = DB.settings.supabaseAnonKey || '';
+  document.getElementById('google-client-id').value = DB.settings.googleClientId || '';
+}
+
+// ═══ 모달 ═══
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id === 'modal-add-slot') {
+    selectedTimes = [];
+    document.querySelectorAll('#modal-time-slots .time-slot').forEach(el => el.classList.remove('selected'));
+  }
+}
+
+function toggleTime(el, time) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) selectedTimes.push(time);
+  else selectedTimes = selectedTimes.filter(t => t !== time);
+}
+
+const ALL_TIMES = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00'];
+
+function renderTimeSlots() {
+  const dateVal = document.getElementById('slot-date').value;
+  const container = document.getElementById('modal-time-slots');
+  const noMsg = document.getElementById('no-time-msg');
+  if (!dateVal) { container.innerHTML = ''; if (noMsg) noMsg.style.display = 'none'; return; }
+  selectedTimes = [];
+  const now = new Date();
+  const selDate = new Date(dateVal + 'T00:00:00+09:00');
+  const isToday = selDate.getFullYear() === now.getFullYear() && selDate.getMonth() === now.getMonth() && selDate.getDate() === now.getDate();
+  const available = ALL_TIMES.filter(t => {
+    if (!isToday) return true;
+    const [h, m] = t.split(':').map(Number);
+    return (h * 60 + m) > (now.getHours() * 60 + now.getMinutes() + 30);
+  });
+  if (available.length === 0) {
+    container.innerHTML = '';
+    if (noMsg) noMsg.style.display = 'block';
+    return;
+  }
+  if (noMsg) noMsg.style.display = 'none';
+  container.innerHTML = available.map(t => `<div class="time-slot" onclick="toggleTime(this,'${t}')">${t}</div>`).join('');
+}
+
+async function addSlots() {
+  if (!ensureAuthorized('일정 등록', ['mentor'])) return;
+  const date = document.getElementById('slot-date').value;
+  const location = document.getElementById('slot-location').value;
+  if (!date || !selectedTimes.length) { toast('날짜와 시간을 선택하세요', 'error'); return; }
+  if (date < todayStr()) { toast('과거 날짜에는 일정을 등록할 수 없습니다', 'error'); return; }
+  // 등록 시점에서 이미 지난 시간 이중 검증
+  const now = new Date();
+  const validTimes = selectedTimes.filter(t => {
+    const slotDT = new Date(`${date}T${t}:00+09:00`);
+    return slotDT > now;
+  });
+  if (validTimes.length === 0) { toast('이미 지난 시간은 등록할 수 없습니다', 'error'); return; }
+  if (validTimes.length < selectedTimes.length) toast(`${selectedTimes.length - validTimes.length}개 시간은 이미 지나서 제외됩니다`, 'warn');
+
+  // 1. 즉시 모달 닫기 + 로컬 반영 (낙관적 업데이트)
+  const addedSlots = [];
+  let skipCount = 0;
+  for (const time of validTimes) {
+    const isDuplicate = DB.slots.some(s => s.mentorId === currentUser?.id && s.date === date && s.time === time && s.status !== 'deleted');
+    if (isDuplicate) { skipCount++; continue; }
+    const slot = { id: 's' + Date.now() + Math.random().toString(36).slice(2), mentorId: currentUser?.id, date, time, location, status: 'available' };
+    DB.slots.push(slot);
+    addedSlots.push(slot);
+  }
+  if (skipCount > 0) toast(`${skipCount}개는 이미 등록된 시간입니다`, 'warn');
+  if (addedSlots.length === 0) { return; }
+
+  selectedTimes = [];
+  closeModal('modal-add-slot');
+  renderMentorSchedule();
+  toast(`${addedSlots.length}개 일정이 등록되었습니다 ✓`, 'success');
+
+  // 2. 백그라운드에서 Supabase 저장 (병렬)
+  try {
+    await Promise.all(addedSlots.map(slot =>
+      syncInsert('slot', { id: slot.id, mentorId: slot.mentorId, date: slot.date, time: slot.time, location: slot.location, status: slot.status, sessionId: '' })
+    ));
+  } catch(e) {
+    // 저장 실패 시 롤백
+    addedSlots.forEach(slot => { DB.slots = DB.slots.filter(s => s.id !== slot.id); });
+    renderMentorSchedule();
+    toast('서버 저장 실패 — 등록이 취소되었습니다', 'error');
+  }
+}
+
+async function deleteSlot(id) {
+  if (!ensureAuthorized('일정 삭제', ['mentor'])) return;
+  const backup = DB.slots.slice();
+  DB.slots = DB.slots.filter(s => s.id !== id);
+  renderMentorSchedule();
+  toast('일정을 삭제했습니다');
+  try {
+    await syncUpdate('slots', id, { status: 'deleted' });
+  } catch(e) {
+    DB.slots = backup;
+    renderMentorSchedule();
+    toast('삭제 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function cancelSession(sessionId, callerRole) {
+  if (!ensureAuthorized('세션 취소', callerRole === 'mentor' ? ['mentor'] : ['mentee'])) return;
+  if (!confirm('취소하시겠습니까? 슬롯이 다시 열립니다.')) return;
+  const session = DB.sessions.find(s => s.id === sessionId);
+  if (!session) return;
+  const backupSessions = DB.sessions.slice();
+  const backupSlots = DB.slots.slice();
+  const prevSlotStatus = DB.slots.find(s => s.id === session.slotId)?.status;
+  const slot = DB.slots.find(s => s.id === session.slotId);
+  if (slot) { slot.status = 'available'; delete slot.sessionId; }
+  DB.sessions = DB.sessions.filter(s => s.id !== sessionId);
+  if (callerRole === 'mentor') renderMentorSessions(); else renderMenteeSessions();
+  toast('취소되었습니다');
+  try {
+    await syncBatch([
+      { action: 'update', sheet: 'sessions', id: sessionId, updates: { status: 'cancelled' } },
+      { action: 'update', sheet: 'slots', id: session.slotId, updates: { status: 'available', sessionId: '' } },
+      { action: 'append', sheet: 'sessionLog', data: { sessionId, action: 'cancelled', cancelledBy: callerRole, cancelledAt: serverTimestamp() } }
+    ]);
+  } catch(e) {
+    DB.sessions = backupSessions; DB.slots = backupSlots;
+    if (callerRole === 'mentor') renderMentorSessions(); else renderMenteeSessions();
+    toast('취소 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function adminCancelSession(sessionId) {
+  if (!ensureAuthorized('관리자 세션 취소', ['admin'])) return;
+  if (!confirm('이 세션을 강제 취소하시겠습니까?')) return;
+  const session = DB.sessions.find(s => s.id === sessionId);
+  if (!session) return;
+  const backupSessions = DB.sessions.slice();
+  const backupSlots = DB.slots.slice();
+  const slot = DB.slots.find(s => s.id === session.slotId);
+  if (slot) { slot.status = 'available'; delete slot.sessionId; }
+  DB.sessions = DB.sessions.filter(s => s.id !== sessionId);
+  renderAdminDashboard();
+  toast('세션이 취소되었습니다');
+  try {
+    await syncBatch([
+      { action: 'update', sheet: 'sessions', id: sessionId, updates: { status: 'cancelled' } },
+      { action: 'update', sheet: 'slots', id: session.slotId, updates: { status: 'available', sessionId: '' } },
+      { action: 'append', sheet: 'sessionLog', data: { sessionId, action: 'admin_cancelled', cancelledBy: 'admin', cancelledAt: serverTimestamp() } }
+    ]);
+  } catch(e) {
+    DB.sessions = backupSessions; DB.slots = backupSlots;
+    renderAdminDashboard();
+    toast('취소 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function confirmSession(sessionId) {
+  if (!ensureAuthorized('세션 확정', ['mentor'])) return;
+  const session = DB.sessions.find(s => s.id === sessionId);
+  if (!session) return;
+  const prevStatus = session.status;
+  const slot = DB.slots.find(s => s.id === session.slotId);
+  const prevSlotStatus = slot?.status;
+  session.status = 'upcoming';
+  if (slot) slot.status = 'booked';
+  renderMentorSessions();
+  toast('멘토링이 확정되었습니다 ✅', 'success');
+  try {
+    await syncBatch([
+      { action: 'update', sheet: 'sessions', id: sessionId, updates: { status: 'upcoming' } },
+      { action: 'update', sheet: 'slots', id: session.slotId, updates: { status: 'booked' } }
+    ]);
+  } catch(e) {
+    session.status = prevStatus;
+    if (slot) slot.status = prevSlotStatus;
+    renderMentorSessions();
+    toast('확정 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function rejectSession(sessionId) {
+  if (!ensureAuthorized('세션 거절', ['mentor'])) return;
+  const session = DB.sessions.find(s => s.id === sessionId);
+  if (!session) return;
+  if (!confirm('신청을 거절하시겠습니까? 슬롯이 다시 열립니다.')) return;
+  const backupSessions = DB.sessions.slice();
+  const backupSlots = DB.slots.slice();
+  const slot = DB.slots.find(s => s.id === session.slotId);
+  if (slot) { slot.status = 'available'; delete slot.sessionId; }
+  DB.sessions = DB.sessions.filter(s => s.id !== sessionId);
+  renderMentorSessions();
+  toast('신청을 거절했습니다', 'error');
+  try {
+    await syncBatch([
+      { action: 'update', sheet: 'sessions', id: sessionId, updates: { status: 'rejected' } },
+      { action: 'update', sheet: 'slots', id: session.slotId, updates: { status: 'available', sessionId: '' } },
+      { action: 'append', sheet: 'sessionLog', data: { sessionId, action: 'rejected', cancelledBy: 'mentor', cancelledAt: serverTimestamp() } }
+    ]);
+  } catch(e) {
+    DB.sessions = backupSessions; DB.slots = backupSlots;
+    renderMentorSessions();
+    toast('거절 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function completeSession(sessionId) {
+  if (!ensureAuthorized('완료 처리', ['mentor'])) return;
+  const session = DB.sessions.find(s => s.id === sessionId);
+  if (!session) return;
+
+  // 멘토링 시작 시간 이전에는 완료 처리 불가 (KST 기준)
+  if (session.date && session.time) {
+    const sessionStart = new Date(`${session.date}T${session.time}:00+09:00`);
+    const now = new Date();
+    if (now < sessionStart) {
+      const dateStr = session.date.replace(/-/g, '.');
+      toast(`멘토링 시작 시간(${dateStr} ${session.time}) 이후에만 완료 처리할 수 있습니다`, 'error');
+      return;
+    }
+  }
+
+  if (!confirm('멘토링을 완료 처리하시겠습니까?\n완료 후 일지 작성 화면이 열립니다.')) return;
+  const prevStatus = session.status;
+  session.status = 'completed';
+  renderMentorSessions();
+  try {
+    await syncUpdate('sessions', sessionId, { status: 'completed' });
+    toast('완료 처리되었습니다 — 일지를 작성해주세요', 'success');
+    setTimeout(() => openJournalModal(sessionId), 400);
+  } catch(e) {
+    session.status = prevStatus;
+    renderMentorSessions();
+    toast('완료 처리 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+function openBookModal(slotId) {
+  const slot = DB.slots.find(s => s.id === slotId);
+  if (!slot || slot.status !== 'available') {
+    toast('이미 예약되었거나 사용할 수 없는 시간입니다', 'error');
+    renderMenteeBook();
+    return;
+  }
+  // 같은 멘토에 진행 중인 예약이 있으면 중복 방지
+  const hasActive = DB.sessions.some(s => s.menteeId === currentUser?.id && s.mentorId === slot.mentorId && (s.status === 'pending' || s.status === 'upcoming'));
+  if (hasActive) {
+    toast('해당 멘토와 이미 진행 중인 예약이 있습니다', 'error');
+    return;
+  }
+  bookingSlotId = slotId;
+  document.getElementById('book-slot-id').value = slotId;
+  document.getElementById('book-summary').innerHTML =
+    `<strong>🎓 ${getMentorName(slot.mentorId)}</strong> 멘토<br>📅 ${formatDate(slot.date)} ${slot.time}<br>📍 ${slot.location}`;
+  openModal('modal-book');
+}
+
+async function confirmBooking() {
+  if (!ensureAuthorized('예약 신청', ['mentee'])) return;
+  const topic = document.getElementById('book-topic').value;
+  if (!topic.trim()) { toast('요청 사항을 입력해주세요', 'error'); return; }
+  if (topic.trim().length < 10) { toast('요청 사항을 10자 이상 입력해주세요', 'error'); return; }
+  const slot = DB.slots.find(s => s.id === bookingSlotId);
+  if (!slot || slot.status !== 'available') {
+    toast('이미 선점된 시간입니다. 목록을 새로고침합니다.', 'error');
+    closeModal('modal-book');
+    await loadData();
+    return;
+  }
+  // 즉시 로딩 피드백
+  const bookBtn = document.querySelector('#modal-book .btn-primary');
+  if (bookBtn) { bookBtn.disabled = true; bookBtn.textContent = '예약 처리 중...'; }
+
+  if (hasSupabaseIntegration() && !isDemoMode) {
+    try {
+      // Supabase RPC: book_session (PostgreSQL FOR UPDATE 잠금)
+      const sb = getSupabase();
+      const { data, error } = await sb.rpc('book_session', {
+        p_slot_id: bookingSlotId,
+        p_mentee_id: currentUser?.id || 'me1',
+        p_topic: topic.trim()
+      });
+      if (error) throw new Error(error.message);
+      if (!data.ok) throw new Error(data.error || '예약에 실패했습니다');
+      // 서버에서 생성된 세션을 로컬 DB에 반영
+      const sess = data.session;
+      const newSession = {
+        id: sess.id, mentorId: sess.mentorId, menteeId: sess.menteeId,
+        slotId: sess.slotId, date: sess.date, time: sess.time,
+        location: sess.location, topic: sess.topic, status: sess.status,
+        hasJournal: sess.hasJournal, hasFeedback: sess.hasFeedback
+      };
+      DB.sessions.push(newSession);
+      slot.status = 'pending';
+      slot.sessionId = newSession.id;
+      _rebuildIndex();
+    } catch (e) {
+      if (bookBtn) { bookBtn.disabled = false; bookBtn.textContent = '예약 신청하기'; }
+      toast(e.message || '예약 처리 중 오류가 발생했습니다', 'error');
+      await loadData();
+      return;
+    }
+  } else {
+    // 데모 모드: 로컬 전용
+    const newSession = {
+      id: 'sess' + Date.now(), mentorId: slot.mentorId,
+      menteeId: currentUser?.id || 'me1', slotId: bookingSlotId,
+      date: slot.date, time: slot.time, location: slot.location, topic,
+      status: 'pending', hasJournal: false, hasFeedback: false
+    };
+    DB.sessions.push(newSession);
+    slot.status = 'pending';
+    slot.sessionId = newSession.id;
+    _rebuildIndex();
+  }
+
+  closeModal('modal-book');
+  if (bookBtn) { bookBtn.disabled = false; bookBtn.textContent = '예약 신청하기'; }
+  document.getElementById('book-topic').value = '';
+  selectedMentorId = null;
+  toast('신청 완료 🎉 멘토 수락 후 확정됩니다. 아래에서 상태를 확인하세요.', 'success');
+  navigateTo('page-mentee-sessions');
+}
+
+function openJournalModal(sessionId) {
+  journalSessionId = sessionId;
+  const s = DB.sessions.find(x => x.id === sessionId);
+  const mentee = _idx.mentee[s.menteeId];
+  document.getElementById('j-session-id').value = sessionId;
+  document.getElementById('journal-session-info').innerHTML =
+    `👤 <strong>${getMenteeName(s.menteeId)}</strong> (${mentee?.team || ''}) · ${formatDate(s.date)} ${s.time}`;
+
+  // 필드 초기화
+  ['j-content','j-issues','j-next','j-detail-location'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+    el.style.borderColor = '';
+  });
+  document.getElementById('j-type').value = '창업전략';
+  document.getElementById('j-duration').value = '1시간';
+  document.getElementById('j-rating').value = '좋음';
+  document.getElementById('j-photo-preview').style.display = 'none';
+  document.getElementById('j-photo-placeholder').style.display = 'block';
+  document.getElementById('j-photo-input').value = '';
+  document.getElementById('j-photo-status').textContent = '';
+  document.getElementById('j-draft-notice').style.display = 'none';
+  document.getElementById('j-edit-notice').style.display = 'none';
+  document.getElementById('j-submit-btn').textContent = '제출하기';
+
+  // 기존 제출 일지 있으면 수정 모드로 불러오기
+  const existingJournal = DB.journals.find(j => j.sessionId === sessionId);
+  if (existingJournal) {
+    _fillJournalFields(existingJournal);
+    document.getElementById('j-edit-notice').style.display = 'block';
+    document.getElementById('j-submit-btn').textContent = '수정 제출';
+    if (existingJournal.photoUrl) {
+      document.getElementById('j-photo-status').innerHTML = `현재 등록된 사진이 있습니다. <a href="${existingJournal.photoUrl}" target="_blank" style="color:var(--accent);font-weight:600">기존 사진 보기</a>`;
+    }
+  } else {
+    // 임시 저장 드래프트 복원
+    try {
+      const raw = localStorage.getItem('mh_jdraft_' + sessionId);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        _fillJournalFields(draft);
+        document.getElementById('j-draft-notice').style.display = 'block';
+        document.getElementById('j-draft-time').textContent = draft.savedAt || '';
+      }
+    } catch(e) {}
+  }
+  openModal('modal-journal');
+}
+
+function _fillJournalFields(data) {
+  if (data.type)           document.getElementById('j-type').value = data.type;
+  if (data.duration)       document.getElementById('j-duration').value = data.duration;
+  if (data.rating)         document.getElementById('j-rating').value = data.rating;
+  if (data.detailLocation) document.getElementById('j-detail-location').value = data.detailLocation;
+  if (data.content)        document.getElementById('j-content').value = data.content;
+  if (data.issues)         document.getElementById('j-issues').value = data.issues;
+  if (data.next)           document.getElementById('j-next').value = data.next;
+}
+
+function saveDraft() {
+  if (!journalSessionId) return;
+  const draft = {
+    type: document.getElementById('j-type').value,
+    duration: document.getElementById('j-duration').value,
+    detailLocation: document.getElementById('j-detail-location').value,
+    content: document.getElementById('j-content').value,
+    issues: document.getElementById('j-issues').value,
+    next: document.getElementById('j-next').value,
+    rating: document.getElementById('j-rating').value,
+    savedAt: new Date().toLocaleString('ko-KR')
+  };
+  try {
+    localStorage.setItem('mh_jdraft_' + journalSessionId, JSON.stringify(draft));
+    toast('임시 저장 완료 ✅', 'success');
+    document.getElementById('j-draft-notice').style.display = 'block';
+    document.getElementById('j-draft-time').textContent = draft.savedAt;
+  } catch(e) { toast('저장 실패', 'error'); }
+}
+
+function previewJournalPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { toast('사진은 10MB 이하만 첨부 가능합니다', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('j-photo-img').src = e.target.result;
+    document.getElementById('j-photo-preview').style.display = 'block';
+    document.getElementById('j-photo-placeholder').style.display = 'none';
+    document.getElementById('j-photo-status').textContent = `${file.name} (${(file.size/1024).toFixed(0)}KB)`;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadPhotoToDrive(file, sessionId) {
+  if (!ensureAuthorized('사진 업로드', ['mentor'])) throw new Error('로그인이 필요합니다');
+  const sb = getSupabase();
+  if (!sb) throw new Error('Supabase 연결이 필요합니다');
+
+  const ext = file.name.split('.').pop();
+  const filename = `journal-${sessionId}-${Date.now()}.${ext}`;
+  const filePath = `journals/${filename}`;
+
+  // Supabase Storage 'journal-photos' 버킷에 업로드
+  const { data, error } = await sb.storage
+    .from('journal-photos')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type
+    });
+  if (error) throw new Error(error.message || '업로드 실패');
+
+  // 공개 URL 생성
+  const { data: urlData } = sb.storage
+    .from('journal-photos')
+    .getPublicUrl(filePath);
+
+  return urlData.publicUrl;
+}
+
+async function submitJournal() {
+  if (!ensureAuthorized('일지 제출', ['mentor'])) return;
+  const content = document.getElementById('j-content').value;
+  const issues  = document.getElementById('j-issues').value;
+  const next    = document.getElementById('j-next').value;
+  const rating  = document.getElementById('j-rating').value;
+  const type    = document.getElementById('j-type').value;
+  const duration = document.getElementById('j-duration').value;
+  const detailLocation = document.getElementById('j-detail-location').value;
+
+  // ── 필수 항목 전체 검증 ──
+  const errors = [];
+  const _markField = (id, ok) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.borderColor   = ok ? '' : 'var(--danger)';
+    el.style.boxShadow     = ok ? '' : '0 0 0 2px rgba(192,57,43,0.15)';
+  };
+
+  if (!detailLocation.trim()) {
+    errors.push('장소/방식을 입력해주세요');
+    _markField('j-detail-location', false);
+  } else { _markField('j-detail-location', true); }
+
+  if (content.trim().length < 50) {
+    errors.push(`주요 상담 내용을 50자 이상 입력해주세요 (현재 ${content.trim().length}자)`);
+    _markField('j-content', false);
+  } else { _markField('j-content', true); }
+
+  if (issues.trim().length < 20) {
+    errors.push(`멘티 현황 및 문제점을 20자 이상 입력해주세요 (현재 ${issues.trim().length}자)`);
+    _markField('j-issues', false);
+  } else { _markField('j-issues', true); }
+
+  if (next.trim().length < 20) {
+    errors.push(`다음 멘토링 계획을 20자 이상 입력해주세요 (현재 ${next.trim().length}자)`);
+    _markField('j-next', false);
+  } else { _markField('j-next', true); }
+
+  const existingJournal = DB.journals.find(j => j.sessionId === journalSessionId);
+  const photoFile = document.getElementById('j-photo-input').files[0];
+  const photoArea = document.getElementById('j-photo-area');
+  const hasExistingPhoto = Boolean(existingJournal?.photoUrl);
+  if (!photoFile && !hasExistingPhoto) {
+    errors.push('사진을 최소 1장 이상 첨부해주세요');
+    if (photoArea) { photoArea.style.borderColor = 'var(--danger)'; photoArea.style.boxShadow = '0 0 0 2px rgba(192,57,43,0.15)'; }
+  } else {
+    if (photoArea) { photoArea.style.borderColor = ''; photoArea.style.boxShadow = ''; }
+  }
+
+  // 에러 목록 표시
+  const errBox = document.getElementById('j-error-box');
+  if (errors.length > 0) {
+    if (errBox) {
+      errBox.style.display = 'block';
+      errBox.innerHTML = `<b>아래 항목을 확인해주세요:</b><ul style="margin:6px 0 0 16px;padding:0">${errors.map(e=>`<li>${e}</li>`).join('')}</ul>`;
+      errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      toast(errors[0], 'error');
+    }
+    return;
+  }
+  if (errBox) errBox.style.display = 'none';
+
+  let photoUrl = '';
+  const submitBtn = document.getElementById('j-submit-btn');
+
+  if (photoFile) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '사진 업로드 중...';
+    document.getElementById('j-photo-status').innerHTML = '📤 사진 업로드 중... <span style="color:var(--text3)">(잠시 기다려 주세요)</span>';
+    try {
+      photoUrl = await uploadPhotoToDrive(photoFile, journalSessionId);
+      document.getElementById('j-photo-status').innerHTML =
+        `✅ 사진 업로드 완료 &nbsp;<a href="${photoUrl}" target="_blank" style="color:var(--accent);font-weight:600">🔗 사진 바로 보기</a>` +
+        `<br><span style="font-size:11px;color:var(--text3)">※ 사진은 Supabase Storage에 저장됩니다. 위 링크로 확인하세요.</span>`;
+    } catch(e) {
+      document.getElementById('j-photo-status').innerHTML =
+        `<span style="color:var(--danger)">⚠️ 사진 업로드 실패 — ${e.toString().slice(0,60)}</span><br><span style="font-size:11px">사진을 다시 선택 후 제출해주세요</span>`;
+      toast('사진 업로드 실패 — 사진을 다시 첨부해주세요', 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = document.getElementById('j-edit-notice').style.display !== 'none' ? '수정 제출' : '제출하기';
+      return;
+    }
+    submitBtn.disabled = false;
+    submitBtn.textContent = document.getElementById('j-edit-notice').style.display !== 'none' ? '수정 제출' : '제출하기';
+  }
+
+  const session = DB.sessions.find(s => s.id === journalSessionId);
+
+  if (existingJournal) {
+    // 수정 모드 — 기존 일지 업데이트
+    const prevPhotoUrl = existingJournal.photoUrl;
+    const backup = { ...existingJournal };
+    Object.assign(existingJournal, {
+      type, duration, detailLocation, content, issues, next, rating,
+      photoUrl: photoUrl || prevPhotoUrl,
+      submittedAt: serverTimestamp()
+    });
+    closeModal('modal-journal');
+    renderPage(document.querySelector('.page.active')?.id || '');
+    toast('일지가 수정되었습니다 ✅', 'success');
+    try {
+      await syncUpdate('journals', existingJournal.id, { type, duration, detailLocation, content, issues, next, rating, photoUrl: photoUrl || prevPhotoUrl, submittedAt: existingJournal.submittedAt });
+    } catch(e) {
+      Object.assign(existingJournal, backup);
+      renderPage(document.querySelector('.page.active')?.id || '');
+      toast('일지 수정 동기화 실패 — 복원되었습니다', 'error');
+    }
+  } else {
+    // 신규 제출
+    const journal = {
+      id: 'j' + Date.now(), sessionId: journalSessionId,
+      mentorId: session.mentorId, menteeId: session.menteeId,
+      date: session.date, type, duration, detailLocation,
+      content, issues, next, rating, photoUrl,
+      submittedAt: serverTimestamp()
+    };
+    DB.journals.push(journal);
+    const prevHasJournal = session.hasJournal;
+    const prevStatus = session.status;
+    session.hasJournal = true; session.status = 'completed';
+    closeModal('modal-journal');
+    renderPage(document.querySelector('.page.active')?.id || '');
+    toast('일지가 제출되었습니다 ✅', 'success');
+    try {
+      await syncBatch([
+        { action: 'append', sheet: 'journals', data: journal },
+        { action: 'update', sheet: 'sessions', id: journalSessionId, updates: { hasJournal: 'true', status: 'completed' } }
+      ]);
+    } catch(e) {
+      DB.journals = DB.journals.filter(j => j.id !== journal.id);
+      session.hasJournal = prevHasJournal;
+      session.status = prevStatus;
+      renderPage(document.querySelector('.page.active')?.id || '');
+      toast('일지 제출 동기화 실패 — 복원되었습니다', 'error');
+    }
+  }
+
+  // 임시 저장 드래프트 삭제
+  try { localStorage.removeItem('mh_jdraft_' + journalSessionId); } catch(e) {}
+}
+
+function openFeedbackModal(sessionId) {
+  feedbackSessionId = sessionId;
+  const s = DB.sessions.find(x => x.id === sessionId);
+  document.getElementById('fb-session-id').value = sessionId;
+  document.getElementById('feedback-session-info').innerHTML =
+    `🎓 <strong>${getMentorName(s.mentorId)}</strong> 멘토 · ${formatDate(s.date)} ${s.time}`;
+  ['fb-good','fb-improve'].forEach(id => document.getElementById(id).value = '');
+  openModal('modal-feedback');
+}
+
+async function submitFeedback() {
+  if (!ensureAuthorized('피드백 제출', ['mentee'])) return;
+  const rating = document.getElementById('fb-rating').value;
+  const good = document.getElementById('fb-good').value;
+  const improve = document.getElementById('fb-improve').value;
+  if (!good.trim()) { toast('도움이 된 점을 입력해주세요', 'error'); return; }
+  const session = DB.sessions.find(s => s.id === feedbackSessionId);
+  const feedback = {
+    id: 'fb' + Date.now(), sessionId: feedbackSessionId,
+    mentorId: session.mentorId, menteeId: session.menteeId,
+    rating, good, improve, submittedAt: serverTimestamp()
+  };
+  DB.feedbacks.push(feedback);
+  session.hasFeedback = true;
+  closeModal('modal-feedback');
+  renderMenteeSessions();
+  toast('피드백이 제출되었습니다 ✅', 'success');
+  try {
+    await syncBatch([
+      { action: 'append', sheet: 'feedbacks', data: feedback },
+      { action: 'update', sheet: 'sessions', id: feedbackSessionId, updates: { hasFeedback: 'true' } }
+    ]);
+  } catch(e) {
+    DB.feedbacks = DB.feedbacks.filter(f => f.id !== feedback.id);
+    session.hasFeedback = false;
+    renderMenteeSessions();
+    toast('피드백 저장 실패 — 복원되었습니다', 'error');
+  }
+}
+
+function viewJournal(sessionId) {
+  const j = DB.journals.find(x => x.sessionId === sessionId);
+  if (!j) { toast('일지 데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요', 'error'); return; }
+  viewJournalById(j.id);
+}
+
+function viewJournalById(jid) {
+  const j = DB.journals.find(x => x.id === jid);
+  const meta = [
+    j.type ? `🏷 ${j.type}` : '',
+    j.duration ? `⏱ ${j.duration}` : '',
+    j.detailLocation ? `📍 ${j.detailLocation}` : ''
+  ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+  document.getElementById('journal-detail').innerHTML = `
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px;font-size:13px;line-height:1.7">
+      <strong>${getMentorName(j.mentorId)}</strong> → <strong>${getMenteeName(j.menteeId)}</strong> · ${formatDate(j.date)}<br>
+      평가: <span class="badge badge-blue">${j.rating}</span> · 제출: ${j.submittedAt}
+      ${meta ? `<br><span style="color:var(--text3)">${meta}</span>` : ''}
+    </div>
+    ${j.photoUrl ? `<div style="margin-bottom:16px"><img src="${j.photoUrl}" style="width:100%;border-radius:var(--radius-sm);object-fit:cover;max-height:280px"><div style="margin-top:6px;font-size:12px;color:var(--text3)">📎 <a href="${j.photoUrl}" target="_blank" style="color:var(--accent)">원본 사진 보기</a></div></div>` : ''}
+    ${[['주요 상담 내용', j.content], ['멘티 현황 및 문제점', j.issues], ['다음 멘토링 계획', j.next]].map(([label, val]) => val ? `
+    <div style="margin-bottom:16px">
+      <div class="form-label" style="margin-bottom:8px">${label}</div>
+      <div style="font-size:13px;line-height:1.7;background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px">${val}</div>
+    </div>` : '').join('')}
+    ${(() => {
+      const fb = DB.feedbacks.find(f => f.sessionId === j.sessionId);
+      if (!fb) return '<div style="margin-top:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text3)">💬 멘티 피드백 미제출</div>';
+      return `<div style="margin-top:16px;border:1px solid var(--accent-light);border-radius:var(--radius-sm);padding:14px 16px;background:var(--accent-ultra)">
+        <div class="form-label" style="margin-bottom:8px;color:var(--accent)">💬 멘티 피드백</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px"><span class="badge badge-blue">${fb.rating}</span><span style="font-size:11px;color:var(--text3)">제출: ${fb.submittedAt}</span></div>
+        <div style="font-size:13px;margin-bottom:6px"><strong>도움이 된 점:</strong> ${fb.good}</div>
+        ${fb.improve ? `<div style="font-size:13px;color:var(--text2)"><strong>개선 바라는 점:</strong> ${fb.improve}</div>` : ''}
+      </div>`;
+    })()}`;
+  openModal('modal-journal-view');
+}
+
+async function addMentor() {
+  if (!ensureAuthorized('멘토 추가', ['admin'])) return;
+  const name  = document.getElementById('new-mentor-name').value;
+  const field = document.getElementById('new-mentor-field').value;
+  const org   = document.getElementById('new-mentor-org').value;
+  const email = document.getElementById('new-mentor-email').value.trim().toLowerCase();
+  const bio   = document.getElementById('new-mentor-bio').value;
+  if (!name || !field) { toast('이름과 분야는 필수입니다', 'error'); return; }
+  if (!email) { toast('이메일을 입력해야 로그인 계정이 생성됩니다', 'error'); return; }
+  if (DB.mentors.some(m => String(m.email || '').toLowerCase() === email.toLowerCase())) {
+    toast('이미 등록된 멘토 이메일입니다', 'error');
+    return;
+  }
+  const newId = 'm' + Date.now();
+  DB.mentors.push({ id: newId, name, field, org, email, bio, active: true });
+  closeModal('modal-add-mentor');
+  ['new-mentor-name','new-mentor-field','new-mentor-org','new-mentor-email','new-mentor-bio'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  renderAdminMentors();
+  toast('멘토 등록 중...', 'info');
+  try {
+    await syncBatch([
+      { action: 'append', sheet: 'mentors', data: { id: newId, name, field, org, email, bio, active: 'true' } },
+      { action: 'upsertUser', data: { email, role: 'mentor', name, linkedId: newId } }
+    ]);
+    toast(`${name} 멘토 추가 완료 — Google 로그인 계정도 자동 등록됐습니다 ✅`, 'success');
+  } catch(e) {
+    DB.mentors = DB.mentors.filter(m => m.id !== newId);
+    renderAdminMentors();
+    toast(`멘토 등록 실패: ${e.message || '서버 오류'} — 다시 시도해주세요`, 'error');
+  }
+}
+
+// ═══ Google 로그인 ═══
+function initLoginScreen() {
+  const hasGoogle = hasSupabaseIntegration();
+  document.getElementById('login-google-mode').style.display = hasGoogle ? 'flex' : 'none';
+  document.getElementById('login-demo-mode').style.display   = hasGoogle ? 'none' : 'block';
+  if (hasGoogle) {
+    isDemoMode = false;
+    // GIS가 로드될 때까지 대기
+    const tryInit = () => {
+      if (typeof google === 'undefined' || !google.accounts) { setTimeout(tryInit, 300); return; }
+      google.accounts.id.initialize({
+        client_id: DB.settings.googleClientId,
+        callback: handleGoogleCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+      google.accounts.id.renderButton(
+        document.getElementById('google-signin-btn'),
+        { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ko', width: 240 }
+      );
+    };
+    tryInit();
+  } else {
+    ensureDemoData();
+  }
+}
+
+async function handleGoogleCredential(response) {
+  const btnEl  = document.getElementById('google-signin-btn');
+  const loadEl = document.getElementById('google-login-loading');
+  const errEl  = document.getElementById('google-login-error');
+  btnEl.style.display  = 'none';
+  loadEl.style.display = 'block';
+  errEl.style.display  = 'none';
+  try {
+    const sb = getSupabase();
+    if (!sb) throw new Error('Supabase 미설정');
+
+    // Google ID Token → Supabase Auth
+    const { data: authData, error: authErr } = await sb.auth.signInWithIdToken({
+      provider: 'google',
+      token: response.credential
+    });
+    if (authErr) throw new Error(authErr.message);
+
+    const email = authData.user?.email?.toLowerCase() || '';
+    const googleName = authData.user?.user_metadata?.full_name || '';
+    const account = await resolveCurrentAccountFromSupabase(googleName);
+    const normalizedRole = account.role;
+    const linkedId = account.linkedId || '';
+    const name = account.name || googleName || '';
+
+    currentAuth = {
+      token: authData.session?.access_token || response.credential,
+      role: normalizedRole,
+      linkedId,
+      email: account.email || email,
+      name
+    };
+    isDemoMode = false;
+
+    // 데이터 로드 후 진입
+    await fetchAppBundle();
+    enterAs(normalizedRole, linkedId, name);
+  } catch(e) {
+    showLoginError(e.message || '로그인 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+    btnEl.style.display  = 'block';
+    loadEl.style.display = 'none';
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('google-login-error');
+  el.innerHTML = msg;
+  el.style.display = 'block';
+}
+
+// ═══ 설정 & 연결 ═══
+function saveSettings() {
+  DB.settings.supabaseUrl = (document.getElementById('supabase-url')?.value || '').trim();
+  DB.settings.supabaseAnonKey = (document.getElementById('supabase-key')?.value || '').trim();
+  DB.settings.googleClientId = (document.getElementById('google-client-id')?.value || '').trim();
+  _supabase = null; // 재초기화
+  try { localStorage.setItem('mh_settings', JSON.stringify(DB.settings)); } catch(e) {}
+  toast('설정이 저장되었습니다', 'success');
+  initLoginScreen();
+}
+
+async function testConnection() {
+  const url = (document.getElementById('supabase-url')?.value || '').trim().replace(/\/+$/, '');
+  const anonKey = (document.getElementById('supabase-key')?.value || '').trim();
+  if (!url) { toast('Supabase URL을 먼저 입력하세요', 'error'); return; }
+  if (!anonKey) { toast('Anon Key를 먼저 입력하세요', 'error'); return; }
+  if (!url.includes('.supabase.co')) { toast('올바른 Supabase URL 형식이 아닙니다 (https://xxxx.supabase.co)', 'error'); return; }
+  console.log('[testConnection] URL:', url);
+  console.log('[testConnection] Key length:', anonKey.length, '| starts:', anonKey.substring(0, 15) + '...');
+  toast('연결 테스트 중...');
+  try {
+    // Supabase 클라이언트로 직접 테스트 (새 키 형식 sb_publishable_ 및 레거시 eyJ... 모두 지원)
+    const sb = window.supabase.createClient(url, anonKey);
+
+    // 1) 기본 연결: 아무 테이블이나 select 시도 → 테이블 없어도 연결 자체는 확인됨
+    const { error: pingError } = await sb.from('users').select('id').limit(1);
+    if (pingError) {
+      // RLS 거부(permission denied)는 연결은 성공한 것 → OK
+      // relation does not exist → 스키마 미실행
+      // Invalid API key → 키 오류
+      const msg = pingError.message || '';
+      if (msg.includes('Invalid API key') || msg.includes('invalid') || pingError.code === '401') {
+        throw new Error('API Key가 유효하지 않습니다. Settings → API에서 Publishable key (또는 Legacy anon key)를 복사하세요.');
+      }
+      if (msg.includes('does not exist') || msg.includes('relation')) {
+        throw new Error('users 테이블이 없습니다. SQL Editor에서 스키마(supabase-schema.sql)를 먼저 실행하세요.');
+      }
+      // permission denied = RLS가 작동 중 = 연결 성공!
+      if (!msg.includes('permission') && !msg.includes('RLS') && !msg.includes('policy')) {
+        throw new Error('DB 오류: ' + msg);
+      }
+    }
+
+    // 2) 로그인 세션이 있으면 RPC까지 확인
+    const { data: { session } } = await sb.auth.getSession();
+    let message = '✅ Supabase 연결 확인 완료!';
+    if (session?.access_token) {
+      const { data, error } = await sb.rpc('get_my_account');
+      if (error) {
+        message += ' (⚠ get_my_account RPC: ' + error.message + ')';
+      } else if (!data?.ok) {
+        message += ' (⚠ ' + (data?.error || 'users 테이블에 계정 없음') + ')';
+      } else {
+        message = '✅ Supabase 연결 + 계정 확인 완료! (' + data.account.role + ')';
+      }
+    } else {
+      message += ' 로그인 후 계정 권한까지 확인됩니다.';
+    }
+    toast(message, 'success');
+  } catch(e) {
+    const msg = e.message || '';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      toast('연결 실패 — URL에 접근할 수 없습니다. URL을 확인하세요.', 'error');
+    } else {
+      toast(`연결 실패 — ${msg}`, 'error');
+    }
+  }
+}
+
+async function loadData() {
+  await _syncData({ silent: false });
+}
+
+// ═══ 공통 동기화 로직 ═══
+async function _syncData({ silent = false } = {}) {
+  if (!hasSupabaseIntegration() || isDemoMode) return;
+  if (silent && !currentAuth?.token) return;
+
+  _showRefreshIndicator();
+  if (!silent) toast('Supabase에서 데이터 불러오는 중...');
+
+  try {
+    // 변경 감지용 이전 상태 스냅샷
+    const prevSessionMap = {};
+    DB.sessions.forEach(s => { prevSessionMap[s.id] = s.status; });
+    const prevPendingCount = currentRole === 'mentor' && currentUser
+      ? getSessionsByMentor(currentUser.id).filter(s => s.status === 'pending').length : 0;
+
+    await fetchAppBundle();
+
+    // currentUser 재설정
+    if (currentLinkedId && currentRole) {
+      if (currentRole === 'mentor') currentUser = _idx.mentor[currentLinkedId] || currentUser;
+      else if (currentRole === 'mentee') currentUser = _idx.mentee[currentLinkedId] || currentUser;
+    }
+    if (currentUser) {
+      document.getElementById('user-name-text').textContent = currentUser.name;
+      document.getElementById('user-role-text').textContent = currentUser.field || currentUser.team || '';
+    }
+
+    // ── 상태 변경 감지 알림 ──
+    if (currentRole === 'mentee' && currentUser) {
+      getSessionsByMentee(currentUser.id).filter(s => s.status === 'upcoming' && prevSessionMap[s.id] === 'pending').forEach(s => {
+        const delay = silent ? 0 : 300;
+        setTimeout(() => toast(`✅ ${getMentorName(s.mentorId)} 멘토가 수락했습니다! ${formatDate(s.date)} ${s.time}`, 'success'), delay);
+      });
+      Object.keys(prevSessionMap).forEach(id => {
+        if (prevSessionMap[id] === 'pending' && !_idx.session[id]) {
+          const delay = silent ? 0 : 300;
+          setTimeout(() => toast('⚠️ 멘토링 신청이 거절되었습니다. 다른 시간에 재예약하세요.', 'warn'), delay);
+        }
+      });
+    }
+    if (currentRole === 'mentor' && currentUser) {
+      const newCnt = getSessionsByMentor(currentUser.id).filter(s => s.status === 'pending').length;
+      if (newCnt > prevPendingCount) {
+        const diff = newCnt - prevPendingCount;
+        const delay = silent ? 0 : 300;
+        setTimeout(() => toast(`🔔 새 멘토링 신청 ${diff}건!`, 'success'), delay);
+      }
+    }
+
+    // 뱃지는 항상 갱신 (데이터는 이미 로드됨)
+    if (currentRole) _updateSidebarBadges();
+
+    // 폼 작성 중이면 페이지 리렌더만 보류 (입력 내용 보호, silent 모드만)
+    if (silent) {
+      const a = document.activeElement;
+      const isTyping = a && (a.tagName === 'TEXTAREA' ||
+        (a.tagName === 'INPUT' && !['hidden','checkbox','radio','button'].includes(a.type)) ||
+        a.tagName === 'SELECT');
+      if (isTyping && a.value && a.value.trim() !== '') {
+        // 포커스 해제 시 지연 렌더
+        if (!a._syncBlurBound) {
+          a._syncBlurBound = true;
+          a.addEventListener('blur', () => {
+            const ap = document.querySelector('.page.active');
+            if (ap) renderPage(ap.id);
+          }, { once: true });
+        }
+        _hideRefreshIndicator(true);
+        return;
+      }
+    }
+
+    // 현재 활성 페이지 재렌더
+    const activePage = document.querySelector('.page.active');
+    if (activePage) renderPage(activePage.id);
+
+    _hideRefreshIndicator(true);
+    if (!silent) toast('데이터 로드 완료', 'success');
+  } catch(e) {
+    _hideRefreshIndicator(false);
+    const msg = e.message || '데이터 로드 실패';
+    if (!silent) toast(msg, 'error');
+    if (currentAuth?.token && msg.includes('계정이 삭제되었거나 접근 권한이 없습니다')) {
+      try { await getSupabase()?.auth?.signOut(); } catch(signOutErr) {}
+      logout();
+    }
+  }
+}
+
+// ═══ Supabase 테이블 매핑 ═══
+const _tableMap = {
+  mentor: 'mentors', mentors: 'mentors',
+  mentee: 'mentees', mentees: 'mentees',
+  slot: 'slots', slots: 'slots',
+  session: 'sessions', sessions: 'sessions',
+  journal: 'journals', journals: 'journals',
+  feedback: 'feedbacks', feedbacks: 'feedbacks',
+  request: 'requests', requests: 'requests',
+  notice: 'notices', notices: 'notices',
+  sessionLog: 'session_log', session_log: 'session_log'
+};
+
+// ═══ Supabase INSERT ═══
+async function syncInsert(type, data) {
+  if (!hasSupabaseIntegration() || isDemoMode) return;
+  const table = _tableMap[type] || _tableMap[type + 's'] || type;
+  try {
+    const { error } = await getSupabase().from(table).insert(toSnake(data));
+    if (error) throw new Error(error.message);
+  } catch(e) {
+    toast(`${type} 저장 실패: ${e.message}`, 'error');
+    throw e;
+  }
+}
+
+// ═══ Supabase UPSERT user ═══
+async function syncUserAccount(data) {
+  if (!hasSupabaseIntegration() || isDemoMode) return;
+  try {
+    const row = {
+      email: String(data.email || '').trim().toLowerCase(),
+      role: normalizeRoleKey(data.role),
+      name: data.name || '',
+      linked_id: data.linkedId || ''
+    };
+    const { error } = await getSupabase().from('users').upsert(row, { onConflict: 'email,role' });
+    if (error) throw new Error(error.message);
+  } catch(e) {
+    toast(`계정 동기화 실패: ${e.message}`, 'error');
+    throw e;
+  }
+}
+
+// ═══ Supabase UPDATE ═══
+async function syncUpdate(sheet, id, updates) {
+  if (!hasSupabaseIntegration() || isDemoMode) return;
+  const table = _tableMap[sheet] || sheet;
+  try {
+    const { error } = await getSupabase().from(table).update(toSnake(updates)).eq('id', id);
+    if (error) throw new Error(error.message);
+  } catch(e) {
+    toast(`${sheet} 업데이트 실패: ${e.message}`, 'error');
+    throw e;
+  }
+}
+
+// ═══ Supabase 배치 (병렬 실행) ═══
+async function syncBatch(operations) {
+  if (!hasSupabaseIntegration() || isDemoMode) return;
+  const sb = getSupabase();
+  const payload = operations.map(op => {
+    const item = { action: op.action };
+    if (op.sheet) item.sheet = op.sheet;
+    if (op.id) item.id = op.id;
+    if (op.data) item.data = op.action === 'upsertUser'
+      ? {
+          email: String(op.data.email || '').trim().toLowerCase(),
+          role: normalizeRoleKey(op.data.role),
+          name: op.data.name || '',
+          linked_id: op.data.linkedId || ''
+        }
+      : toSnake(op.data);
+    if (op.updates) item.updates = toSnake(op.updates);
+    return item;
+  });
+  const { data, error } = await sb.rpc('apply_batch_operations', { p_operations: payload });
+  if (error) throw new Error(error.message);
+  if (!data?.ok) throw new Error(data?.error || '배치 저장 실패');
+}
+
+
+
+// ═══ 유틸 ═══
+
+// 삭제된 멘토/멘티 이름도 안전하게 조회 (세션·일지 표시용)
+function getMentorName(id) {
+  const m = _idx.mentor[id];
+  return m ? m.name : (_nameMap.mentors[id] || id || '알 수 없음');
+}
+function getMenteeName(id) {
+  const m = _idx.mentee[id];
+  return m ? m.name : (_nameMap.mentees[id] || id || '알 수 없음');
+}
+// 캐시 기반 세션/슬롯 조회 헬퍼
+function getSessionsByMentor(mentorId) { return _idx.sessByMentor[mentorId] || []; }
+function getSessionsByMentee(menteeId) { return _idx.sessByMentee[menteeId] || []; }
+function getSlotsByMentor(mentorId)    { return _idx.slotsByMentor[mentorId] || []; }
+
+function formatDate(str) {
+  if (!str) return '';
+  const dateOnly = (typeof str === 'string' ? str : '').split('T')[0];
+  const d = new Date(dateOnly + 'T00:00:00+09:00');
+  if (isNaN(d)) return str;
+  return `${d.getMonth()+1}월 ${d.getDate()}일 (${['일','월','화','수','목','금','토'][d.getDay()]})`;
+}
+
+
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' ' + type : '');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// 오버레이 클릭 닫기
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ESC 닫기
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+});
+
+// 날짜 기본값
+document.getElementById('slot-date').value = todayStr();
+
+window.addEventListener('resize', () => {
+  const mobileNav = document.getElementById('mobile-nav');
+  if (!mobileNav || !currentRole) return;
+  mobileNav.style.display = window.innerWidth <= 680 ? 'block' : 'none';
+});
+
+// F5 새로고침 시 로그인 상태 복원
+(async function restoreSession() {
+  try {
+    const sb = getSupabase();
+
+    // Supabase Auth 세션 복원 시도
+    if (sb) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        try {
+          const account = await resolveCurrentAccountFromSupabase(session.user?.user_metadata?.full_name || '');
+          const role = account.role;
+          const linkedId = account.linkedId || '';
+          const name = account.name || session.user?.user_metadata?.full_name || '';
+          currentAuth = { token: session.access_token, role, linkedId, email: account.email, name };
+          isDemoMode = false;
+          await fetchAppBundle();
+          enterAs(role, linkedId, name);
+          return;
+        } catch (accountErr) {
+          await sb.auth.signOut();
+        }
+      }
+    }
+
+    // sessionStorage fallback (데모 모드)
+    const saved = sessionStorage.getItem('mh_session');
+    if (saved) {
+      const { role, linkedId, googleName, isDemoMode: savedDemo } = JSON.parse(saved);
+      if (role && (savedDemo || !hasSupabaseIntegration())) {
+        initLoginScreen();
+        ensureDemoData();
+        enterAs(role, linkedId, googleName);
+        return;
+      }
+    }
+
+    initLoginScreen();
+  } catch(e) {
+    console.error('세션 복원 실패:', e);
+    initLoginScreen();
+  }
+})();
+</script>
+</body>
+</html>

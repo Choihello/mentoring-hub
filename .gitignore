@@ -1,0 +1,17 @@
+# IDE / editor
+.claude/
+.vscode/
+*.swp
+*.swatch
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Legacy files (not for deployment)
+index.html
+mentoring-hub.html
+mentoring-hub-fixed(codex).html
+migration-guide.sql
+supabase-functions-only.sql
