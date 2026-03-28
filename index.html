@@ -2924,7 +2924,9 @@ async function submitRequest(role) {
   renderRequestPage(role);
   toast('요청이 제출되었습니다 ✅', 'success');
   try {
-    await syncInsert('request', req);
+    await syncBatch([
+      { action: 'append', sheet: 'requests', data: toSnake(req) }
+    ]);
   } catch(e) {
     DB.requests = DB.requests.filter(r => r.id !== req.id);
     renderRequestPage(role);
@@ -3070,7 +3072,9 @@ async function sendAdminMessage() {
   renderAdminRequests();
   toast(`${normalizeRoleKey(receiver_role) === 'mentor' ? '멘토' : '멘티'} ${receiver}에게 메시지를 발송했습니다 ✅`, 'success');
   try {
-    await syncInsert('request', msg);
+    await syncBatch([
+      { action: 'append', sheet: 'requests', data: toSnake(msg) }
+    ]);
   } catch(e) {
     DB.requests = DB.requests.filter(r => r.id !== msg.id);
     renderAdminRequests();

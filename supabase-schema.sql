@@ -533,6 +533,26 @@ BEGIN
             COALESCE(v_data->>'cancelled_by', ''),
             COALESCE(NULLIF(v_data->>'cancelled_at', '')::timestamptz, now())
           );
+        WHEN 'requests' THEN
+          INSERT INTO public.requests (id, author_id, author_name, author_role, type, title, content, status, reply, reply_read, sender, receiver_id, receiver, receiver_role, message_type, created_at)
+          VALUES (
+            v_data->>'id',
+            COALESCE(v_data->>'author_id', ''),
+            COALESCE(v_data->>'author_name', ''),
+            COALESCE(v_data->>'author_role', ''),
+            COALESCE(v_data->>'type', ''),
+            COALESCE(v_data->>'title', ''),
+            COALESCE(v_data->>'content', ''),
+            COALESCE(v_data->>'status', '대기중'),
+            COALESCE(v_data->>'reply', ''),
+            COALESCE(NULLIF(v_data->>'reply_read', '')::boolean, false),
+            COALESCE(v_data->>'sender', ''),
+            COALESCE(v_data->>'receiver_id', ''),
+            COALESCE(v_data->>'receiver', ''),
+            COALESCE(v_data->>'receiver_role', ''),
+            COALESCE(v_data->>'message_type', ''),
+            COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
+          );
         ELSE
           RAISE EXCEPTION 'Unsupported append target: %', v_sheet;
       END CASE;
