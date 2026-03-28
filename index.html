@@ -1913,10 +1913,10 @@ function buildSidebar() {
       const replyCnt = DB.requests.filter(r => {
         const matchById = myId && r.authorId && r.authorId === myId;
         const matchByName = r.authorName === myName;
-        return (matchById || matchByName) && r.reply && !r.reply_read;
+        return (matchById || matchByName) && r.reply && r.reply_read !== true && r.reply_read !== 'true';
       }).length;
       const msgCnt = DB.requests.filter(r => {
-        if (r.type !== '관리자발신' || r.reply_read) return false;
+        if (r.type !== '관리자발신' || r.reply_read === true || r.reply_read === 'true') return false;
         const matchById = myId && r.receiverId && r.receiverId === myId;
         const matchByName = _norm(r.receiver) === _norm(myName);
         return (matchById || matchByName) && (normalizeRoleKey(r.receiver_role) === myRole || !r.receiver_role);
@@ -2006,10 +2006,10 @@ function _updateSidebarBadges() {
       const replyCnt = DB.requests.filter(r => {
         const matchById = myId && r.authorId && r.authorId === myId;
         const matchByName = r.authorName === myName;
-        return (matchById || matchByName) && r.reply && !r.reply_read;
+        return (matchById || matchByName) && r.reply && r.reply_read !== true && r.reply_read !== 'true';
       }).length;
       const msgCnt = DB.requests.filter(r => {
-        if (r.type !== '관리자발신' || r.reply_read) return false;
+        if (r.type !== '관리자발신' || r.reply_read === true || r.reply_read === 'true') return false;
         const matchById = myId && r.receiverId && r.receiverId === myId;
         const matchByName = _norm(r.receiver) === _norm(myName);
         return (matchById || matchByName) && (normalizeRoleKey(r.receiver_role) === myRole || !r.receiver_role);
@@ -2827,7 +2827,7 @@ function renderRequestPage(role) {
     <div class="page-col">
       ${adminMsgsIn.length ? `
       <div class="card" style="margin-bottom:16px">
-        <div class="card-title">📬 관리자 메시지 <span class="badge" style="background:var(--danger);color:#fff">${adminMsgsIn.filter(r => !r.reply_read).length}새글</span></div>
+        <div class="card-title">📬 관리자 메시지 <span class="badge" style="background:var(--danger);color:#fff">${adminMsgsIn.filter(r => r.reply_read !== true && r.reply_read !== 'true').length}새글</span></div>
         ${adminMsgsIn.slice().reverse().map(r => `
           <div style="border:1px solid ${r.reply_read === true || r.reply_read === 'true' ? 'var(--border)' : 'var(--accent)'};border-radius:var(--radius-xs);padding:12px;margin-bottom:8px;cursor:pointer" onclick="markReplyRead('${r.id}')">
             <div class="flex-between" style="margin-bottom:4px">
@@ -2887,7 +2887,7 @@ async function markReplyRead(reqId) {
   const activePage = document.querySelector('.page.active');
   if (activePage) renderPage(activePage.id);
   try {
-    await syncUpdate('requests', reqId, { reply_read: 'true' });
+    await syncUpdate('requests', reqId, { reply_read: true });
   } catch(e) {
     req.reply_read = false;
     _updateSidebarBadges();
@@ -2910,7 +2910,7 @@ async function submitRequest(role) {
     type, title, content,
     status: '대기중',
     reply: '',
-    reply_read: 'false',
+    reply_read: false,
     sender: '',
     receiverId: '',
     receiver: '',
@@ -2996,7 +2996,7 @@ function renderAdminRequests() {
           <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
             <div class="flex-between" style="margin-bottom:4px">
               <span style="font-weight:600">${r.title}</span>
-              <span class="badge ${r.reply_read === true || r.reply_read === 'true' ? 'badge-green' : 'badge-warn'}">${r.reply_read ? '읽음' : '미확인'}</span>
+              <span class="badge ${r.reply_read === true || r.reply_read === 'true' ? 'badge-green' : 'badge-warn'}">${r.reply_read === true || r.reply_read === 'true' ? '읽음' : '미확인'}</span>
             </div>
             <div style="font-size:12px;color:var(--text3)">→ ${normalizeRoleKey(r.receiver_role) === 'mentor' ? '멘토' : '멘티'} ${r.receiver} · ${r.message_type} · ${r.createdAt || ''}</div>
             <div style="font-size:13px;color:var(--text2);margin-top:4px">${r.content || ''}</div>
@@ -3059,7 +3059,7 @@ async function sendAdminMessage() {
     title, content,
     status: '전송완료',
     reply: '',
-    reply_read: 'false',
+    reply_read: false,
     sender: '관리자',
     receiverId, receiver, receiver_role, message_type,
     createdAt: serverTimestamp()

@@ -639,7 +639,7 @@ BEGIN
 
   RETURN json_build_object('ok', true);
 END;
-$$ LANGUAGE plpgsql SECURITY INVOKER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ═══ Realtime 활성화 ═══
 ALTER PUBLICATION supabase_realtime ADD TABLE public.sessions;
