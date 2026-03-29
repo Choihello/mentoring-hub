@@ -1466,7 +1466,21 @@ function mondayStart(date = new Date()) {
 }
 
 function getBookableMentors() {
-  return DB.mentors.filter(m => m && m.active !== false);
+  const activeMentors = DB.mentors.filter(m => m && m.active !== false);
+  // 멘티 역할: 확정된 매칭 멘토만 표시
+  if (currentRole === 'mentee' && currentUser?.id) {
+    const matchedMentorIds = new Set(
+      DB.matchProposals
+        .filter(p => p.menteeId === currentUser.id && p.status === '확정')
+        .map(p => p.mentorId)
+    );
+    if (matchedMentorIds.size > 0) {
+      return activeMentors.filter(m => matchedMentorIds.has(m.id));
+    }
+    // 매칭 확정 없으면 빈 배열 (예약 불가)
+    return [];
+  }
+  return activeMentors;
 }
 
 function isPreviewMode() {
@@ -1577,7 +1591,7 @@ const _snakeMap = {
   preferredField:'preferred_field', preferredSchedule:'preferred_schedule',
   requestNote:'request_note', requestId:'request_id', flowType:'flow_type',
   mentorResponse:'mentor_response', adminMemo:'admin_memo',
-  notificationEmail:'notification_email', menteeId2:'mentee_id'
+  notificationEmail:'notification_email'
 };
 const _camelMap = Object.fromEntries(Object.entries(_snakeMap).map(([k,v]) => [v,k]));
 
@@ -1728,12 +1742,18 @@ function adminPreviewAs(role) {
     DB.mentors = full.mentors.filter(m => m.id === uid);
   } else if (role === 'mentee' && uid) {
     DB.sessions = full.sessions.filter(s => s.menteeId === uid);
-    DB.slots = full.slots.filter(s => s.status !== 'deleted');
+    // 매칭된 멘토의 슬롯만 표시
+    const matchedMentorIds = new Set(
+      full.matchProposals.filter(p => p.menteeId === uid && p.status === '확정').map(p => p.mentorId)
+    );
+    DB.slots = full.slots.filter(s => s.status !== 'deleted' && matchedMentorIds.has(s.mentorId));
     DB.journals = []; // 멘티는 일지 접근 불가
     DB.feedbacks = full.feedbacks.filter(f => f.menteeId === uid);
     DB.requests = full.requests.filter(r => r.authorId === uid || r.receiverId === uid);
     DB.notices = full.notices.filter(n => n.target === '전체' || n.target === '멘티만');
     DB.mentees = full.mentees.filter(m => m.id === uid);
+    DB.matchRequests = full.matchRequests.filter(r => r.menteeId === uid);
+    DB.matchProposals = full.matchProposals.filter(p => p.menteeId === uid);
     // 멘토는 활성 멘토 + 세션 연결된 멘토만
     const linkedMentorIds = new Set(DB.sessions.map(s => s.mentorId));
     DB.mentors = full.mentors.filter(m => m.active !== false || linkedMentorIds.has(m.id));
@@ -2384,7 +2404,11 @@ function renderMenteeBook() {
     return bSlots - aSlots;
   });
   if (!sorted.length) {
-    el.innerHTML = `<div class="empty-state"><span class="icon">📭</span><h4>예약 가능한 멘토 없음</h4><p>현재 예약 가능한 멘토가 없습니다</p></div>`;
+    const hasMatch = currentRole === 'mentee' && DB.matchProposals.some(p => p.menteeId === currentUser?.id && p.status === '확정');
+    const msg = currentRole === 'mentee' && !hasMatch
+      ? '<div class="empty-state"><span class="icon">🤝</span><h4>매칭된 멘토가 없습니다</h4><p>담당자가 멘토를 매칭해주면 예약할 수 있습니다.<br>매칭 신청은 <a href="#" onclick="navigateTo(\'page-mentee-match\');return false" style="color:var(--accent);font-weight:600">매칭 신청</a> 메뉴에서 가능합니다.</p></div>'
+      : '<div class="empty-state"><span class="icon">📭</span><h4>예약 가능한 멘토 없음</h4><p>현재 예약 가능한 멘토가 없습니다</p></div>';
+    el.innerHTML = msg;
     document.getElementById('slot-picker-card').style.display = 'none';
     return;
   }
@@ -3454,7 +3478,7 @@ async function submitMatchRequest() {
   renderMenteeMatch();
   toast('매칭 신청이 완료되었습니다. 담당자 검토 후 매칭 결과를 안내드립니다', 'success');
   try {
-    await syncBatch([{ action: 'append', sheet: 'match_requests', data: toSnake(req) }]);
+    await syncBatch([{ action: 'append', sheet: 'match_requests', data: req }]);
   } catch(e) {
     DB.matchRequests = DB.matchRequests.filter(r => r.id !== req.id);
     renderMenteeMatch();
@@ -3715,8 +3739,8 @@ async function confirmMatchPropose() {
     mentorId,
     menteeId: req.menteeId,
     requestId: req.id,
-    flowType: 'mentee_request',
-    mentor_response: '대기',
+    flowType: 'request_based',
+    mentorResponse: '대기',
     adminMemo: memo,
     status: '제안중',
     createdAt: serverTimestamp()
@@ -3728,7 +3752,7 @@ async function confirmMatchPropose() {
   toast('멘토에게 매칭 제안을 보냈습니다', 'success');
   try {
     await syncBatch([
-      { action: 'append', sheet: 'match_proposals', data: toSnake(proposal) },
+      { action: 'append', sheet: 'match_proposals', data: proposal },
       { action: 'update', sheet: 'match_requests', id: req.id, updates: { status: '제안됨' } }
     ]);
     await sendMatchEmail('propose', proposal);
@@ -3753,7 +3777,7 @@ async function adminDirectMatch() {
     menteeId,
     requestId: '',
     flowType: 'admin_direct',
-    mentor_response: '수락',
+    mentorResponse: '수락',
     adminMemo: memo,
     status: '확정',
     createdAt: serverTimestamp()
@@ -3762,7 +3786,7 @@ async function adminDirectMatch() {
   renderAdminMatch();
   toast('매칭이 확정되었습니다 ✅', 'success');
   try {
-    await syncBatch([{ action: 'append', sheet: 'match_proposals', data: toSnake(proposal) }]);
+    await syncBatch([{ action: 'append', sheet: 'match_proposals', data: proposal }]);
     await sendMatchEmail('confirmed_b', proposal);
   } catch(e) {
     DB.matchProposals = DB.matchProposals.filter(p => p.id !== proposal.id);
@@ -4748,12 +4772,17 @@ async function _syncData({ silent = false } = {}) {
         DB.mentors = full.mentors.filter(m => m.id === uid);
       } else if (_adminPreviewRole === 'mentee' && uid) {
         DB.sessions = full.sessions.filter(s => s.menteeId === uid);
-        DB.slots = full.slots.filter(s => s.status !== 'deleted');
+        const matchedMIds = new Set(
+          full.matchProposals.filter(p => p.menteeId === uid && p.status === '확정').map(p => p.mentorId)
+        );
+        DB.slots = full.slots.filter(s => s.status !== 'deleted' && matchedMIds.has(s.mentorId));
         DB.journals = [];
         DB.feedbacks = full.feedbacks.filter(f => f.menteeId === uid);
         DB.requests = full.requests.filter(r => r.authorId === uid || r.receiverId === uid);
         DB.notices = full.notices.filter(n => n.target === '전체' || n.target === '멘티만');
         DB.mentees = full.mentees.filter(m => m.id === uid);
+        DB.matchRequests = full.matchRequests.filter(r => r.menteeId === uid);
+        DB.matchProposals = full.matchProposals.filter(p => p.menteeId === uid);
         const linkedMentorIds = new Set(DB.sessions.map(s => s.mentorId));
         DB.mentors = full.mentors.filter(m => m.active !== false || linkedMentorIds.has(m.id));
       }
