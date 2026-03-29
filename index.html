@@ -911,6 +911,55 @@ tr:hover td { background: var(--accent-ultra); }
           <div id="journals-list"></div>
         </div>
 
+        <!-- ── 멘티: 매칭 신청 ── -->
+        <div id="page-mentee-match" class="page">
+          <div class="page-header"><h2>🤝 매칭 신청</h2><p>희망 분야와 일정을 선택하면 담당자가 적합한 멘토를 매칭해 드립니다</p></div>
+          <div id="mentee-match-content"></div>
+        </div>
+
+        <!-- ── 멘토: 매칭 알림 ── -->
+        <div id="page-mentor-match" class="page">
+          <div class="page-header"><h2>🤝 매칭 알림</h2><p>담당자가 제안한 멘토링 매칭을 확인하고 수락/거절할 수 있습니다</p></div>
+          <div id="mentor-match-content"></div>
+        </div>
+
+        <!-- ── 관리자: 매칭 관리 ── -->
+        <div id="page-admin-match" class="page">
+          <div class="page-header flex-between">
+            <div><h2>🤝 매칭 관리</h2><p>멘토-멘티 매칭 신청 및 현황을 관리합니다</p></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+            <button id="mtab-requests" class="btn btn-sm btn-primary" style="border-radius:999px" onclick="setMatchTab('requests')">멘티 신청 목록</button>
+            <button id="mtab-proposals" class="btn btn-sm btn-secondary" style="border-radius:999px" onclick="setMatchTab('proposals')">매칭 현황</button>
+            <button id="mtab-direct" class="btn btn-sm btn-secondary" style="border-radius:999px" onclick="setMatchTab('direct')">직접 매칭</button>
+          </div>
+          <div id="admin-match-content"></div>
+        </div>
+
+        <!-- ── 멘토 선택 모달 ── -->
+        <div class="modal-overlay" id="modal-match-propose">
+          <div class="modal-box" style="max-width:480px">
+            <div class="modal-header">
+              <h3>멘토 선택</h3>
+              <button class="modal-close" onclick="closeModal('modal-match-propose')">✕</button>
+            </div>
+            <div id="match-propose-body">
+              <div class="form-group">
+                <label class="form-label">매칭할 멘토 선택</label>
+                <select id="propose-mentor-select" class="form-control"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">담당자 메모 (선택)</label>
+                <textarea id="propose-admin-memo" class="form-control" rows="2" placeholder="멘토에게 전달할 메모"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" onclick="closeModal('modal-match-propose')">취소</button>
+              <button class="btn btn-primary" onclick="confirmMatchPropose()">제안 보내기</button>
+            </div>
+          </div>
+        </div>
+
         <!-- ── 멘토/멘티 공용: 요청하기 ── -->
         <div id="page-mentor-request" class="page">
           <div class="page-header"><h2>📨 요청하기</h2><p>관리자에게 문의 또는 요청 사항을 전달합니다</p></div>
@@ -1212,6 +1261,10 @@ tr:hover td { background: var(--accent-ultra); }
       <label class="form-label">멘토 소개 <span style="font-size:11px;color:var(--text3)">(멘티에게 표시)</span></label>
       <textarea class="form-control" id="new-mentor-bio" placeholder="주요 경력, 강점, 멘토링 가능 분야 등을 간략히 소개해주세요..." rows="3"></textarea>
     </div>
+    <div class="form-group">
+      <label class="form-label">알림 이메일 <span style="font-size:11px;color:var(--text3)">(매칭 알림 수신용, 미입력 시 로그인 이메일 사용)</span></label>
+      <input type="email" class="form-control" id="new-mentor-notification-email" placeholder="notifications@email.com">
+    </div>
     <div class="flex gap-8 mt-20">
       <button class="btn btn-primary" onclick="addMentor()">추가</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-add-mentor')">취소</button>
@@ -1236,6 +1289,10 @@ tr:hover td { background: var(--accent-ultra); }
     <div class="form-group">
       <label class="form-label">이메일</label>
       <input type="email" class="form-control" id="new-mentee-email" placeholder="mentee@startup.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">알림 이메일 <span style="font-size:11px;color:var(--text3)">(매칭 알림 수신용, 미입력 시 로그인 이메일 사용)</span></label>
+      <input type="email" class="form-control" id="new-mentee-notification-email" placeholder="notifications@email.com">
     </div>
     <div class="flex gap-8 mt-20">
       <button class="btn btn-primary" onclick="addMentee()">추가</button>
@@ -1322,6 +1379,8 @@ const DB = {
   journals: [],
   feedbacks: [],
   requests: [],
+  matchRequests: [],
+  matchProposals: [],
   notices: [],
   settings: {
     // ─── Supabase 설정 (본인 프로젝트 값으로 교체) ───
@@ -1514,7 +1573,11 @@ const _snakeMap = {
   reply_read:'reply_read', messageType:'message_type', message_type:'message_type',
   receiver_role:'receiver_role', detailLocation:'detail_location', photoUrl:'photo_url',
   linkedId:'linked_id', cancelledBy:'cancelled_by', cancelledAt:'cancelled_at',
-  next:'next_plan'
+  next:'next_plan',
+  preferredField:'preferred_field', preferredSchedule:'preferred_schedule',
+  requestNote:'request_note', requestId:'request_id', flowType:'flow_type',
+  mentorResponse:'mentor_response', adminMemo:'admin_memo',
+  notificationEmail:'notification_email', menteeId2:'mentee_id'
 };
 const _camelMap = Object.fromEntries(Object.entries(_snakeMap).map(([k,v]) => [v,k]));
 
@@ -1557,6 +1620,8 @@ function applyLoadedData(bundle = {}) {
   if (Array.isArray(feedbacks)) DB.feedbacks = feedbacks;
   if (Array.isArray(requests))  DB.requests  = requests;
   if (Array.isArray(notices))   DB.notices   = notices.filter(n => !n.is_deleted);
+  if (Array.isArray(bundle.matchRequests))  DB.matchRequests  = bundle.matchRequests;
+  if (Array.isArray(bundle.matchProposals)) DB.matchProposals = bundle.matchProposals;
   _rebuildIndex();
 }
 
@@ -1582,7 +1647,9 @@ async function fetchAppBundle() {
     journals:  bundleArray(bundle.journals),
     feedbacks: bundleArray(bundle.feedbacks),
     requests:  bundleArray(bundle.requests),
-    notices:   bundleArray(bundle.notices)
+    notices:   bundleArray(bundle.notices),
+    matchRequests:  bundleArray(bundle.match_requests),
+    matchProposals: bundleArray(bundle.match_proposals)
   });
 }
 
@@ -1633,7 +1700,9 @@ function adminPreviewAs(role) {
       journals: DB.journals,
       feedbacks: DB.feedbacks,
       requests: DB.requests,
-      notices: DB.notices
+      notices: DB.notices,
+      matchRequests: DB.matchRequests,
+      matchProposals: DB.matchProposals
     };
   }
 
@@ -1817,6 +1886,8 @@ function startRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'mentors' }, _handleRealtimeChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'mentees' }, _handleRealtimeChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'match_requests' }, _handleRealtimeChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'match_proposals' }, _handleRealtimeChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'feedbacks' }, _handleRealtimeChange)
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
@@ -1858,10 +1929,12 @@ const menus = {
     { id: 'page-mentor-schedule', icon: '📅', label: '가용 일정 등록' },
     { id: 'page-mentor-sessions', icon: '📋', label: '예약 현황' },
     { id: 'page-mentor-journal', icon: '📝', label: '멘토링 일지' },
+    { id: 'page-mentor-match',     icon: '🤝', label: '매칭 알림', badgeType: 'mentorMatch' },
     { id: 'page-mentor-notices',  icon: '📢', label: '공지사항', badgeType: 'notices' },
     { id: 'page-mentor-request',  icon: '📨', label: '요청하기', badgeType: 'myRequests' },
   ],
   mentee: [
+    { id: 'page-mentee-match',    icon: '🤝', label: '매칭 신청', badgeType: 'menteeMatch' },
     { id: 'page-mentee-book',     icon: '🔍', label: '멘토 예약하기' },
     { id: 'page-mentee-sessions', icon: '📋', label: '내 멘토링 내역' },
     { id: 'page-mentee-notices',  icon: '📢', label: '공지사항', badgeType: 'notices' },
@@ -1869,6 +1942,7 @@ const menus = {
   ],
   admin: [
     { id: 'page-admin-dashboard', icon: '📊', label: '전체 현황' },
+    { id: 'page-admin-match',     icon: '🤝', label: '매칭 관리', badgeType: 'adminMatch' },
     { id: 'page-admin-mentors',   icon: '🎓', label: '멘토 관리' },
     { id: 'page-admin-mentees',   icon: '🚀', label: '멘티 관리' },
     { id: 'page-admin-journals',  icon: '📝', label: '일지 목록' },
@@ -1900,6 +1974,19 @@ function buildSidebar() {
       const read = _getReadNoticeIds();
       const myRole = currentRole;
       const cnt = DB.notices.filter(n => (n.target === '전체' || n.target === (myRole === 'mentor' ? '멘토만' : '멘티만')) && !read.has(n.id)).length;
+      if (cnt > 0) badge = ` <span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (m.badgeType === 'mentorMatch') {
+      const cnt = DB.matchProposals.filter(p => p.mentorId === currentUser?.id && p.mentorResponse === '대기' && p.status === '제안중').length;
+      if (cnt > 0) badge = ` <span style="${badgeStyle}">${cnt}</span>`;
+    }
+    if (m.badgeType === 'menteeMatch') {
+      const cnt = DB.matchProposals.filter(p => p.menteeId === currentUser?.id && p.status === '확정').length
+              + DB.matchRequests.filter(r => r.menteeId === currentUser?.id && r.status === '대기중').length;
+      if (cnt > 0) badge = ` <span style="background:var(--accent);color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;font-weight:700">${cnt}</span>`;
+    }
+    if (m.badgeType === 'adminMatch') {
+      const cnt = DB.matchRequests.filter(r => r.status === '대기중').length;
       if (cnt > 0) badge = ` <span style="${badgeStyle}">${cnt}</span>`;
     }
     if (m.badgeType === 'pendingRequests') {
@@ -2055,12 +2142,15 @@ function renderPage(id) {
     case 'page-mentor-schedule':  renderMentorSchedule(); break;
     case 'page-mentor-sessions':  renderMentorSessions(); break;
     case 'page-mentor-journal':   renderJournalPage(); break;
+    case 'page-mentor-match':     renderMentorMatch(); break;
     case 'page-mentor-notices':   renderNoticesPage('mentor'); break;
     case 'page-mentor-request':   renderRequestPage('mentor'); break;
+    case 'page-mentee-match':     renderMenteeMatch(); break;
     case 'page-mentee-book':      renderMenteeBook(); break;
     case 'page-mentee-sessions':  renderMenteeSessions(); break;
     case 'page-mentee-notices':   renderNoticesPage('mentee'); break;
     case 'page-mentee-request':   renderRequestPage('mentee'); break;
+    case 'page-admin-match':      renderAdminMatch(); break;
     case 'page-admin-dashboard':  renderAdminDashboard(); break;
     case 'page-admin-mentors':    renderAdminMentors(); break;
     case 'page-admin-mentees':    renderAdminMentees(); break;
@@ -3184,6 +3274,7 @@ async function addMentee() {
   const name  = document.getElementById('new-mentee-name').value;
   const team  = document.getElementById('new-mentee-team').value;
   const email = document.getElementById('new-mentee-email').value.trim().toLowerCase();
+  const notificationEmail = document.getElementById('new-mentee-notification-email').value.trim();
   if (!name || !team) { toast('이름과 팀명은 필수입니다', 'error'); return; }
   if (!email) { toast('이메일을 입력해야 로그인 계정이 생성됩니다', 'error'); return; }
   if (DB.mentees.some(m => String(m.email || '').toLowerCase() === email.toLowerCase())) {
@@ -3191,16 +3282,16 @@ async function addMentee() {
     return;
   }
   const newId = 'me' + Date.now();
-  const newMentee = { id: newId, name, team, email };
+  const newMentee = { id: newId, name, team, email, notificationEmail };
   // 로컬 즉시 반영 (UX)
   DB.mentees.push(newMentee);
-  ['new-mentee-name','new-mentee-team','new-mentee-email'].forEach(id => document.getElementById(id).value = '');
+  ['new-mentee-name','new-mentee-team','new-mentee-email','new-mentee-notification-email'].forEach(id => document.getElementById(id).value = '');
   closeModal('modal-add-mentee');
   renderAdminMentees();
   toast('멘티 등록 중...', 'info');
   try {
     await syncBatch([
-      { action: 'append', sheet: 'mentees', data: { id: newId, name, team, email } },
+      { action: 'append', sheet: 'mentees', data: { id: newId, name, team, email, notificationEmail } },
       { action: 'upsertUser', data: { email, role: 'mentee', name, linkedId: newId } }
     ]);
     toast(`${name} 멘티 추가 완료 — Google 로그인 계정도 자동 등록됐습니다 ✅`, 'success');
@@ -3264,6 +3355,482 @@ function renderAdminJournals() {
       <div class="session-topic">${(j.content || '').substring(0, 80)}…</div>
     </div></div>`;
   }).join('')}</div>`;
+}
+
+// ═══ 매칭 기능 ═══
+
+const MATCH_FIELDS = ['마케팅', '투자유치', '기술개발', '해외진출', '재무회계', '법률', '기타'];
+const MATCH_SCHEDULES = ['평일 오전', '평일 오후', '주말'];
+
+// ── 멘티: 매칭 신청 ──
+function renderMenteeMatch() {
+  const el = document.getElementById('mentee-match-content');
+  const myId = currentUser?.id;
+  const myRequests = DB.matchRequests.filter(r => r.menteeId === myId).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  const myProposals = DB.matchProposals.filter(p => p.menteeId === myId);
+
+  // 확정된 매칭
+  const confirmed = myProposals.filter(p => p.status === '확정');
+
+  el.innerHTML = `
+    ${confirmed.length ? `<div class="card" style="border-left:4px solid var(--success);margin-bottom:20px">
+      <h4 style="margin-bottom:12px;color:var(--success)">✅ 확정된 매칭</h4>
+      ${confirmed.map(p => {
+        const mentor = _idx.mentor[p.mentorId];
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+          <strong>${mentor?.name || '알 수 없음'}</strong> 멘토 <span class="text-muted">(${mentor?.field || ''})</span>
+          <br><span class="text-muted" style="font-size:12px">확정일: ${formatDate(p.createdAt)}</span>
+          ${p.adminMemo ? `<br><span style="font-size:12px;color:var(--text3)">메모: ${p.adminMemo}</span>` : ''}
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+    <div class="card" style="margin-bottom:20px">
+      <h4 style="margin-bottom:16px">매칭 신청하기</h4>
+      <div class="form-group">
+        <label class="form-label">희망 분야 (복수 선택 가능)</label>
+        <div id="match-field-tags" style="display:flex;flex-wrap:wrap;gap:6px">
+          ${MATCH_FIELDS.map(f => `<label style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:999px;font-size:13px;cursor:pointer;user-select:none">
+            <input type="checkbox" value="${f}" style="display:none" onchange="this.parentElement.style.background=this.checked?'var(--accent-ultra)':'';this.parentElement.style.borderColor=this.checked?'var(--accent)':'var(--border)'"> ${f}
+          </label>`).join('')}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">희망 일정 (복수 선택 가능)</label>
+        <div id="match-schedule-tags" style="display:flex;flex-wrap:wrap;gap:6px">
+          ${MATCH_SCHEDULES.map(s => `<label style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:999px;font-size:13px;cursor:pointer;user-select:none">
+            <input type="checkbox" value="${s}" style="display:none" onchange="this.parentElement.style.background=this.checked?'var(--accent-ultra)':'';this.parentElement.style.borderColor=this.checked?'var(--accent)':'var(--border)'"> ${s}
+          </label>`).join('')}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">요청사항</label>
+        <textarea id="match-request-note" class="form-control" rows="3" placeholder="멘토링에 대한 구체적인 희망사항을 작성해주세요"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitMatchRequest()" style="width:100%">매칭 신청하기</button>
+    </div>
+    ${myRequests.length ? `<div class="card">
+      <h4 style="margin-bottom:12px">신청 현황</h4>
+      ${myRequests.map(r => {
+        const statusBadge = r.status === '대기중' ? 'badge-warn' : r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : 'badge-gray';
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div class="flex-between">
+            <div>
+              <span class="badge ${statusBadge}">${r.status}</span>
+              <span style="margin-left:8px;font-size:13px">${r.preferredField || '분야 미지정'}</span>
+            </div>
+            <span class="text-muted" style="font-size:12px">${formatDate(r.createdAt)}</span>
+          </div>
+          ${r.requestNote ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${r.requestNote.substring(0, 80)}${r.requestNote.length > 80 ? '...' : ''}</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+    <div class="card" style="margin-top:20px">
+      <h5 style="margin-bottom:10px">🔔 알림 이메일 설정</h5>
+      <p class="text-muted" style="font-size:12px;margin-bottom:8px">매칭 결과 알림을 받을 이메일을 설정하세요. 미설정 시 로그인 이메일로 발송됩니다.</p>
+      <div style="display:flex;gap:8px">
+        <input type="email" class="form-control" id="my-notification-email" placeholder="알림 받을 이메일" value="${currentUser?.notificationEmail || ''}" style="flex:1">
+        <button class="btn btn-secondary btn-sm" onclick="saveNotificationEmail()">저장</button>
+      </div>
+    </div>`;
+}
+
+async function submitMatchRequest() {
+  if (!ensureAuthorized('매칭 신청', ['mentee'])) return;
+  const fields = [...document.querySelectorAll('#match-field-tags input:checked')].map(i => i.value);
+  const schedules = [...document.querySelectorAll('#match-schedule-tags input:checked')].map(i => i.value);
+  const note = document.getElementById('match-request-note').value.trim();
+  if (!fields.length) { toast('희망 분야를 1개 이상 선택해주세요', 'error'); return; }
+  if (!schedules.length) { toast('희망 일정을 1개 이상 선택해주세요', 'error'); return; }
+  const req = {
+    id: 'mr' + Date.now(),
+    menteeId: currentUser.id,
+    preferredField: fields.join(', '),
+    preferredSchedule: schedules.join(', '),
+    requestNote: note,
+    status: '대기중',
+    createdAt: serverTimestamp()
+  };
+  DB.matchRequests.push(req);
+  renderMenteeMatch();
+  toast('매칭 신청이 완료되었습니다. 담당자 검토 후 매칭 결과를 안내드립니다', 'success');
+  try {
+    await syncBatch([{ action: 'append', sheet: 'match_requests', data: toSnake(req) }]);
+  } catch(e) {
+    DB.matchRequests = DB.matchRequests.filter(r => r.id !== req.id);
+    renderMenteeMatch();
+    toast('매칭 신청 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+// ── 멘토: 매칭 알림 ──
+function renderMentorMatch() {
+  const el = document.getElementById('mentor-match-content');
+  const myId = currentUser?.id;
+  const proposals = DB.matchProposals.filter(p => p.mentorId === myId).sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  const pending = proposals.filter(p => p.mentorResponse === '대기' && p.status === '제안중');
+  const history = proposals.filter(p => p.mentorResponse !== '대기' || p.status !== '제안중');
+
+  el.innerHTML = `
+    ${pending.length ? `<div class="card" style="border-left:4px solid var(--accent);margin-bottom:20px">
+      <h4 style="margin-bottom:12px;color:var(--accent)">📬 새로운 매칭 제안 (${pending.length}건)</h4>
+      ${pending.map(p => {
+        const mentee = _idx.mentee[p.menteeId];
+        const req = DB.matchRequests.find(r => r.id === p.requestId);
+        return `<div class="card" style="margin-bottom:12px;background:var(--surface2)">
+          <div class="flex-between" style="margin-bottom:8px">
+            <strong style="font-size:15px">${mentee?.name || '멘티'}</strong>
+            <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+          </div>
+          ${req ? `<div style="font-size:13px;margin-bottom:4px"><strong>희망 분야:</strong> ${req.preferredField}</div>
+          <div style="font-size:13px;margin-bottom:4px"><strong>희망 일정:</strong> ${req.preferredSchedule}</div>
+          ${req.requestNote ? `<div style="font-size:13px;margin-bottom:8px"><strong>요청사항:</strong> ${req.requestNote}</div>` : ''}` : ''}
+          ${p.adminMemo ? `<div style="font-size:12px;color:var(--text3);margin-bottom:8px">담당자 메모: ${p.adminMemo}</div>` : ''}
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary btn-sm" onclick="respondMatchProposal('${p.id}', '수락')">수락</button>
+            <button class="btn btn-danger btn-sm" onclick="respondMatchProposal('${p.id}', '거절')">거절</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '<div class="card" style="margin-bottom:20px"><div class="empty-state"><span class="icon">📭</span><h4>새로운 매칭 제안 없음</h4><p>담당자가 매칭을 제안하면 여기에 표시됩니다</p></div></div>'}
+    ${history.length ? `<div class="card">
+      <h4 style="margin-bottom:12px">매칭 이력</h4>
+      ${history.map(p => {
+        const mentee = _idx.mentee[p.menteeId];
+        const statusBadge = p.status === '확정' ? 'badge-green' : 'badge-gray';
+        const respBadge = p.mentorResponse === '수락' ? 'badge-green' : p.mentorResponse === '거절' ? 'badge-gray' : 'badge-warn';
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <strong>${mentee?.name || '멘티'}</strong>
+            <span class="badge ${statusBadge}" style="margin-left:8px">${p.status}</span>
+            <span class="badge ${respBadge}" style="margin-left:4px">${p.mentorResponse}</span>
+          </div>
+          <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+    <div class="card" style="margin-top:20px">
+      <h5 style="margin-bottom:10px">🔔 알림 이메일 설정</h5>
+      <p class="text-muted" style="font-size:12px;margin-bottom:8px">매칭 제안 알림을 받을 이메일을 설정하세요. 미설정 시 로그인 이메일로 발송됩니다.</p>
+      <div style="display:flex;gap:8px">
+        <input type="email" class="form-control" id="my-notification-email" placeholder="알림 받을 이메일" value="${currentUser?.notificationEmail || ''}" style="flex:1">
+        <button class="btn btn-secondary btn-sm" onclick="saveNotificationEmail()">저장</button>
+      </div>
+    </div>`;
+}
+
+async function saveNotificationEmail() {
+  const emailVal = document.getElementById('my-notification-email').value.trim();
+  if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+    toast('올바른 이메일 형식을 입력해주세요', 'error'); return;
+  }
+  const sheet = currentRole === 'mentor' ? 'mentors' : 'mentees';
+  const me = currentRole === 'mentor'
+    ? DB.mentors.find(m => m.id === currentUser.id)
+    : DB.mentees.find(m => m.id === currentUser.id);
+  if (!me) return;
+  const prev = me.notificationEmail;
+  me.notificationEmail = emailVal;
+  if (currentUser) currentUser.notificationEmail = emailVal;
+  toast('알림 이메일 저장 중...', 'info');
+  try {
+    await syncBatch([{ action: 'update', sheet, id: me.id, updates: { notificationEmail: emailVal } }]);
+    toast('알림 이메일이 저장되었습니다 ✅', 'success');
+  } catch(e) {
+    me.notificationEmail = prev;
+    if (currentUser) currentUser.notificationEmail = prev;
+    toast('알림 이메일 저장 실패', 'error');
+  }
+}
+
+async function respondMatchProposal(proposalId, response) {
+  const p = DB.matchProposals.find(x => x.id === proposalId);
+  if (!p) return;
+  const newStatus = response === '수락' ? '확정' : '거절';
+  const prevResponse = p.mentorResponse;
+  const prevStatus = p.status;
+  p.mentorResponse = response;
+  p.status = newStatus;
+  // 수락 시 관련 match_request도 확정
+  let prevReqStatus;
+  if (response === '수락' && p.requestId) {
+    const req = DB.matchRequests.find(r => r.id === p.requestId);
+    if (req) { prevReqStatus = req.status; req.status = '확정'; }
+  }
+  renderMentorMatch();
+  toast(response === '수락' ? '매칭을 수락했습니다 ✅' : '매칭을 거절했습니다', response === '수락' ? 'success' : 'warn');
+  try {
+    const ops = [{ action: 'update', sheet: 'match_proposals', id: proposalId, updates: { mentor_response: response, status: newStatus } }];
+    if (response === '수락' && p.requestId) {
+      ops.push({ action: 'update', sheet: 'match_requests', id: p.requestId, updates: { status: '확정' } });
+    }
+    await syncBatch(ops);
+    // 이메일 발송
+    await sendMatchEmail(response === '수락' ? 'confirmed_a' : 'rejected', p);
+  } catch(e) {
+    p.mentorResponse = prevResponse;
+    p.status = prevStatus;
+    if (prevReqStatus && p.requestId) {
+      const req = DB.matchRequests.find(r => r.id === p.requestId);
+      if (req) req.status = prevReqStatus;
+    }
+    renderMentorMatch();
+    toast('매칭 응답 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+// ── 관리자: 매칭 관리 ──
+let _matchTab = 'requests';
+function setMatchTab(tab) {
+  _matchTab = tab;
+  ['requests', 'proposals', 'direct'].forEach(t => {
+    const btn = document.getElementById('mtab-' + t);
+    if (btn) { btn.className = `btn btn-sm ${t === tab ? 'btn-primary' : 'btn-secondary'}`; btn.style.borderRadius = '999px'; }
+  });
+  renderAdminMatch();
+}
+
+function renderAdminMatch() {
+  const el = document.getElementById('admin-match-content');
+  if (_matchTab === 'requests') renderAdminMatchRequests(el);
+  else if (_matchTab === 'proposals') renderAdminMatchProposals(el);
+  else renderAdminMatchDirect(el);
+}
+
+function renderAdminMatchRequests(el) {
+  const pending = DB.matchRequests.filter(r => r.status === '대기중').sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  const other = DB.matchRequests.filter(r => r.status !== '대기중').sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  el.innerHTML = `
+    ${pending.length ? `<div class="card" style="margin-bottom:16px">
+      <h4 style="margin-bottom:12px">대기 중인 신청 (${pending.length}건)</h4>
+      ${pending.map(r => {
+        const mentee = _idx.mentee[r.menteeId];
+        return `<div class="card" style="background:var(--surface2);margin-bottom:10px">
+          <div class="flex-between" style="margin-bottom:8px">
+            <div><strong>${mentee?.name || '멘티'}</strong> <span class="text-muted">(${mentee?.team || ''})</span></div>
+            <span class="text-muted" style="font-size:12px">${formatDate(r.createdAt)}</span>
+          </div>
+          <div style="font-size:13px;margin-bottom:4px">희망 분야: <strong>${r.preferredField}</strong></div>
+          <div style="font-size:13px;margin-bottom:4px">희망 일정: <strong>${r.preferredSchedule}</strong></div>
+          ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2)">요청사항: ${r.requestNote}</div>` : ''}
+          <button class="btn btn-primary btn-sm" onclick="openMatchProposeModal('${r.id}')">멘토 선택 후 제안</button>
+        </div>`;
+      }).join('')}
+    </div>` : '<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>대기 중인 신청 없음</h4></div></div>'}
+    ${other.length ? `<div class="card">
+      <h4 style="margin-bottom:12px">처리된 신청</h4>
+      ${other.map(r => {
+        const mentee = _idx.mentee[r.menteeId];
+        const statusBadge = r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : 'badge-gray';
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div><strong>${mentee?.name || '멘티'}</strong> — ${r.preferredField} <span class="badge ${statusBadge}">${r.status}</span></div>
+          <span class="text-muted" style="font-size:12px">${formatDate(r.createdAt)}</span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}`;
+}
+
+function renderAdminMatchProposals(el) {
+  const statusFilter = document.getElementById('match-status-filter')?.value || 'all';
+  let proposals = [...DB.matchProposals].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  if (statusFilter !== 'all') proposals = proposals.filter(p => p.status === statusFilter);
+  el.innerHTML = `
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:12px">
+        <h4>매칭 현황 (${proposals.length}건)</h4>
+        <select id="match-status-filter" class="form-control" style="width:auto;padding:4px 10px;font-size:13px" onchange="renderAdminMatch()">
+          <option value="all" ${statusFilter==='all'?'selected':''}>전체</option>
+          <option value="제안중" ${statusFilter==='제안중'?'selected':''}>제안중</option>
+          <option value="확정" ${statusFilter==='확정'?'selected':''}>확정</option>
+          <option value="거절" ${statusFilter==='거절'?'selected':''}>거절</option>
+        </select>
+      </div>
+      ${proposals.length ? proposals.map(p => {
+        const mentor = _idx.mentor[p.mentorId];
+        const mentee = _idx.mentee[p.menteeId];
+        const statusBadge = p.status === '제안중' ? 'badge-warn' : p.status === '확정' ? 'badge-green' : 'badge-gray';
+        const flowBadge = p.flowType === 'admin_direct'
+          ? '<span style="background:#E8F5E9;color:#2E7D32;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600">직접매칭</span>'
+          : '<span style="background:#E3F2FD;color:#1565C0;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600">신청기반</span>';
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div class="flex-between">
+            <div>
+              ${flowBadge}
+              <strong style="margin-left:6px">${mentor?.name || '멘토'}</strong> → <strong>${mentee?.name || '멘티'}</strong>
+              <span class="badge ${statusBadge}" style="margin-left:6px">${p.status}</span>
+              ${p.mentorResponse !== '대기' ? `<span class="text-muted" style="font-size:11px;margin-left:4px">(멘토: ${p.mentorResponse})</span>` : ''}
+            </div>
+            <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+          </div>
+          ${p.adminMemo ? `<div class="text-muted" style="font-size:12px;margin-top:4px">메모: ${p.adminMemo}</div>` : ''}
+        </div>`;
+      }).join('') : '<div class="empty-state"><span class="icon">📭</span><h4>매칭 기록 없음</h4></div>'}
+    </div>`;
+}
+
+function renderAdminMatchDirect(el) {
+  el.innerHTML = `
+    <div class="card">
+      <h4 style="margin-bottom:16px">직접 매칭</h4>
+      <p class="text-muted" style="margin-bottom:16px;font-size:13px">멘토와 멘티를 직접 선택하여 매칭합니다. 제안 단계 없이 바로 확정됩니다.</p>
+      <div class="form-group">
+        <label class="form-label">멘토 선택</label>
+        <select id="direct-mentor-select" class="form-control">
+          <option value="">— 멘토를 선택하세요 —</option>
+          ${DB.mentors.filter(m => m.active !== false).map(m => `<option value="${m.id}">${m.name} (${m.field || ''})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">멘티 선택</label>
+        <select id="direct-mentee-select" class="form-control">
+          <option value="">— 멘티를 선택하세요 —</option>
+          ${DB.mentees.map(m => `<option value="${m.id}">${m.name} (${m.team || ''})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">담당자 메모 (선택)</label>
+        <textarea id="direct-admin-memo" class="form-control" rows="2" placeholder="매칭 사유나 참고사항"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="adminDirectMatch()" style="width:100%">매칭 확정</button>
+    </div>`;
+}
+
+let _proposeRequestId = null;
+function openMatchProposeModal(requestId) {
+  _proposeRequestId = requestId;
+  const sel = document.getElementById('propose-mentor-select');
+  sel.innerHTML = `<option value="">— 멘토를 선택하세요 —</option>` +
+    DB.mentors.filter(m => m.active !== false).map(m => `<option value="${m.id}">${m.name} (${m.field || ''})</option>`).join('');
+  document.getElementById('propose-admin-memo').value = '';
+  openModal('modal-match-propose');
+}
+
+async function confirmMatchPropose() {
+  const mentorId = document.getElementById('propose-mentor-select').value;
+  const memo = document.getElementById('propose-admin-memo').value.trim();
+  if (!mentorId) { toast('멘토를 선택해주세요', 'error'); return; }
+  const req = DB.matchRequests.find(r => r.id === _proposeRequestId);
+  if (!req) return;
+  const proposal = {
+    id: 'mp' + Date.now(),
+    mentorId,
+    menteeId: req.menteeId,
+    requestId: req.id,
+    flowType: 'mentee_request',
+    mentor_response: '대기',
+    adminMemo: memo,
+    status: '제안중',
+    createdAt: serverTimestamp()
+  };
+  DB.matchProposals.push(proposal);
+  req.status = '제안됨';
+  closeModal('modal-match-propose');
+  renderAdminMatch();
+  toast('멘토에게 매칭 제안을 보냈습니다', 'success');
+  try {
+    await syncBatch([
+      { action: 'append', sheet: 'match_proposals', data: toSnake(proposal) },
+      { action: 'update', sheet: 'match_requests', id: req.id, updates: { status: '제안됨' } }
+    ]);
+    await sendMatchEmail('propose', proposal);
+  } catch(e) {
+    DB.matchProposals = DB.matchProposals.filter(p => p.id !== proposal.id);
+    req.status = '대기중';
+    renderAdminMatch();
+    toast('매칭 제안 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function adminDirectMatch() {
+  if (!ensureAuthorized('직접 매칭', ['admin'])) return;
+  const mentorId = document.getElementById('direct-mentor-select').value;
+  const menteeId = document.getElementById('direct-mentee-select').value;
+  const memo = document.getElementById('direct-admin-memo').value.trim();
+  if (!mentorId || !menteeId) { toast('멘토와 멘티를 모두 선택해주세요', 'error'); return; }
+  if (mentorId === menteeId) { toast('동일인을 선택할 수 없습니다', 'error'); return; }
+  const proposal = {
+    id: 'mp' + Date.now(),
+    mentorId,
+    menteeId,
+    requestId: '',
+    flowType: 'admin_direct',
+    mentor_response: '수락',
+    adminMemo: memo,
+    status: '확정',
+    createdAt: serverTimestamp()
+  };
+  DB.matchProposals.push(proposal);
+  renderAdminMatch();
+  toast('매칭이 확정되었습니다 ✅', 'success');
+  try {
+    await syncBatch([{ action: 'append', sheet: 'match_proposals', data: toSnake(proposal) }]);
+    await sendMatchEmail('confirmed_b', proposal);
+  } catch(e) {
+    DB.matchProposals = DB.matchProposals.filter(p => p.id !== proposal.id);
+    renderAdminMatch();
+    toast('매칭 확정 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+// ── 매칭 이메일 발송 ──
+async function sendMatchEmail(type, proposal) {
+  if (!hasSupabaseIntegration() || isDemoMode) return;
+  try {
+    const mentor = _idx.mentor[proposal.mentorId];
+    const mentee = _idx.mentee[proposal.menteeId];
+    const req = proposal.requestId ? DB.matchRequests.find(r => r.id === proposal.requestId) : null;
+    const hubUrl = window.location.href;
+    const adminEmail = DB.mentors.length ? '' : ''; // 관리자 이메일은 users 테이블에서
+    let emails = [];
+
+    if (type === 'propose') {
+      // 멘토에게 제안 이메일
+      const to = mentor?.notificationEmail || mentor?.email;
+      if (to) emails.push({
+        to, subject: '[멘토링 허브] 멘토링 매칭 제안',
+        body: `안녕하세요 ${mentor.name} 멘토님,\n\n새로운 멘토링 매칭이 제안되었습니다.\n\n` +
+          `멘티: ${mentee?.name || ''}\n` +
+          (req ? `희망 분야: ${req.preferredField}\n희망 일정: ${req.preferredSchedule}\n${req.requestNote ? '요청사항: ' + req.requestNote + '\n' : ''}` : '') +
+          `\n멘토링 허브에서 수락/거절해주세요:\n${hubUrl}\n\n감사합니다.`
+      });
+    } else if (type === 'confirmed_a' || type === 'confirmed_b') {
+      // 멘토+멘티에게 확정 이메일
+      const subj = '[멘토링 허브] 멘토링 매칭이 확정되었습니다';
+      const mentorTo = mentor?.notificationEmail || mentor?.email;
+      const menteeTo = mentee?.notificationEmail || mentee?.email;
+      const memoLine = proposal.adminMemo ? `\n담당자 메모: ${proposal.adminMemo}` : '';
+      if (mentorTo) emails.push({
+        to: mentorTo, subject: subj,
+        body: `안녕하세요 ${mentor.name} 멘토님,\n\n${mentee?.name} 멘티와의 멘토링 매칭이 확정되었습니다.${memoLine}\n\n멘토링 허브에서 일정을 조율해주세요:\n${hubUrl}\n\n감사합니다.`
+      });
+      if (menteeTo) emails.push({
+        to: menteeTo, subject: subj,
+        body: `안녕하세요 ${mentee?.name} 멘티님,\n\n${mentor?.name} 멘토님과의 멘토링 매칭이 확정되었습니다.${memoLine}\n\n멘토링 허브에서 일정을 확인해주세요:\n${hubUrl}\n\n감사합니다.`
+      });
+    } else if (type === 'rejected') {
+      // 담당자에게 거절 알림 (admin users 테이블에서 이메일 조회)
+      const sb = getSupabase();
+      const { data: adminUsers } = await sb.from('users').select('email').eq('role', 'admin');
+      if (adminUsers?.length) {
+        const mentee = _idx.mentee[proposal.menteeId];
+        emails.push({
+          to: adminUsers[0].email, subject: '[멘토링 허브] 멘토가 매칭을 거절했습니다',
+          body: `멘토 ${mentor?.name}님이 멘티 ${mentee?.name}님과의 매칭을 거절했습니다.\n\n재매칭이 필요합니다.\n\n멘토링 허브:\n${hubUrl}`
+        });
+      }
+    }
+
+    // Supabase Edge Function 또는 DB function으로 이메일 발송
+    for (const em of emails) {
+      try {
+        const sb = getSupabase();
+        await sb.rpc('send_match_email', { p_to: em.to, p_subject: em.subject, p_body: em.body });
+      } catch(emailErr) {
+        console.warn('이메일 발송 실패 (별도 처리 필요):', emailErr.message, em.to);
+      }
+    }
+  } catch(e) {
+    console.warn('이메일 처리 오류:', e);
+  }
 }
 
 function renderSettings() {
@@ -3957,6 +4524,7 @@ async function addMentor() {
   const org   = document.getElementById('new-mentor-org').value;
   const email = document.getElementById('new-mentor-email').value.trim().toLowerCase();
   const bio   = document.getElementById('new-mentor-bio').value;
+  const notificationEmail = document.getElementById('new-mentor-notification-email').value.trim();
   if (!name || !field) { toast('이름과 분야는 필수입니다', 'error'); return; }
   if (!email) { toast('이메일을 입력해야 로그인 계정이 생성됩니다', 'error'); return; }
   if (DB.mentors.some(m => String(m.email || '').toLowerCase() === email.toLowerCase())) {
@@ -3964,16 +4532,16 @@ async function addMentor() {
     return;
   }
   const newId = 'm' + Date.now();
-  DB.mentors.push({ id: newId, name, field, org, email, bio, active: true });
+  DB.mentors.push({ id: newId, name, field, org, email, bio, notificationEmail, active: true });
   closeModal('modal-add-mentor');
-  ['new-mentor-name','new-mentor-field','new-mentor-org','new-mentor-email','new-mentor-bio'].forEach(id => {
+  ['new-mentor-name','new-mentor-field','new-mentor-org','new-mentor-email','new-mentor-bio','new-mentor-notification-email'].forEach(id => {
     document.getElementById(id).value = '';
   });
   renderAdminMentors();
   toast('멘토 등록 중...', 'info');
   try {
     await syncBatch([
-      { action: 'append', sheet: 'mentors', data: { id: newId, name, field, org, email, bio, active: 'true' } },
+      { action: 'append', sheet: 'mentors', data: { id: newId, name, field, org, email, bio, notificationEmail, active: 'true' } },
       { action: 'upsertUser', data: { email, role: 'mentor', name, linkedId: newId } }
     ]);
     toast(`${name} 멘토 추가 완료 — Google 로그인 계정도 자동 등록됐습니다 ✅`, 'success');
@@ -4161,7 +4729,9 @@ async function _syncData({ silent = false } = {}) {
         journals: DB.journals,
         feedbacks: DB.feedbacks,
         requests: DB.requests,
-        notices: DB.notices
+        notices: DB.notices,
+        matchRequests: DB.matchRequests,
+        matchProposals: DB.matchProposals
       };
       // 미리보기 필터 재적용
       const uid = currentUser?.id;

@@ -156,25 +156,27 @@ CREATE TABLE public.users (
 
 -- ═══ 2. mentors (멘토 프로필) ═══
 CREATE TABLE public.mentors (
-  id          text PRIMARY KEY,
-  name        text NOT NULL,
-  field       text DEFAULT '',
-  org         text DEFAULT '',
-  email       text DEFAULT '',
-  bio         text DEFAULT '',
-  active      boolean DEFAULT true,
-  is_deleted  boolean DEFAULT false,
-  created_at  timestamptz DEFAULT now()
+  id                  text PRIMARY KEY,
+  name                text NOT NULL,
+  field               text DEFAULT '',
+  org                 text DEFAULT '',
+  email               text DEFAULT '',
+  bio                 text DEFAULT '',
+  notification_email  text DEFAULT '',
+  active              boolean DEFAULT true,
+  is_deleted          boolean DEFAULT false,
+  created_at          timestamptz DEFAULT now()
 );
 
 -- ═══ 3. mentees (멘티 프로필) ═══
 CREATE TABLE public.mentees (
-  id          text PRIMARY KEY,
-  name        text NOT NULL,
-  team        text DEFAULT '',
-  email       text DEFAULT '',
-  is_deleted  boolean DEFAULT false,
-  created_at  timestamptz DEFAULT now()
+  id                  text PRIMARY KEY,
+  name                text NOT NULL,
+  team                text DEFAULT '',
+  email               text DEFAULT '',
+  notification_email  text DEFAULT '',
+  is_deleted          boolean DEFAULT false,
+  created_at          timestamptz DEFAULT now()
 );
 
 -- ═══ 4. slots (멘토 가용 시간) ═══
@@ -275,6 +277,48 @@ CREATE TABLE public.notices (
   created_at   timestamptz DEFAULT now()
 );
 
+-- ═══ 11. match_requests (매칭 신청) ═══
+CREATE TABLE public.match_requests (
+  id                text PRIMARY KEY,
+  mentee_id         text NOT NULL REFERENCES public.mentees(id),
+  preferred_field   text DEFAULT '',
+  preferred_schedule text DEFAULT '',
+  request_note      text DEFAULT '',
+  status            text DEFAULT '대기중' CHECK (status IN ('대기중','제안됨','확정','취소')),
+  created_at        timestamptz DEFAULT now()
+);
+
+-- ═══ 12. match_proposals (매칭 제안) ═══
+CREATE TABLE public.match_proposals (
+  id              text PRIMARY KEY,
+  mentor_id       text NOT NULL REFERENCES public.mentors(id),
+  mentee_id       text NOT NULL REFERENCES public.mentees(id),
+  request_id      text REFERENCES public.match_requests(id),
+  flow_type       text DEFAULT 'request_based' CHECK (flow_type IN ('request_based','admin_direct')),
+  mentor_response text DEFAULT '대기' CHECK (mentor_response IN ('대기','수락','거절')),
+  admin_memo      text DEFAULT '',
+  status          text DEFAULT '제안중' CHECK (status IN ('제안중','확정','거절')),
+  created_at      timestamptz DEFAULT now()
+);
+
+-- ═══ 13. email_queue (이메일 발송 큐) ═══
+CREATE TABLE public.email_queue (
+  id          uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  to_email    text NOT NULL,
+  subject     text NOT NULL,
+  body        text NOT NULL,
+  status      text DEFAULT '대기' CHECK (status IN ('대기','발송완료','실패')),
+  created_at  timestamptz DEFAULT now()
+);
+
+-- send_match_email RPC
+CREATE OR REPLACE FUNCTION send_match_email(p_to text, p_subject text, p_body text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO email_queue (to_email, subject, body) VALUES (p_to, p_subject, p_body);
+END;
+$$;
+
 -- ═══ 인덱스 ═══
 CREATE INDEX idx_slots_mentor    ON public.slots(mentor_id);
 CREATE INDEX idx_sessions_mentor ON public.sessions(mentor_id);
@@ -283,6 +327,10 @@ CREATE INDEX idx_sessions_status ON public.sessions(status);
 CREATE INDEX idx_journals_mentor ON public.journals(mentor_id);
 CREATE INDEX idx_journals_session ON public.journals(session_id);
 CREATE INDEX idx_users_email     ON public.users(email);
+CREATE INDEX idx_match_req_mentee ON public.match_requests(mentee_id);
+CREATE INDEX idx_match_prop_mentor ON public.match_proposals(mentor_id);
+CREATE INDEX idx_match_prop_mentee ON public.match_proposals(mentee_id);
+CREATE INDEX idx_match_prop_request ON public.match_proposals(request_id);
 
 -- ═══ 예약 동시성 제어 함수 (LockService 대체) ═══
 CREATE OR REPLACE FUNCTION book_session(
