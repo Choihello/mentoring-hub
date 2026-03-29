@@ -1623,7 +1623,8 @@ function adminPreviewAs(role) {
   if (currentRole !== 'admin' && _adminPreviewRole === null) return;
 
   // 관리자 전체 데이터 백업 (미리보기 복귀 시 복원용)
-  if (!window._adminFullDB) {
+  // 이미 미리보기 중이면 기존 백업(원본) 유지, 관리자 모드에서 진입 시 항상 새로 백업
+  if (!_adminPreviewRole) {
     window._adminFullDB = {
       sessions: DB.sessions,
       slots: DB.slots,
@@ -1782,7 +1783,7 @@ function logout() {
   document.getElementById('screen-login').classList.add('active');
   document.getElementById('mobile-nav').style.display = 'none';
   currentRole = null; currentUser = null; currentLinkedId = null;
-  currentAuth = null; isDemoMode = false; _adminPreviewRole = null;
+  currentAuth = null; isDemoMode = false; _adminPreviewRole = null; window._adminFullDB = null;
   // Supabase 연결 시 완전 로그아웃 처리
   const sb = getSupabase();
   if (sb) sb.auth.signOut().catch(() => {});
@@ -2576,7 +2577,7 @@ function renderAdminDashboard() {
           <td>${getMenteeName(s.menteeId)}<br><span class="text-muted">${mentee?.team || ''}</span></td>
           <td>${formatDate(s.date)} ${s.time}<br><span class="text-muted">${s.location}</span></td>
           <td>${s.status === 'pending' ? '<span class="badge badge-warn">대기</span>' : s.status === 'upcoming' ? '<span class="badge badge-blue">확정</span>' : '<span class="badge badge-green">완료</span>'}</td>
-          <td>${s.hasJournal
+          <td>${(s.hasJournal === true || s.hasJournal === 'true')
             ? `<span class="badge badge-green" style="cursor:pointer" onclick="viewJournal('${s.id}')">📄 일지 보기</span>`
             : '<span class="badge badge-gray">미제출</span>'}</td>
           <td>${(s.status === 'pending' || s.status === 'upcoming')
@@ -3236,7 +3237,9 @@ function renderAdminJournals() {
   const dateFrom = document.getElementById('journal-date-from')?.value || '';
   const dateTo   = document.getElementById('journal-date-to')?.value || '';
 
-  let journals = [...DB.journals].sort((a,b) => (b.submittedAt||b.date||'').localeCompare(a.submittedAt||a.date||''));
+  // 관리자 모드: DB.journals가 비어있으면 _adminFullDB에서 복원 시도
+  const journalSource = DB.journals.length > 0 ? DB.journals : (window._adminFullDB?.journals || DB.journals);
+  let journals = [...journalSource].sort((a,b) => (b.submittedAt||b.date||'').localeCompare(a.submittedAt||a.date||''));
   if (selectedMentor !== 'all') journals = journals.filter(j => j.mentorId === selectedMentor);
   if (selectedMentee !== 'all') journals = journals.filter(j => j.menteeId === selectedMentee);
   if (dateFrom) journals = journals.filter(j => (j.date||'') >= dateFrom);
@@ -3892,14 +3895,31 @@ async function submitFeedback() {
   }
 }
 
-function viewJournal(sessionId) {
-  const j = DB.journals.find(x => x.sessionId === sessionId);
-  if (!j) { toast('일지 데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요', 'error'); return; }
+async function viewJournal(sessionId) {
+  let j = DB.journals.find(x => x.sessionId === sessionId);
+  // _adminFullDB에서도 검색 (미리보기 복귀 후 데이터 불일치 대비)
+  if (!j && window._adminFullDB?.journals) {
+    j = window._adminFullDB.journals.find(x => x.sessionId === sessionId);
+  }
+  if (!j) {
+    // Supabase에서 직접 조회 시도
+    try {
+      const sb = getSupabase();
+      if (sb) {
+        const { data } = await sb.from('journals').select('*').eq('session_id', sessionId).maybeSingle();
+        if (data) { j = toCamel(data); DB.journals.push(j); }
+      }
+    } catch(e) { console.warn('일지 직접 조회 실패:', e); }
+  }
+  if (!j) { toast('일지 데이터를 찾을 수 없습니다', 'error'); return; }
   viewJournalById(j.id);
 }
 
 function viewJournalById(jid) {
-  const j = DB.journals.find(x => x.id === jid);
+  let j = DB.journals.find(x => x.id === jid);
+  if (!j && window._adminFullDB?.journals) {
+    j = window._adminFullDB.journals.find(x => x.id === jid);
+  }
   const meta = [
     j.type ? `🏷 ${j.type}` : '',
     j.duration ? `⏱ ${j.duration}` : '',
@@ -4130,6 +4150,45 @@ async function _syncData({ silent = false } = {}) {
       ? getSessionsByMentor(currentUser.id).filter(s => s.status === 'pending').length : 0;
 
     await fetchAppBundle();
+
+    // 관리자 미리보기 중이면 백업 갱신 후 필터 재적용
+    if (_adminPreviewRole && window._adminFullDB) {
+      window._adminFullDB = {
+        sessions: DB.sessions,
+        slots: DB.slots,
+        mentors: DB.mentors,
+        mentees: DB.mentees,
+        journals: DB.journals,
+        feedbacks: DB.feedbacks,
+        requests: DB.requests,
+        notices: DB.notices
+      };
+      // 미리보기 필터 재적용
+      const uid = currentUser?.id;
+      const full = window._adminFullDB;
+      if (_adminPreviewRole === 'mentor' && uid) {
+        DB.sessions = full.sessions.filter(s => s.mentorId === uid);
+        DB.slots = full.slots.filter(s => s.mentorId === uid && s.status !== 'deleted');
+        DB.journals = full.journals.filter(j => j.mentorId === uid);
+        DB.feedbacks = full.feedbacks.filter(f => f.mentorId === uid);
+        DB.requests = full.requests.filter(r => r.authorId === uid || r.receiverId === uid);
+        DB.notices = full.notices.filter(n => n.target === '전체' || n.target === '멘토만');
+        const linkedMenteeIds = new Set(DB.sessions.map(s => s.menteeId));
+        DB.mentees = full.mentees.filter(m => linkedMenteeIds.has(m.id));
+        DB.mentors = full.mentors.filter(m => m.id === uid);
+      } else if (_adminPreviewRole === 'mentee' && uid) {
+        DB.sessions = full.sessions.filter(s => s.menteeId === uid);
+        DB.slots = full.slots.filter(s => s.status !== 'deleted');
+        DB.journals = [];
+        DB.feedbacks = full.feedbacks.filter(f => f.menteeId === uid);
+        DB.requests = full.requests.filter(r => r.authorId === uid || r.receiverId === uid);
+        DB.notices = full.notices.filter(n => n.target === '전체' || n.target === '멘티만');
+        DB.mentees = full.mentees.filter(m => m.id === uid);
+        const linkedMentorIds = new Set(DB.sessions.map(s => s.mentorId));
+        DB.mentors = full.mentors.filter(m => m.active !== false || linkedMentorIds.has(m.id));
+      }
+      _rebuildIndex();
+    }
 
     // currentUser 재설정
     if (currentLinkedId && currentRole) {
