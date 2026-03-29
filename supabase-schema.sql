@@ -553,6 +553,17 @@ BEGIN
             COALESCE(v_data->>'message_type', ''),
             COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
           );
+        WHEN 'notices' THEN
+          INSERT INTO public.notices (id, target, title, content, is_important, is_deleted, created_at)
+          VALUES (
+            v_data->>'id',
+            COALESCE(v_data->>'target', '전체'),
+            COALESCE(v_data->>'title', ''),
+            COALESCE(v_data->>'content', ''),
+            COALESCE(NULLIF(v_data->>'is_important', '')::boolean, false),
+            COALESCE(NULLIF(v_data->>'is_deleted', '')::boolean, false),
+            COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
+          );
         ELSE
           RAISE EXCEPTION 'Unsupported append target: %', v_sheet;
       END CASE;

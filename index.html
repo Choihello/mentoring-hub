@@ -3155,7 +3155,7 @@ async function createNotice() {
   renderAdminNotices();
   toast(`공지가 등록되었습니다 (대상: ${target}) ✅`, 'success');
   try {
-    await syncInsert('notice', { ...notice, isImportant: String(isImportant) });
+    await syncBatch([{ action: 'append', sheet: 'notices', data: toSnake(notice) }]);
   } catch(e) {
     DB.notices = DB.notices.filter(n => n.id !== notice.id);
     renderAdminNotices();
