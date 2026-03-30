@@ -1691,7 +1691,9 @@ async function resolveCurrentAccountFromSupabase(fallbackName = '') {
 
 
 function openAddSlotModal() {
-  document.getElementById('slot-date').value = todayStr();
+  const dateEl = document.getElementById('slot-date');
+  dateEl.value = todayStr();
+  dateEl.min = todayStr();
   renderTimeSlots();
   openModal('modal-add-slot');
 }
@@ -2006,7 +2008,8 @@ function buildSidebar() {
       if (cnt > 0) badge = ` <span style="background:var(--accent);color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;font-weight:700">${cnt}</span>`;
     }
     if (m.badgeType === 'adminMatch') {
-      const cnt = DB.matchRequests.filter(r => r.status === '대기중').length;
+      const cnt = DB.matchRequests.filter(r => r.status === '대기중').length
+              + DB.matchProposals.filter(p => p.mentorResponse !== '대기' && p.status === '제안중').length;
       if (cnt > 0) badge = ` <span style="${badgeStyle}">${cnt}</span>`;
     }
     if (m.badgeType === 'pendingRequests') {
@@ -3937,11 +3940,13 @@ async function addSlots() {
   renderMentorSchedule();
   toast(`${addedSlots.length}개 일정이 등록되었습니다 ✓`, 'success');
 
-  // 2. 백그라운드에서 Supabase 저장 (병렬)
+  // 2. 백그라운드에서 Supabase 저장 (syncBatch 사용 — RLS 우회)
   try {
-    await Promise.all(addedSlots.map(slot =>
-      syncInsert('slot', { id: slot.id, mentorId: slot.mentorId, date: slot.date, time: slot.time, location: slot.location, status: slot.status, sessionId: '' })
-    ));
+    const ops = addedSlots.map(slot => ({
+      action: 'append', sheet: 'slots',
+      data: { id: slot.id, mentorId: slot.mentorId, date: slot.date, time: slot.time, location: slot.location, status: slot.status, sessionId: '' }
+    }));
+    await syncBatch(ops);
   } catch(e) {
     // 저장 실패 시 롤백
     addedSlots.forEach(slot => { DB.slots = DB.slots.filter(s => s.id !== slot.id); });
