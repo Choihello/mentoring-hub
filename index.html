@@ -529,6 +529,9 @@ tr:hover td { background: var(--accent-ultra); }
 .cal-day.other-month { color: var(--text3); opacity: 0.4; }
 .cal-day.booked { background: var(--warn-bg); color: var(--warn); }
 .cal-day.booked::after { background: var(--warn); }
+.cal-day.past { opacity: 0.35; cursor: default; pointer-events: none; }
+.cal-day.clickable { cursor: pointer; }
+.cal-day.clickable:hover { background: var(--accent-light); color: var(--accent); transform: scale(1.1); }
 
 /* ── 멘토 카드 (멘티 예약) ── */
 .mentor-card {
@@ -1698,6 +1701,14 @@ function openAddSlotModal() {
   openModal('modal-add-slot');
 }
 
+function openSlotForDate(dateStr) {
+  const dateEl = document.getElementById('slot-date');
+  dateEl.value = dateStr;
+  dateEl.min = todayStr();
+  renderTimeSlots();
+  openModal('modal-add-slot');
+}
+
 function adminPreviewAs(role) {
   if (!isDemoMode && currentAuth?.role !== 'admin') {
     toast('관리자만 미리보기를 사용할 수 있습니다', 'error');
@@ -2217,16 +2228,22 @@ function renderMiniCalendar(slots) {
   startDow = startDow === 0 ? 6 : startDow - 1;
 
   for (let i = 0; i < startDow; i++) html += `<div class="cal-day other-month"></div>`;
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cellDate = new Date(calYear, calMonth, d);
+    const isPast = cellDate < todayDate;
     const hasAvail = slots.some(s => s.date === dateStr && s.status === 'available');
     const hasBooked = slots.some(s => s.date === dateStr && s.status === 'booked');
     const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
     let cls = 'cal-day';
     if (isToday) cls += ' today';
+    if (isPast) cls += ' past';
     if (hasBooked) cls += ' booked';
     else if (hasAvail) cls += ' has-slot';
-    html += `<div class="${cls}">${d}</div>`;
+    if (!isPast) cls += ' clickable';
+    const clickAttr = !isPast ? ` onclick="openSlotForDate('${dateStr}')"` : '';
+    html += `<div class="${cls}"${clickAttr}>${d}</div>`;
   }
   cal.innerHTML = html;
 }
@@ -3669,15 +3686,25 @@ function renderAdminMatchProposals(el) {
           <option value="제안중" ${statusFilter==='제안중'?'selected':''}>제안중</option>
           <option value="확정" ${statusFilter==='확정'?'selected':''}>확정</option>
           <option value="거절" ${statusFilter==='거절'?'selected':''}>거절</option>
+          <option value="해제" ${statusFilter==='해제'?'selected':''}>해제</option>
         </select>
       </div>
       ${proposals.length ? proposals.map(p => {
         const mentor = _idx.mentor[p.mentorId];
         const mentee = _idx.mentee[p.menteeId];
-        const statusBadge = p.status === '제안중' ? 'badge-warn' : p.status === '확정' ? 'badge-green' : 'badge-gray';
+        const statusBadge = p.status === '제안중' ? 'badge-warn' : p.status === '확정' ? 'badge-green' : p.status === '해제' ? 'badge-gray' : 'badge-gray';
         const flowBadge = p.flowType === 'admin_direct'
           ? '<span style="background:#E8F5E9;color:#2E7D32;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600">직접매칭</span>'
           : '<span style="background:#E3F2FD;color:#1565C0;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600">신청기반</span>';
+        const sessions = DB.sessions.filter(s => s.mentorId === p.mentorId && s.menteeId === p.menteeId);
+        const completedCnt = sessions.filter(s => s.status === 'completed').length;
+        const upcomingCnt = sessions.filter(s => s.status === 'upcoming' || s.status === 'pending').length;
+        const activityHtml = p.status === '확정' ? `<div style="margin-top:6px;display:flex;gap:8px;align-items:center">
+          ${completedCnt > 0 ? `<span style="background:#E8F5E9;color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">✅ 멘토링 ${completedCnt}회 완료</span>` : ''}
+          ${upcomingCnt > 0 ? `<span style="background:#E3F2FD;color:#1565C0;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">📅 예정 ${upcomingCnt}건</span>` : ''}
+          ${completedCnt === 0 && upcomingCnt === 0 ? `<span style="background:#FFF3E0;color:#E65100;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">⏳ 멘토링 미진행</span>` : ''}
+        </div>` : '';
+        const unmatchBtn = p.status === '확정' ? `<button class="btn btn-sm" style="background:#ffebee;color:#c62828;border:none;font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer" onclick="adminUnmatch('${p.id}')">매칭 해제</button>` : '';
         return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
           <div class="flex-between">
             <div>
@@ -3686,8 +3713,12 @@ function renderAdminMatchProposals(el) {
               <span class="badge ${statusBadge}" style="margin-left:6px">${p.status}</span>
               ${p.mentorResponse !== '대기' ? `<span class="text-muted" style="font-size:11px;margin-left:4px">(멘토: ${p.mentorResponse})</span>` : ''}
             </div>
-            <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              ${unmatchBtn}
+              <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+            </div>
           </div>
+          ${activityHtml}
           ${p.adminMemo ? `<div class="text-muted" style="font-size:12px;margin-top:4px">메모: ${p.adminMemo}</div>` : ''}
         </div>`;
       }).join('') : '<div class="empty-state"><span class="icon">📭</span><h4>매칭 기록 없음</h4></div>'}
@@ -3795,6 +3826,24 @@ async function adminDirectMatch() {
     DB.matchProposals = DB.matchProposals.filter(p => p.id !== proposal.id);
     renderAdminMatch();
     toast('매칭 확정 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+async function adminUnmatch(proposalId) {
+  if (!ensureAuthorized('매칭 해제', ['admin'])) return;
+  if (!confirm('이 매칭을 해제하시겠습니까?\n해제 후에는 멘티가 해당 멘토의 일정을 조회할 수 없게 됩니다.')) return;
+  const p = DB.matchProposals.find(x => x.id === proposalId);
+  if (!p) { toast('매칭 정보를 찾을 수 없습니다', 'error'); return; }
+  const prevStatus = p.status;
+  p.status = '해제';
+  renderAdminMatch();
+  toast('매칭이 해제되었습니다', 'success');
+  try {
+    await syncBatch([{ action: 'update', sheet: 'match_proposals', id: proposalId, updates: { status: '해제' } }]);
+  } catch(e) {
+    p.status = prevStatus;
+    renderAdminMatch();
+    toast('매칭 해제 동기화 실패 — 복원되었습니다', 'error');
   }
 }
 
