@@ -3642,8 +3642,21 @@ function renderAdminMatch() {
 
 function renderAdminMatchRequests(el) {
   const pending = DB.matchRequests.filter(r => r.status === '대기중').sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  const responded = DB.matchProposals.filter(p => p.mentorResponse !== '대기' && p.status === '제안중');
   const other = DB.matchRequests.filter(r => r.status !== '대기중').sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  const alertCount = pending.length + responded.length;
   el.innerHTML = `
+    ${alertCount > 0 ? `<div style="background:linear-gradient(135deg,#FFF3E0,#FFE0B2);border:1.5px solid #FFB74D;border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:28px">🔔</span>
+      <div>
+        <div style="font-weight:700;font-size:15px;color:#E65100;margin-bottom:4px">처리 대기 중인 알림 ${alertCount}건</div>
+        <div style="font-size:13px;color:#BF360C">
+          ${pending.length ? `멘티 매칭 신청 <strong>${pending.length}건</strong>` : ''}
+          ${pending.length && responded.length ? ' · ' : ''}
+          ${responded.length ? `멘토 응답 완료 <strong>${responded.length}건</strong>` : ''}
+        </div>
+      </div>
+    </div>` : ''}
     ${pending.length ? `<div class="card" style="margin-bottom:16px">
       <h4 style="margin-bottom:12px">대기 중인 신청 (${pending.length}건)</h4>
       ${pending.map(r => {
@@ -4794,6 +4807,8 @@ async function _syncData({ silent = false } = {}) {
     DB.sessions.forEach(s => { prevSessionMap[s.id] = s.status; });
     const prevPendingCount = currentRole === 'mentor' && currentUser
       ? getSessionsByMentor(currentUser.id).filter(s => s.status === 'pending').length : 0;
+    const prevMatchReqCount = currentRole === 'admin' ? DB.matchRequests.filter(r => r.status === '대기중').length : 0;
+    const prevMatchResCount = currentRole === 'admin' ? DB.matchProposals.filter(p => p.mentorResponse !== '대기' && p.status === '제안중').length : 0;
 
     await fetchAppBundle();
 
@@ -4872,6 +4887,21 @@ async function _syncData({ silent = false } = {}) {
         const diff = newCnt - prevPendingCount;
         const delay = silent ? 0 : 300;
         setTimeout(() => toast(`🔔 새 멘토링 신청 ${diff}건!`, 'success'), delay);
+      }
+    }
+
+    if (currentRole === 'admin') {
+      const newMatchReqCount = DB.matchRequests.filter(r => r.status === '대기중').length;
+      const newMatchResCount = DB.matchProposals.filter(p => p.mentorResponse !== '대기' && p.status === '제안중').length;
+      if (newMatchReqCount > prevMatchReqCount) {
+        const diff = newMatchReqCount - prevMatchReqCount;
+        const delay = silent ? 0 : 300;
+        setTimeout(() => toast(`🤝 새 매칭 신청 ${diff}건이 접수되었습니다!`, 'success'), delay);
+      }
+      if (newMatchResCount > prevMatchResCount) {
+        const diff = newMatchResCount - prevMatchResCount;
+        const delay = silent ? 0 : 400;
+        setTimeout(() => toast(`📩 멘토 응답 ${diff}건이 도착했습니다!`, 'success'), delay);
       }
     }
 
