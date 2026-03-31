@@ -941,24 +941,24 @@ tr:hover td { background: var(--accent-ultra); }
 
         <!-- ── 멘토 선택 모달 ── -->
         <div class="modal-overlay" id="modal-match-propose">
-          <div class="modal-box" style="max-width:480px">
+          <div class="modal" style="max-width:520px">
             <div class="modal-header">
-              <h3>멘토 선택</h3>
+              <h3 style="font-size:18px;font-weight:700;color:var(--text)">🤝 멘토 매칭 제안</h3>
               <button class="modal-close" onclick="closeModal('modal-match-propose')">✕</button>
             </div>
             <div id="match-propose-body">
-              <div class="form-group">
-                <label class="form-label">매칭할 멘토 선택</label>
-                <select id="propose-mentor-select" class="form-control"></select>
+              <div class="form-group" style="margin-bottom:20px">
+                <label class="form-label" style="font-size:13px;color:var(--text);margin-bottom:10px">매칭할 멘토 선택</label>
+                <select id="propose-mentor-select" class="form-control" style="padding:14px 16px;font-size:15px;border-radius:var(--radius-sm)"></select>
               </div>
-              <div class="form-group">
-                <label class="form-label">담당자 메모 (선택)</label>
-                <textarea id="propose-admin-memo" class="form-control" rows="2" placeholder="멘토에게 전달할 메모"></textarea>
+              <div class="form-group" style="margin-bottom:20px">
+                <label class="form-label" style="font-size:13px;color:var(--text);margin-bottom:10px">담당자 메모 (선택)</label>
+                <textarea id="propose-admin-memo" class="form-control" rows="4" style="padding:14px 16px;font-size:15px;min-height:120px;line-height:1.7" placeholder="멘토에게 전달할 메모를 입력하세요"></textarea>
               </div>
             </div>
-            <div class="modal-footer">
-              <button class="btn btn-secondary" onclick="closeModal('modal-match-propose')">취소</button>
-              <button class="btn btn-primary" onclick="confirmMatchPropose()">제안 보내기</button>
+            <div style="display:flex;gap:10px;margin-top:8px">
+              <button class="btn btn-secondary" onclick="closeModal('modal-match-propose')" style="flex:1;padding:14px;font-size:15px">취소</button>
+              <button class="btn btn-primary" onclick="confirmMatchPropose()" style="flex:1;padding:14px;font-size:15px">제안 보내기</button>
             </div>
           </div>
         </div>
