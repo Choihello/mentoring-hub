@@ -397,6 +397,7 @@ body {
 }
 .form-control:hover:not(:focus) { border-color: var(--border2); }
 textarea.form-control { resize: vertical; min-height: 90px; line-height: 1.6; }
+textarea.j-auto-resize { resize: none; overflow: hidden; }
 select.form-control {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%235A5A50' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center;
@@ -1103,11 +1104,12 @@ tr:hover td { background: var(--accent-ultra); }
 </div>
 
 <div class="modal-overlay" id="modal-journal">
-  <div class="modal" style="max-width:600px">
-    <div class="modal-header">
+  <div class="modal" style="max-width:600px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modal-header" style="flex-shrink:0;position:sticky;top:0;background:var(--surface);z-index:1">
       <div class="modal-title">멘토링 일지 작성</div>
       <button class="modal-close" onclick="closeModal('modal-journal')">✕</button>
     </div>
+    <div style="overflow-y:auto;flex:1;padding-right:4px">
     <div id="journal-session-info" style="margin-bottom:18px;padding:12px 14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:13px;color:var(--text2)"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group" style="margin-bottom:0">
@@ -1138,15 +1140,18 @@ tr:hover td { background: var(--accent-ultra); }
     </div>
     <div class="form-group">
       <label class="form-label">주요 상담 내용</label>
-      <textarea class="form-control" id="j-content" placeholder="오늘 멘토링에서 다룬 주요 내용을 입력하세요..."></textarea>
+      <textarea class="form-control j-auto-resize" id="j-content" data-min-chars="50" style="min-height:160px;overflow:hidden" placeholder="오늘 멘토링에서 다룬 주요 내용을 구체적으로 작성해주세요.&#10;(예: 논의한 주제, 제공한 조언, 검토한 자료 등)"></textarea>
+      <div class="j-char-counter" id="j-content-counter" style="text-align:right;font-size:12px;margin-top:4px;font-weight:600">0 / 50자 이상</div>
     </div>
     <div class="form-group">
       <label class="form-label">멘티 현황 및 문제점</label>
-      <textarea class="form-control" id="j-issues" placeholder="멘티의 현재 상황, 어려움, 개선이 필요한 점..."></textarea>
+      <textarea class="form-control j-auto-resize" id="j-issues" data-min-chars="20" style="min-height:120px;overflow:hidden" placeholder="멘티의 현재 상황, 직면한 어려움,&#10;개선이 필요한 부분을 작성해주세요."></textarea>
+      <div class="j-char-counter" id="j-issues-counter" style="text-align:right;font-size:12px;margin-top:4px;font-weight:600">0 / 20자 이상</div>
     </div>
     <div class="form-group">
       <label class="form-label">다음 멘토링 계획</label>
-      <textarea class="form-control" id="j-next" placeholder="다음 세션 목표 및 준비 사항..."></textarea>
+      <textarea class="form-control j-auto-resize" id="j-next" data-min-chars="20" style="min-height:120px;overflow:hidden" placeholder="다음 세션에서 다룰 내용, 멘티가 준비해올 사항,&#10;목표를 작성해주세요."></textarea>
+      <div class="j-char-counter" id="j-next-counter" style="text-align:right;font-size:12px;margin-top:4px;font-weight:600">0 / 20자 이상</div>
     </div>
     <div class="form-group">
       <label class="form-label">종합 평가</label>
@@ -1178,7 +1183,8 @@ tr:hover td { background: var(--accent-ultra); }
     <div id="j-edit-notice" style="display:none;background:var(--info-bg);border:1px solid var(--info);border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--info);margin-bottom:12px">
       ✏️ 제출된 일지를 수정 중입니다. 수정 후 다시 제출하세요.
     </div>
-    <div class="flex gap-8 mt-20">
+    </div><!-- end scrollable area -->
+    <div style="flex-shrink:0;position:sticky;bottom:0;background:var(--surface);padding-top:12px;border-top:1px solid var(--border);z-index:1" class="flex gap-8">
       <button class="btn btn-primary" id="j-submit-btn" onclick="submitJournal()">제출하기</button>
       <button class="btn btn-secondary" onclick="saveDraft()" style="background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)">💾 임시 저장</button>
       <button class="btn btn-secondary" onclick="closeModal('modal-journal')">취소</button>
@@ -4297,6 +4303,26 @@ function openJournalModal(sessionId) {
     } catch(e) {}
   }
   openModal('modal-journal');
+
+  // textarea auto-resize + 글자수 카운터 초기화
+  setTimeout(() => {
+    document.querySelectorAll('#modal-journal .j-auto-resize').forEach(ta => {
+      const counterId = ta.id + '-counter';
+      const counterEl = document.getElementById(counterId);
+      const minChars = parseInt(ta.dataset.minChars) || 0;
+      const updateCounter = () => {
+        const len = ta.value.length;
+        if (counterEl) {
+          counterEl.textContent = `${len} / ${minChars}자 이상`;
+          counterEl.style.color = len >= minChars ? 'var(--accent2)' : 'var(--danger)';
+        }
+      };
+      const autoResize = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+      ta.oninput = () => { autoResize(); updateCounter(); };
+      autoResize();
+      updateCounter();
+    });
+  }, 50);
 }
 
 function _fillJournalFields(data) {
