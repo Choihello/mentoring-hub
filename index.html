@@ -4049,6 +4049,7 @@ async function cancelSession(sessionId, callerRole) {
   const slot = DB.slots.find(s => s.id === session.slotId);
   if (slot) { slot.status = 'available'; delete slot.sessionId; }
   DB.sessions = DB.sessions.filter(s => s.id !== sessionId);
+  _rebuildIndex();
   if (callerRole === 'mentor') renderMentorSessions(); else renderMenteeSessions();
   toast('취소되었습니다');
   try {
@@ -4059,6 +4060,7 @@ async function cancelSession(sessionId, callerRole) {
     ]);
   } catch(e) {
     DB.sessions = backupSessions; DB.slots = backupSlots;
+    _rebuildIndex();
     if (callerRole === 'mentor') renderMentorSessions(); else renderMenteeSessions();
     toast('취소 동기화 실패 — 복원되었습니다', 'error');
   }
@@ -4074,6 +4076,7 @@ async function adminCancelSession(sessionId) {
   const slot = DB.slots.find(s => s.id === session.slotId);
   if (slot) { slot.status = 'available'; delete slot.sessionId; }
   DB.sessions = DB.sessions.filter(s => s.id !== sessionId);
+  _rebuildIndex();
   renderAdminDashboard();
   toast('세션이 취소되었습니다');
   try {
@@ -4084,6 +4087,7 @@ async function adminCancelSession(sessionId) {
     ]);
   } catch(e) {
     DB.sessions = backupSessions; DB.slots = backupSlots;
+    _rebuildIndex();
     renderAdminDashboard();
     toast('취소 동기화 실패 — 복원되었습니다', 'error');
   }
