@@ -2224,14 +2224,13 @@ function renderMiniCalendar(slots) {
   const monthNames = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
   titleEl.textContent = `${calYear}년 ${monthNames[calMonth]}`;
 
-  const headers = ['월','화','수','목','금','토','일'];
+  const headers = ['일','월','화','수','목','금','토'];
   let html = headers.map(h => `<div class="cal-header">${h}</div>`).join('');
 
   const today = new Date();
   const firstDay = new Date(calYear, calMonth, 1);
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   let startDow = firstDay.getDay();
-  startDow = startDow === 0 ? 6 : startDow - 1;
 
   for (let i = 0; i < startDow; i++) html += `<div class="cal-day other-month"></div>`;
   const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
