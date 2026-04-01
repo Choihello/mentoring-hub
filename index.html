@@ -870,7 +870,7 @@ tr:hover td { background: var(--accent-ultra); }
           <div class="card">
             <div class="table-wrap">
               <table>
-                <thead><tr><th>이름</th><th>분야</th><th>소속</th><th>전체</th><th>완료</th><th>일지율</th><th>상태</th><th></th></tr></thead>
+                <thead><tr><th>이름</th><th>분야</th><th>소속</th><th>알림 이메일</th><th>전체</th><th>완료</th><th>일지율</th><th>상태</th><th></th></tr></thead>
                 <tbody id="admin-mentors-body"></tbody>
               </table>
             </div>
@@ -2808,10 +2808,22 @@ function renderAdminMentors() {
     const journalRate = completed > 0 ? Math.round((journalCount / completed) * 100) : 0;
     const rateColor = journalRate === 100 ? 'badge-green' : journalRate >= 50 ? 'badge-warn' : 'badge-danger';
     const isActive = m.active !== false;
+    const notiEmail = m.notificationEmail || '';
+    const displayEmail = notiEmail || `<span class="text-muted" style="font-size:11px">로그인 메일 사용</span>`;
     return `<tr style="${!isActive ? 'opacity:0.5' : ''}">
       <td><strong>${m.name}</strong><br><span class="text-muted">${m.email}</span></td>
       <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.field}</td>
       <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.org}</td>
+      <td style="min-width:160px">
+        <div id="noti-email-display-${m.id}" style="cursor:pointer;font-size:12px" onclick="editMentorNotiEmail('${m.id}')" title="클릭하여 수정">${displayEmail} <span style="font-size:10px;color:var(--accent)">✏️</span></div>
+        <div id="noti-email-edit-${m.id}" style="display:none">
+          <div style="display:flex;gap:4px;align-items:center">
+            <input type="email" class="form-control" id="noti-email-input-${m.id}" value="${notiEmail}" placeholder="미입력 시 로그인 메일" style="font-size:12px;padding:4px 8px;flex:1;min-width:0">
+            <button class="btn btn-sm btn-primary" onclick="saveMentorNotiEmail('${m.id}')" style="font-size:11px;padding:3px 8px;white-space:nowrap">저장</button>
+            <button class="btn btn-sm btn-secondary" onclick="cancelMentorNotiEmail('${m.id}')" style="font-size:11px;padding:3px 6px">✕</button>
+          </div>
+        </div>
+      </td>
       <td style="text-align:center"><strong>${total}</strong></td>
       <td style="text-align:center"><span class="badge badge-green">${completed}</span></td>
       <td style="text-align:center"><span class="badge ${rateColor}">${completed > 0 ? journalRate + '%' : '—'}</span></td>
@@ -2856,6 +2868,112 @@ async function deleteMentor(id) {
     m.active = prevActive;
     renderAdminMentors();
     toast('숨기기 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
+function editMentorNotiEmail(id) {
+  document.getElementById('noti-email-display-' + id).style.display = 'none';
+  document.getElementById('noti-email-edit-' + id).style.display = '';
+  const input = document.getElementById('noti-email-input-' + id);
+  input.focus();
+  input.select();
+}
+
+function cancelMentorNotiEmail(id) {
+  document.getElementById('noti-email-display-' + id).style.display = '';
+  document.getElementById('noti-email-edit-' + id).style.display = 'none';
+}
+
+async function saveMentorNotiEmail(id) {
+  if (!ensureAuthorized('알림 이메일 수정', ['admin'])) return;
+  const input = document.getElementById('noti-email-input-' + id);
+  const val = input.value.trim();
+  if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+    toast('올바른 이메일 형식을 입력해주세요', 'error'); return;
+  }
+  const m = _idx.mentor[id];
+  if (!m) return;
+  const prev = m.notificationEmail;
+  m.notificationEmail = val;
+  renderAdminMentors();
+  toast('알림 이메일 저장 중...', 'info');
+  try {
+    await syncBatch([{ action: 'update', sheet: 'mentors', id, updates: { notificationEmail: val } }]);
+    toast(`${m.name} 멘토 알림 이메일 ${val ? '저장' : '초기화'} 완료 ✅`, 'success');
+  } catch(e) {
+    m.notificationEmail = prev;
+    renderAdminMentors();
+    toast('알림 이메일 저장 실패', 'error');
+  }
+}
+
+// ═══ 범용 이메일 발송 헬퍼 ═══
+// 향후 Supabase Edge Function / send_email RPC 연동 시 이 함수를 통해 발송
+function getMentorEmailAddress(mentorId) {
+  const m = _idx.mentor[mentorId];
+  return m?.notificationEmail || m?.email || '';
+}
+
+function getMenteeEmailAddress(menteeId) {
+  const m = _idx.mentee[menteeId];
+  return m?.notificationEmail || m?.email || '';
+}
+
+async function sendHubEmail({ to, subject, body, type = 'general' }) {
+  if (!to || !hasSupabaseIntegration() || isDemoMode) return;
+  try {
+    const sb = getSupabase();
+    await sb.rpc('send_match_email', { p_to: to, p_subject: subject, p_body: body });
+    console.log(`[이메일 발송] ${type} → ${to}`);
+  } catch(e) {
+    console.warn(`[이메일 발송 실패] ${type} → ${to}:`, e.message);
+  }
+}
+
+// 세션 확정 알림 이메일
+async function sendSessionConfirmedEmail(session) {
+  const mentor = _idx.mentor[session.mentorId];
+  const mentee = _idx.mentee[session.menteeId];
+  const hubUrl = window.location.href;
+  const menteeTo = getMenteeEmailAddress(session.menteeId);
+  if (menteeTo) {
+    await sendHubEmail({
+      to: menteeTo, type: 'session_confirmed',
+      subject: '[멘토링 허브] 멘토링 세션이 확정되었습니다',
+      body: `안녕하세요 ${mentee?.name} 멘티님,\n\n${mentor?.name} 멘토님이 멘토링 세션을 수락했습니다.\n\n일시: ${session.date} ${session.time}\n장소: ${session.location}\n\n멘토링 허브에서 확인하세요:\n${hubUrl}\n\n감사합니다.`
+    });
+  }
+}
+
+// 세션 예약 알림 이메일 (멘토에게)
+async function sendSessionBookedEmail(session) {
+  const mentor = _idx.mentor[session.mentorId];
+  const mentee = _idx.mentee[session.menteeId];
+  const hubUrl = window.location.href;
+  const mentorTo = getMentorEmailAddress(session.mentorId);
+  if (mentorTo) {
+    await sendHubEmail({
+      to: mentorTo, type: 'session_booked',
+      subject: '[멘토링 허브] 새 멘토링 세션 신청이 있습니다',
+      body: `안녕하세요 ${mentor?.name} 멘토님,\n\n${mentee?.name} 멘티가 멘토링 세션을 신청했습니다.\n\n일시: ${session.date} ${session.time}\n주제: ${session.topic}\n\n멘토링 허브에서 수락/거절해주세요:\n${hubUrl}\n\n감사합니다.`
+    });
+  }
+}
+
+// 세션 취소 알림 이메일
+async function sendSessionCancelledEmail(session, cancelledBy) {
+  const mentor = _idx.mentor[session.mentorId];
+  const mentee = _idx.mentee[session.menteeId];
+  const hubUrl = window.location.href;
+  const targetTo = cancelledBy === 'mentor' ? getMenteeEmailAddress(session.menteeId) : getMentorEmailAddress(session.mentorId);
+  const targetName = cancelledBy === 'mentor' ? mentee?.name : mentor?.name;
+  const cancellerName = cancelledBy === 'mentor' ? mentor?.name : mentee?.name;
+  if (targetTo) {
+    await sendHubEmail({
+      to: targetTo, type: 'session_cancelled',
+      subject: '[멘토링 허브] 멘토링 세션이 취소되었습니다',
+      body: `안녕하세요 ${targetName}님,\n\n${cancellerName}님이 멘토링 세션을 취소했습니다.\n\n일시: ${session.date} ${session.time}\n\n멘토링 허브에서 확인하세요:\n${hubUrl}\n\n감사합니다.`
+    });
   }
 }
 
