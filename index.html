@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg: #F5F7FA;
@@ -865,8 +866,13 @@ tr:hover td { background: var(--accent-ultra); }
               <h2>멘토 관리</h2>
               <p>등록된 멘토 목록과 활동 현황</p>
             </div>
-            <button class="btn btn-primary" onclick="openModal('modal-add-mentor')">+ 멘토 추가</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-secondary" onclick="document.getElementById('bulk-email-file').click()" style="font-size:13px">📎 알림 이메일 일괄 등록</button>
+              <button class="btn btn-primary" onclick="openModal('modal-add-mentor')">+ 멘토 추가</button>
+            </div>
+            <input type="file" id="bulk-email-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleBulkEmailUpload(this)">
           </div>
+          <div id="bulk-email-preview" style="display:none"></div>
           <div class="card">
             <div class="table-wrap">
               <table>
@@ -2904,6 +2910,157 @@ async function saveMentorNotiEmail(id) {
     m.notificationEmail = prev;
     renderAdminMentors();
     toast('알림 이메일 저장 실패', 'error');
+  }
+}
+
+// ═══ 알림 이메일 엑셀 일괄 등록 ═══
+function handleBulkEmailUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      if (rows.length < 2) { toast('데이터가 없습니다. 헤더 포함 2행 이상 필요', 'error'); return; }
+
+      // 헤더 자동 감지: 이름/성명/멘토명 + 이메일/알림이메일/메일
+      const header = rows[0].map(h => String(h || '').trim());
+      let nameCol = -1, emailCol = -1;
+      header.forEach((h, i) => {
+        const lh = h.toLowerCase().replace(/\s/g, '');
+        if (nameCol < 0 && /이름|성명|멘토명|name/.test(lh)) nameCol = i;
+        if (emailCol < 0 && /이메일|메일|email|e-mail/.test(lh)) emailCol = i;
+      });
+      if (nameCol < 0 || emailCol < 0) {
+        toast('엑셀에 "이름"과 "이메일" 열이 필요합니다.\n(이름/성명/멘토명 + 이메일/메일)', 'error');
+        return;
+      }
+
+      // 데이터 파싱 + 멘토 매칭
+      const results = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row[nameCol]) continue;
+        const name = String(row[nameCol]).trim();
+        const email = String(row[emailCol] || '').trim().toLowerCase();
+        if (!name) continue;
+
+        const matched = DB.mentors.filter(m => m.name === name);
+        if (matched.length === 1) {
+          const m = matched[0];
+          const changed = (m.notificationEmail || '').toLowerCase() !== email;
+          results.push({ name, email, mentorId: m.id, status: changed ? 'update' : 'same', current: m.notificationEmail || '' });
+        } else if (matched.length > 1) {
+          results.push({ name, email, mentorId: null, status: 'duplicate', current: '' });
+        } else {
+          results.push({ name, email, mentorId: null, status: 'notfound', current: '' });
+        }
+      }
+
+      if (!results.length) { toast('유효한 데이터가 없습니다', 'error'); return; }
+      showBulkEmailPreview(results);
+    } catch(err) {
+      toast('엑셀 파일 읽기 실패: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function showBulkEmailPreview(results) {
+  const el = document.getElementById('bulk-email-preview');
+  const updates = results.filter(r => r.status === 'update');
+  const same = results.filter(r => r.status === 'same');
+  const notfound = results.filter(r => r.status === 'notfound');
+  const dupes = results.filter(r => r.status === 'duplicate');
+
+  const statusIcon = r => {
+    if (r.status === 'update') return '🔄';
+    if (r.status === 'same') return '✅';
+    if (r.status === 'notfound') return '❌';
+    return '⚠️';
+  };
+  const statusText = r => {
+    if (r.status === 'update') return `<span style="color:var(--accent);font-weight:600">변경 예정</span>`;
+    if (r.status === 'same') return `<span style="color:var(--success)">동일 (변경 없음)</span>`;
+    if (r.status === 'notfound') return `<span style="color:var(--danger)">멘토 미등록</span>`;
+    return `<span style="color:var(--warn)">동명이인 (수동 처리 필요)</span>`;
+  };
+
+  el.innerHTML = `<div class="card" style="margin-bottom:16px;border-left:4px solid var(--accent)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h4 style="margin:0">📎 엑셀 업로드 미리보기</h4>
+      <div style="display:flex;gap:6px;font-size:12px">
+        <span class="badge badge-blue">변경 ${updates.length}</span>
+        <span class="badge badge-green">동일 ${same.length}</span>
+        ${notfound.length ? `<span class="badge badge-danger">미등록 ${notfound.length}</span>` : ''}
+        ${dupes.length ? `<span class="badge badge-warn">동명이인 ${dupes.length}</span>` : ''}
+      </div>
+    </div>
+    <div class="table-wrap" style="max-height:300px;overflow-y:auto">
+      <table style="font-size:13px">
+        <thead><tr><th></th><th>이름</th><th>엑셀 이메일</th><th>현재 설정</th><th>결과</th></tr></thead>
+        <tbody>
+        ${results.map(r => `<tr style="${r.status === 'update' ? 'background:var(--accent-ultra)' : r.status === 'notfound' || r.status === 'duplicate' ? 'opacity:0.6' : ''}">
+          <td>${statusIcon(r)}</td>
+          <td><strong>${r.name}</strong></td>
+          <td>${r.email || '<span class="text-muted">없음 (초기화)</span>'}</td>
+          <td class="text-muted">${r.current || '미설정'}</td>
+          <td>${statusText(r)}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      ${updates.length ? `<button class="btn btn-primary" onclick="applyBulkEmailUpdates()">🔄 ${updates.length}건 일괄 반영</button>` : '<span class="text-muted" style="font-size:13px;padding:8px">변경할 항목이 없습니다</span>'}
+      <button class="btn btn-secondary" onclick="closeBulkEmailPreview()">닫기</button>
+    </div>
+  </div>`;
+  el.style.display = '';
+  window._bulkEmailResults = results;
+}
+
+function closeBulkEmailPreview() {
+  const el = document.getElementById('bulk-email-preview');
+  el.style.display = 'none';
+  el.innerHTML = '';
+  window._bulkEmailResults = null;
+}
+
+async function applyBulkEmailUpdates() {
+  if (!ensureAuthorized('알림 이메일 일괄 등록', ['admin'])) return;
+  const results = window._bulkEmailResults;
+  if (!results) return;
+  const updates = results.filter(r => r.status === 'update');
+  if (!updates.length) return;
+
+  if (!confirm(`${updates.length}건의 알림 이메일을 일괄 변경합니다.\n계속하시겠습니까?`)) return;
+
+  toast(`${updates.length}건 반영 중...`, 'info');
+  const ops = [];
+  const backups = [];
+  for (const u of updates) {
+    const m = _idx.mentor[u.mentorId];
+    if (!m) continue;
+    backups.push({ id: m.id, prev: m.notificationEmail });
+    m.notificationEmail = u.email;
+    ops.push({ action: 'update', sheet: 'mentors', id: m.id, updates: { notificationEmail: u.email } });
+  }
+  renderAdminMentors();
+
+  try {
+    await syncBatch(ops);
+    toast(`✅ ${updates.length}건 알림 이메일 일괄 반영 완료!`, 'success');
+    closeBulkEmailPreview();
+  } catch(e) {
+    for (const b of backups) {
+      const m = _idx.mentor[b.id];
+      if (m) m.notificationEmail = b.prev;
+    }
+    renderAdminMentors();
+    toast('일괄 반영 실패 — 복원되었습니다: ' + (e.message || ''), 'error');
   }
 }
 
