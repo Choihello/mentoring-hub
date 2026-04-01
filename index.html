@@ -733,6 +733,7 @@ tr:hover td { background: var(--accent-ultra); }
             </div>
             <button class="btn btn-primary" onclick="openAddSlotModal()">+ 시간 추가</button>
           </div>
+          <div id="schedule-guide-banner" style="display:none"></div>
           <div class="page-grid">
             <div class="page-col">
               <div class="card">
@@ -758,6 +759,7 @@ tr:hover td { background: var(--accent-ultra); }
             <h2>예약 현황</h2>
             <p>멘티들이 예약한 세션을 확인하세요</p>
           </div>
+          <div id="session-slot-reminder" style="display:none"></div>
           <div class="page-grid" id="mentor-sessions-list"></div>
         </div>
 
@@ -2205,6 +2207,25 @@ function renderPage(id) {
 function renderMentorSchedule() {
   const today = todayStr();
   const mySlots = getSlotsByMentor(currentUser?.id).filter(s => s.date >= today);
+  // 2단계: 매칭 확정 + 슬롯 미등록 시 안내 배너
+  const bannerEl = document.getElementById('schedule-guide-banner');
+  if (bannerEl) {
+    const confirmedMentees = DB.matchProposals
+      .filter(p => p.mentorId === currentUser?.id && p.status === '확정')
+      .map(p => _idx.mentee[p.menteeId]?.name).filter(Boolean);
+    const availCount = mySlots.filter(s => s.status === 'available').length;
+    if (confirmedMentees.length > 0 && availCount === 0) {
+      const names = confirmedMentees.length <= 2 ? confirmedMentees.join(', ') : confirmedMentees.slice(0,2).join(', ') + ` 외 ${confirmedMentees.length-2}명`;
+      bannerEl.innerHTML = `<div style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#EBF5FB,#E8F8F5);border-left:4px solid var(--accent);border-radius:10px;padding:14px 18px;margin-bottom:16px">
+        <div style="flex:1;font-size:13px;color:#2C3E50;line-height:1.6">📅 <strong>${names}</strong> 멘티가 일정 예약을 기다리고 있어요. 가용 시간을 등록해주세요.</div>
+        <button class="btn btn-sm btn-primary" onclick="openAddSlotModal()" style="white-space:nowrap;font-size:12px;padding:6px 14px;border-radius:8px">+ 시간 추가 →</button>
+      </div>`;
+      bannerEl.style.display = '';
+    } else {
+      bannerEl.innerHTML = '';
+      bannerEl.style.display = 'none';
+    }
+  }
   renderMiniCalendar(mySlots);
   renderSlotList(mySlots);
 }
@@ -2306,6 +2327,26 @@ function renderSlotList(slots) {
 // ── 멘토: 예약 현황 ──
 function renderMentorSessions() {
   const el = document.getElementById('mentor-sessions-list');
+  // 4단계: 매칭 확정 후 24시간 + 슬롯 미등록 리마인더
+  const sessionReminder = document.getElementById('session-slot-reminder');
+  if (sessionReminder) {
+    const now = Date.now();
+    const confirmedNoSlot = DB.matchProposals.filter(p =>
+      p.mentorId === currentUser?.id && p.status === '확정' &&
+      p.createdAt && (now - new Date(p.createdAt).getTime()) > 24 * 60 * 60 * 1000
+    );
+    const availSlots = getSlotsByMentor(currentUser?.id).filter(s => s.status === 'available' && s.date >= todayStr()).length;
+    if (confirmedNoSlot.length > 0 && availSlots === 0) {
+      sessionReminder.innerHTML = `<div style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#FFF8E1,#FFF3E0);border-left:4px solid #F9A825;border-radius:10px;padding:14px 18px;margin-bottom:16px">
+        <div style="flex:1;font-size:13px;color:#4E342E;line-height:1.6">⏰ 아직 가용 일정이 등록되지 않았어요. 멘티가 예약할 수 있도록 일정을 등록해주세요.</div>
+        <button class="btn btn-sm" onclick="navigateTo('page-mentor-schedule')" style="white-space:nowrap;font-size:12px;padding:6px 14px;border-radius:8px;background:#F9A825;color:#fff;border:none;font-weight:700;cursor:pointer">등록하러 가기</button>
+      </div>`;
+      sessionReminder.style.display = '';
+    } else {
+      sessionReminder.innerHTML = '';
+      sessionReminder.style.display = 'none';
+    }
+  }
   const mySessions = getSessionsByMentor(currentUser?.id);
   if (!mySessions.length) {
     el.innerHTML = `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>신청된 세션 없음</h4><p>멘티가 신청하면 여기에 표시됩니다</p></div></div>`;
@@ -3541,22 +3582,32 @@ function renderMentorMatch() {
         </div>`;
       }).join('')}
     </div>` : '<div class="card" style="margin-bottom:20px"><div class="empty-state"><span class="icon">📭</span><h4>새로운 매칭 제안 없음</h4><p>담당자가 매칭을 제안하면 여기에 표시됩니다</p></div></div>'}
-    ${history.length ? `<div class="card">
+    ${history.length ? (() => {
+      const myAvailSlots = getSlotsByMentor(currentUser?.id).filter(s => s.status === 'available' && s.date >= todayStr()).length;
+      return `<div class="card">
       <h4 style="margin-bottom:12px">매칭 이력</h4>
       ${history.map(p => {
         const mentee = _idx.mentee[p.menteeId];
         const statusBadge = p.status === '확정' ? 'badge-green' : 'badge-gray';
         const respBadge = p.mentorResponse === '수락' ? 'badge-green' : p.mentorResponse === '거절' ? 'badge-gray' : 'badge-warn';
-        return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <strong>${mentee?.name || '멘티'}</strong>
-            <span class="badge ${statusBadge}" style="margin-left:8px">${p.status}</span>
-            <span class="badge ${respBadge}" style="margin-left:4px">${p.mentorResponse}</span>
+        const needsSlot = p.status === '확정' && p.mentorResponse === '수락' && myAvailSlots === 0;
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>${mentee?.name || '멘티'}</strong>
+              <span class="badge ${statusBadge}" style="margin-left:8px">${p.status}</span>
+              <span class="badge ${respBadge}" style="margin-left:4px">${p.mentorResponse}</span>
+            </div>
+            <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
           </div>
-          <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+          ${needsSlot ? `<div style="margin-top:8px;padding:8px 12px;background:#EBF5FB;border-radius:8px;font-size:12px;color:#37474F;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span>✅ 수락 완료 — 가용 일정을 등록하면 멘티가 예약할 수 있어요</span>
+            <a href="javascript:void(0)" onclick="navigateTo('page-mentor-schedule')" style="color:var(--accent);font-weight:700;text-decoration:none;white-space:nowrap">가용 일정 등록하기 →</a>
+          </div>` : ''}
         </div>`;
       }).join('')}
-    </div>` : ''}
+    </div>`;
+    })() : ''}
     <div class="card" style="margin-top:20px">
       <h5 style="margin-bottom:10px">🔔 알림 이메일 설정</h5>
       <p class="text-muted" style="font-size:12px;margin-bottom:8px">매칭 제안 알림을 받을 이메일을 설정하세요. 미설정 시 로그인 이메일로 발송됩니다.</p>
@@ -3606,7 +3657,12 @@ async function respondMatchProposal(proposalId, response) {
     if (req) { prevReqStatus = req.status; req.status = '확정'; }
   }
   renderMentorMatch();
-  toast(response === '수락' ? '매칭을 수락했습니다 ✅' : '매칭을 거절했습니다', response === '수락' ? 'success' : 'warn');
+  const menteeName = _idx.mentee[p.menteeId]?.name || '멘티';
+  if (response === '수락') {
+    showMatchAcceptedModal(menteeName);
+  } else {
+    toast('매칭을 거절했습니다', 'warn');
+  }
   try {
     const ops = [{ action: 'update', sheet: 'match_proposals', id: proposalId, updates: { mentor_response: response, status: newStatus } }];
     if (response === '수락' && p.requestId) {
@@ -3625,6 +3681,30 @@ async function respondMatchProposal(proposalId, response) {
     renderMentorMatch();
     toast('매칭 응답 동기화 실패 — 복원되었습니다', 'error');
   }
+}
+
+function showMatchAcceptedModal(menteeName) {
+  let overlay = document.getElementById('match-accepted-overlay');
+  if (overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'match-accepted-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s';
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;max-width:420px;width:90%;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;animation:modalPop 0.25s ease-out">
+      <div style="width:56px;height:56px;border-radius:50%;background:#E8F5E9;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px">✅</div>
+      <h3 style="margin:0 0 8px;font-size:18px;color:var(--text)">매칭이 수락되었습니다!</h3>
+      <p style="margin:0 0 20px;font-size:14px;color:var(--text2);line-height:1.6"><strong>${menteeName}</strong> 멘티와의 멘토링이 확정되었습니다.</p>
+      <div style="background:#EBF5FB;border-radius:12px;padding:16px;margin-bottom:24px;text-align:left">
+        <div style="font-size:13px;font-weight:700;color:#1976D2;margin-bottom:8px">📅 다음 단계</div>
+        <p style="margin:0;font-size:13px;color:#37474F;line-height:1.7">멘티가 멘토링을 예약할 수 있도록<br>가용 일정을 등록해주세요.<br>등록한 시간 중 멘티가 원하는<br>시간을 선택해 신청합니다.</p>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="document.getElementById('match-accepted-overlay').remove();navigateTo('page-mentor-schedule')" style="padding:10px 22px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity 0.15s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">가용 일정 등록하기 →</button>
+        <button onclick="document.getElementById('match-accepted-overlay').remove()" style="padding:10px 18px;background:none;color:var(--text3);border:none;font-size:13px;cursor:pointer">나중에</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 // ── 관리자: 매칭 관리 ──
