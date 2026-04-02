@@ -1066,8 +1066,29 @@ tr:hover td { background: var(--accent-ultra); }
                   <tr><td><code>session_log</code></td><td>세션 이력 (취소 로그)</td></tr>
                   <tr><td><code>requests</code></td><td>요청/메시지</td></tr>
                   <tr><td><code>notices</code></td><td>공지사항</td></tr>
+                  <tr><td><code>email_queue</code></td><td>이메일 발송 큐 (Resend 연동)</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">📧 이메일 발송 관리 (Resend)</div>
+            <p class="text-muted" style="font-size:12px;margin-bottom:12px">Resend API를 통해 매칭/세션 알림 이메일을 자동 발송합니다.</p>
+            <div id="email-queue-stats" style="margin-bottom:12px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="processEmailQueue()">📤 대기 이메일 발송</button>
+              <button class="btn btn-secondary btn-sm" onclick="loadEmailQueueStats()">🔄 현황 새로고침</button>
+            </div>
+            <div class="setup-box" style="margin-top:16px">
+              <h4>📌 Resend 설정 방법</h4>
+              <p style="font-size:12px;line-height:1.8">
+                1. <a href="https://resend.com" target="_blank" rel="noopener noreferrer">resend.com</a> 회원가입 (무료 플랜: 월 3,000건)<br>
+                2. API Keys에서 키 발급<br>
+                3. Supabase Dashboard → Edge Functions → send-email → Secrets에 추가:<br>
+                <code style="font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px">RESEND_API_KEY = re_xxxxxxxxx</code><br>
+                4. 커스텀 도메인 연결 시 FROM_EMAIL도 설정:<br>
+                <code style="font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:4px">FROM_EMAIL = 멘토링 허브 &lt;noreply@yourdomain.com&gt;</code>
+              </p>
             </div>
           </div>
         </div>
@@ -3096,10 +3117,24 @@ async function sendHubEmail({ to, subject, body, type = 'general' }) {
   if (!to || !hasSupabaseIntegration() || isDemoMode) return;
   try {
     const sb = getSupabase();
-    await sb.rpc('send_match_email', { p_to: to, p_subject: subject, p_body: body });
-    console.log(`[이메일 발송] ${type} → ${to}`);
+    const { data, error } = await sb.functions.invoke('send-email', {
+      body: { mode: 'direct', to, subject, body }
+    });
+    if (error) throw error;
+    if (data?.success) {
+      console.log(`[이메일 발송 ✅] ${type} → ${to} (resendId: ${data.resendId})`);
+    } else {
+      console.warn(`[이메일 발송 ⚠️] ${type} → ${to}: ${data?.error}`);
+    }
   } catch(e) {
-    console.warn(`[이메일 발송 실패] ${type} → ${to}:`, e.message);
+    // Edge Function 실패 시 email_queue에 직접 삽입 (폴백)
+    try {
+      const sb = getSupabase();
+      await sb.rpc('send_match_email', { p_to: to, p_subject: subject, p_body: body });
+      console.log(`[이메일 큐 등록] ${type} → ${to} (Edge Function 실패, 큐 폴백)`);
+    } catch(e2) {
+      console.warn(`[이메일 발송 실패] ${type} → ${to}:`, e.message, e2.message);
+    }
   }
 }
 
@@ -4316,14 +4351,9 @@ async function sendMatchEmail(type, proposal) {
       }
     }
 
-    // Supabase Edge Function 또는 DB function으로 이메일 발송
+    // Resend Edge Function으로 이메일 발송
     for (const em of emails) {
-      try {
-        const sb = getSupabase();
-        await sb.rpc('send_match_email', { p_to: em.to, p_subject: em.subject, p_body: em.body });
-      } catch(emailErr) {
-        console.warn('이메일 발송 실패 (별도 처리 필요):', emailErr.message, em.to);
-      }
+      await sendHubEmail({ to: em.to, subject: em.subject, body: em.body, type });
     }
   } catch(e) {
     console.warn('이메일 처리 오류:', e);
@@ -4334,6 +4364,55 @@ function renderSettings() {
   document.getElementById('supabase-url').value = DB.settings.supabaseUrl || '';
   document.getElementById('supabase-key').value = DB.settings.supabaseAnonKey || '';
   document.getElementById('google-client-id').value = DB.settings.googleClientId || '';
+  loadEmailQueueStats();
+}
+
+async function loadEmailQueueStats() {
+  const el = document.getElementById('email-queue-stats');
+  if (!el || !hasSupabaseIntegration()) {
+    if (el) el.innerHTML = '<span class="text-muted" style="font-size:12px">Supabase 연동 후 확인 가능</span>';
+    return;
+  }
+  try {
+    const sb = getSupabase();
+    const { data, error } = await sb.from('email_queue').select('status, created_at');
+    if (error) throw error;
+    const pending = data.filter(r => r.status === '대기').length;
+    const sending = data.filter(r => r.status === '발송중').length;
+    const sent = data.filter(r => r.status === '발송완료').length;
+    const failed = data.filter(r => r.status === '실패').length;
+    const total = data.length;
+    el.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:13px">
+      <span class="badge badge-warn">대기 ${pending}</span>
+      <span class="badge badge-blue">발송중 ${sending}</span>
+      <span class="badge badge-green">완료 ${sent}</span>
+      ${failed ? `<span class="badge badge-danger">실패 ${failed}</span>` : ''}
+      <span class="text-muted" style="font-size:11px;align-self:center">총 ${total}건</span>
+    </div>`;
+  } catch(e) {
+    el.innerHTML = `<span class="text-muted" style="font-size:12px">현황 조회 실패: ${e.message}</span>`;
+  }
+}
+
+async function processEmailQueue() {
+  if (!ensureAuthorized('이메일 발송', ['admin'])) return;
+  if (!hasSupabaseIntegration()) { toast('Supabase 연동이 필요합니다', 'error'); return; }
+  toast('대기 이메일 발송 처리 중...', 'info');
+  try {
+    const sb = getSupabase();
+    const { data, error } = await sb.functions.invoke('send-email', {
+      body: { mode: 'process' }
+    });
+    if (error) throw error;
+    if (data?.processed === 0) {
+      toast('발송 대기 중인 이메일이 없습니다', 'info');
+    } else {
+      toast(`✅ ${data.sent || 0}건 발송 완료${data.failed ? `, ${data.failed}건 실패` : ''}`, data.failed ? 'warn' : 'success');
+    }
+    loadEmailQueueStats();
+  } catch(e) {
+    toast('이메일 큐 처리 실패: ' + (e.message || ''), 'error');
+  }
 }
 
 // ═══ 모달 ═══
