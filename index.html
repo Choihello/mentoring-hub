@@ -26,6 +26,8 @@
   --text3: #9AABB8;
   --border: #E0E4EA;
   --border2: #CCD2DC;
+  --success: #2E7D32;
+  --success-bg: #E8F5E9;
   --danger: #A32D2D;
   --danger-bg: #FDECEA;
   --warn: #7A5A00;
@@ -487,6 +489,8 @@ tr:hover td { background: var(--accent-ultra); }
 #toast.show { opacity: 1; transform: translateY(0); }
 #toast.success { background: var(--accent); }
 #toast.error { background: var(--danger); }
+#toast.warn { background: var(--warn); }
+#toast.info { background: var(--info); }
 
 /* ── 빈 상태 ── */
 .empty-state { text-align: center; padding: 52px 20px; color: var(--text3); }
@@ -809,7 +813,7 @@ tr:hover td { background: var(--accent-ultra); }
               <h2>전체 현황 대시보드</h2>
               <p>멘토링 프로그램 운영 현황</p>
             </div>
-            <a id="supabase-dashboard-btn" href="#" target="_blank" class="btn btn-secondary" style="display:none;gap:6px">
+            <a id="supabase-dashboard-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="display:none;gap:6px">
               📊 Supabase 대시보드
             </a>
           </div>
@@ -826,7 +830,7 @@ tr:hover td { background: var(--accent-ultra); }
                   <button class="btn btn-sm btn-secondary" id="ptab-custom-week"  onclick="setPeriodTab('custom-week')"  style="border-radius:999px">주차별 조회</button>
                   <button class="btn btn-sm btn-secondary" id="ptab-all"   onclick="setPeriodTab('all')"    style="border-radius:999px">전체 누적</button>
                 </div>
-                <div id="period-custom-controls" style="display:none;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
+                <div id="period-custom-controls" style="display:none;margin-bottom:12px;gap:8px;flex-wrap:wrap;align-items:center"></div>
                 <div id="admin-period-stats"></div>
               </div>
               <div id="admin-journal-missing-section"></div>
@@ -1012,7 +1016,7 @@ tr:hover td { background: var(--accent-ultra); }
           <div class="setup-box">
             <h4>📌 연동 방법</h4>
             <p>
-              1. <a href="https://supabase.com" target="_blank">supabase.com</a>에서 프로젝트 생성 → URL과 anon key 입력<br>
+              1. <a href="https://supabase.com" target="_blank" rel="noopener noreferrer">supabase.com</a>에서 프로젝트 생성 → URL과 anon key 입력<br>
               2. SQL Editor에서 스키마 및 RLS 정책 실행<br>
               3. Authentication → Providers에서 Google OAuth 활성화<br>
               4. Google Cloud Console에서 OAuth 클라이언트 ID 발급 → 아래 입력<br>
@@ -1534,13 +1538,6 @@ function persistSession(role, linkedId, googleName) {
       role,
       linkedId: linkedId || null,
       googleName: googleName || null,
-      auth: currentAuth ? {
-        token: currentAuth.token,
-        role: currentAuth.role,
-        linkedId: currentAuth.linkedId,
-        email: currentAuth.email || '',
-        name: currentAuth.name || ''
-      } : null,
       isDemoMode
     }));
   } catch(e) {}
@@ -2360,17 +2357,24 @@ function renderMentorSessions() {
   }
   const sessionCard = (s, buttons) => {
     const mentee = _idx.mentee[s.menteeId];
+    const safeMenteeName = escapeHtml(getMenteeName(s.menteeId));
+    const safeTeam = escapeHtml(mentee?.team || '');
+    const safeDate = escapeHtml(formatDate(s.date));
+    const safeTime = escapeHtml(s.time || '');
+    const safeLocation = escapeHtml(s.location || '');
+    const safeEmail = escapeHtml(mentee?.email || '');
+    const safeTopic = escapeHtml(s.topic || '');
     return `<div class="session-card">
       <div class="session-card-header">
         <div class="session-main-info">
-          <div class="session-name">${getMenteeName(s.menteeId)} <span class="text-muted fw-600">· ${mentee?.team || ''}</span></div>
+          <div class="session-name">${safeMenteeName} <span class="text-muted fw-600">· ${safeTeam}</span></div>
           <div class="session-meta">
-            <span>📅 ${formatDate(s.date)}</span>
-            <span>⏰ ${s.time}</span>
-            <span>📍 ${s.location}</span>
-            ${mentee?.email ? `<span>✉️ ${mentee.email}</span>` : ''}
+            <span>📅 ${safeDate}</span>
+            <span>⏰ ${safeTime}</span>
+            <span>📍 ${safeLocation}</span>
+            ${mentee?.email ? `<span>✉️ ${safeEmail}</span>` : ''}
           </div>
-          <div class="session-topic" style="margin-top:6px">📌 ${s.topic}</div>
+          <div class="session-topic" style="margin-top:6px">📌 ${safeTopic}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">${buttons}</div>
       </div>
@@ -2429,10 +2433,13 @@ function renderJournalPage() {
   } else {
     leftHtml += `<div class="card"><div class="card-title">📝 작성 대기 <span class="badge badge-warn" style="margin-left:4px">${pending.length}</span></div>`;
     leftHtml += pending.map(s => {
+      const safeMenteeName = escapeHtml(getMenteeName(s.menteeId));
+      const safeDate = escapeHtml(formatDate(s.date));
+      const safeTime = escapeHtml(s.time || '');
       return `<div class="journal-pending-item">
         <div>
-          <div class="fw-600" style="font-size:14px">${getMenteeName(s.menteeId)}</div>
-          <div class="text-muted">${formatDate(s.date)} ${s.time}</div>
+          <div class="fw-600" style="font-size:14px">${safeMenteeName}</div>
+          <div class="text-muted">${safeDate} ${safeTime}</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openJournalModal('${s.id}')">일지 작성</button>
       </div>`;
@@ -2443,10 +2450,13 @@ function renderJournalPage() {
   if (done.length) {
     rightHtml += `<div class="card"><div class="card-title">✅ 제출 완료 <span class="badge badge-green" style="margin-left:4px">${done.length}</span></div>`;
     rightHtml += done.map(s => {
+      const safeMenteeName = escapeHtml(getMenteeName(s.menteeId));
+      const safeDate = escapeHtml(formatDate(s.date));
+      const safeTime = escapeHtml(s.time || '');
       return `<div class="journal-pending-item">
         <div>
-          <div class="fw-600" style="font-size:14px">${getMenteeName(s.menteeId)}</div>
-          <div class="text-muted">${formatDate(s.date)} ${s.time}</div>
+          <div class="fw-600" style="font-size:14px">${safeMenteeName}</div>
+          <div class="text-muted">${safeDate} ${safeTime}</div>
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-secondary btn-sm" onclick="viewJournal('${s.id}')">상세 보기</button>
@@ -2487,13 +2497,13 @@ function renderMenteeBook() {
   el.innerHTML = sorted.map(m => {
     const availSlots = getSlotsByMentor(m.id).filter(s => s.status === 'available' && _isFutureSlot(s));
     const initials = m.name.slice(0, 2);
-    const bioHtml = m.bio ? `<div style="margin-top:6px;font-size:12px;color:var(--text2);line-height:1.5;border-top:1px solid var(--border);padding-top:6px">${m.bio}</div>` : '';
+    const bioHtml = m.bio ? `<div style="margin-top:6px;font-size:12px;color:var(--text2);line-height:1.5;border-top:1px solid var(--border);padding-top:6px">${escapeHtml(m.bio)}</div>` : '';
     return `<div class="mentor-card ${selectedMentorId === m.id ? 'selected' : ''}" style="flex-direction:column;align-items:stretch;cursor:pointer">
       <div style="display:flex;align-items:center;gap:12px" onclick="selectMentor('${m.id}')">
-        <div class="mentor-avatar">${initials}</div>
+        <div class="mentor-avatar">${escapeHtml(initials)}</div>
         <div class="mentor-card-info" style="flex:1">
-          <div class="mentor-card-name">${m.name}</div>
-          <div class="mentor-card-meta">${m.field} · ${m.org}</div>
+          <div class="mentor-card-name">${escapeHtml(m.name)}</div>
+          <div class="mentor-card-meta">${escapeHtml(m.field)} · ${escapeHtml(m.org)}</div>
         </div>
         <span class="badge ${availSlots.length > 0 ? 'badge-green' : 'badge-gray'}">가용 ${availSlots.length}</span>
       </div>
@@ -2525,8 +2535,8 @@ function selectMentor(id) {
     const dayLabel = `${d.getMonth()+1}월 ${d.getDate()}일 (${dayNames[d.getDay()]})`;
     const timeRows = slotList.map(s => `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-xs);margin-bottom:6px;cursor:pointer;transition:background 0.1s" onclick="openBookModal('${s.id}')" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-        <span style="font-size:20px;font-weight:800;color:var(--accent);min-width:52px">${s.time}</span>
-        <span style="font-size:13px;color:var(--text2)">${s.location}</span>
+        <span style="font-size:20px;font-weight:800;color:var(--accent);min-width:52px">${escapeHtml(s.time)}</span>
+        <span style="font-size:13px;color:var(--text2)">${escapeHtml(s.location)}</span>
         <span class="badge badge-green" style="margin-left:auto">예약 가능</span>
       </div>`).join('');
     return `<div style="margin-bottom:16px">
@@ -2545,19 +2555,25 @@ function renderMenteeSessions() {
   }
   const sessionCardHtml = s => {
     const mentor = _idx.mentor[s.mentorId];
+    const safeMentorName = escapeHtml(mentor?.name || '');
+    const safeField = escapeHtml(mentor?.field || '');
+    const safeDate = escapeHtml(formatDate(s.date));
+    const safeTime = escapeHtml(s.time || '');
+    const safeLocation = escapeHtml(s.location || '');
+    const safeTopic = escapeHtml(s.topic || '');
     const badgeMap = { pending: '<span class="badge badge-warn">대기중</span>', upcoming: '<span class="badge badge-blue">확정</span>', completed: '<span class="badge badge-green">완료</span>' };
     return `<div class="session-card">
       <div class="session-card-header">
         <div class="session-main-info">
-          <div class="session-name">${mentor?.name} 멘토 <span class="text-muted fw-600">· ${mentor?.field}</span></div>
+          <div class="session-name">${safeMentorName} 멘토 <span class="text-muted fw-600">· ${safeField}</span></div>
           <div class="session-meta">
-            <span>📅 ${formatDate(s.date)}</span>
-            <span>⏰ ${s.time}</span>
-            <span>📍 ${s.location}</span>
+            <span>📅 ${safeDate}</span>
+            <span>⏰ ${safeTime}</span>
+            <span>📍 ${safeLocation}</span>
           </div>
           ${s.status === 'pending' ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:var(--warn-bg);border:1px solid #E8D4A0;border-radius:var(--radius-xs);padding:6px 10px;font-size:12px;color:var(--warn)">⏳ 멘토 확인 대기 중입니다</div>` : ''}
-          ${s.status === 'upcoming' ? `<div style="margin-top:8px;background:var(--info-bg);border:1px solid #B8D8F0;border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--info);line-height:1.7">✅ <strong>멘토링이 확정되었습니다!</strong><br>📍 장소/방식: <strong>${s.location}</strong><br><span style="color:var(--text3)">일정 변경이 필요하면 신청 취소 후 재예약하세요</span></div>` : ''}
-          <div style="margin-top:6px;font-size:12px;color:var(--text2)">📌 ${s.topic}</div>
+          ${s.status === 'upcoming' ? `<div style="margin-top:8px;background:var(--info-bg);border:1px solid #B8D8F0;border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--info);line-height:1.7">✅ <strong>멘토링이 확정되었습니다!</strong><br>📍 장소/방식: <strong>${safeLocation}</strong><br><span style="color:var(--text3)">일정 변경이 필요하면 신청 취소 후 재예약하세요</span></div>` : ''}
+          <div style="margin-top:6px;font-size:12px;color:var(--text2)">📌 ${safeTopic}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
           ${badgeMap[s.status] || ''}
@@ -3235,12 +3251,15 @@ function renderNoticesPage(role) {
     const isRead = read.has(n.id);
     const importantBadge = n.isImportant ? `<span class="badge" style="background:var(--danger);color:#fff;margin-left:6px">❗ 중요</span>` : '';
     const unreadDot = !isRead ? `<span style="width:8px;height:8px;border-radius:50%;background:var(--danger);display:inline-block;margin-right:6px"></span>` : '';
+    const safeTitle = escapeHtml(n.title);
+    const safeCreatedAt = escapeHtml(n.createdAt || '');
+    const safePreview = escapeHtml((n.content || '').slice(0,80));
     return `<div class="page-col"><div class="card" style="cursor:pointer;border-left:3px solid ${n.isImportant ? 'var(--danger)' : 'var(--accent)'};margin-bottom:10px" onclick="openNoticeDetail('${n.id}','${role}')">
       <div class="flex-between">
-        <div style="font-weight:600;font-size:15px">${unreadDot}${n.title}${importantBadge}</div>
-        <div style="font-size:11px;color:var(--text3)">${n.createdAt || ''}</div>
+        <div style="font-weight:600;font-size:15px">${unreadDot}${safeTitle}${importantBadge}</div>
+        <div style="font-size:11px;color:var(--text3)">${safeCreatedAt}</div>
       </div>
-      <div style="margin-top:6px;font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(n.content || '').slice(0,80)}${(n.content || '').length > 80 ? '...' : ''}</div>
+      <div style="margin-top:6px;font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safePreview}${(n.content || '').length > 80 ? '...' : ''}</div>
     </div></div>`;
   }).join('')}</div>`;
   _updateSidebarBadges(); // 뱃지만 갱신 (navigateTo 없음)
@@ -3251,7 +3270,7 @@ function openNoticeDetail(noticeId, role) {
   const n = DB.notices.find(x => x.id === noticeId);
   if (!n) return;
   const importantBadge = n.isImportant ? `<span class="badge" style="background:var(--danger);color:#fff;margin-left:6px">❗ 중요</span>` : '';
-  document.getElementById('notice-detail-title').innerHTML = n.title + importantBadge;
+  document.getElementById('notice-detail-title').innerHTML = escapeHtml(n.title) + importantBadge;
   document.getElementById('notice-detail-meta').textContent = `대상: ${n.target} · ${n.createdAt || ''}`;
   document.getElementById('notice-detail-body').textContent = n.content || '';
   openModal('modal-notice-detail');
@@ -3287,11 +3306,11 @@ function renderRequestPage(role) {
         ${adminMsgsIn.slice().reverse().map(r => `
           <div style="border:1px solid ${r.replyRead === true || r.replyRead === 'true' ? 'var(--border)' : 'var(--accent)'};border-radius:var(--radius-xs);padding:12px;margin-bottom:8px;cursor:pointer" onclick="markReplyRead('${r.id}')">
             <div class="flex-between" style="margin-bottom:4px">
-              <span style="font-weight:600">${r.replyRead === true || r.replyRead === 'true' ? '' : '🔴 '}${r.title}</span>
-              <span class="badge badge-blue">${r.messageType || '안내'}</span>
+              <span style="font-weight:600">${r.replyRead === true || r.replyRead === 'true' ? '' : '🔴 '}${escapeHtml(r.title)}</span>
+              <span class="badge badge-blue">${escapeHtml(r.messageType || '안내')}</span>
             </div>
-            <div style="font-size:12px;color:var(--text3)">${r.createdAt || ''}</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:6px">${r.content || ''}</div>
+            <div style="font-size:12px;color:var(--text3)">${escapeHtml(r.createdAt || '')}</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:6px">${escapeHtml(r.content || '')}</div>
           </div>`).join('')}
       </div>` : ''}
       <div class="card">
@@ -3320,13 +3339,13 @@ function renderRequestPage(role) {
           myRequests.slice().reverse().map(r => `
             <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
               <div class="flex-between" style="margin-bottom:4px">
-                <span style="font-weight:600">${r.title}</span>${statusBadge(r.status)}
+                <span style="font-weight:600">${escapeHtml(r.title)}</span>${statusBadge(r.status)}
               </div>
-              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">유형: ${r.type} · ${r.createdAt || ''}</div>
-              <div style="font-size:13px;color:var(--text2)">${r.content || ''}</div>
+              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">유형: ${escapeHtml(r.type)} · ${escapeHtml(r.createdAt || '')}</div>
+              <div style="font-size:13px;color:var(--text2)">${escapeHtml(r.content || '')}</div>
               ${r.reply ? `<div style="margin-top:8px;padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent);cursor:pointer" onclick="markReplyRead('${r.id}')">
                 <span style="font-size:11px;color:var(--accent);font-weight:600">관리자 회신 ${r.replyRead ? '✅ 읽음' : '🔴 새 회신'}</span>
-                <br><span style="font-size:13px">${r.reply}</span>
+                <br><span style="font-size:13px">${escapeHtml(r.reply)}</span>
               </div>` : ''}
             </div>`).join('')}
       </div>
@@ -3400,11 +3419,11 @@ function renderAdminRequests() {
   const cardHtml = (r) => `
     <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
       <div class="flex-between" style="margin-bottom:4px">
-        <span style="font-weight:600">${r.title}</span>${statusBadge(r.status)}
+        <span style="font-weight:600">${escapeHtml(r.title)}</span>${statusBadge(r.status)}
       </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">${normalizeRoleKey(r.authorRole) === 'mentor' ? '멘토' : '멘티'} ${r.authorName} · 유형: ${r.type} · ${r.createdAt || ''}</div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${r.content || ''}</div>
-      ${r.reply ? `<div style="padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent);font-size:13px;margin-bottom:8px"><b style="font-size:11px;color:var(--accent)">회신 완료</b><br>${r.reply}</div>` : ''}
+      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">${normalizeRoleKey(r.authorRole) === 'mentor' ? '멘토' : '멘티'} ${escapeHtml(r.authorName)} · 유형: ${escapeHtml(r.type)} · ${escapeHtml(r.createdAt || '')}</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${escapeHtml(r.content || '')}</div>
+      ${r.reply ? `<div style="padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent);font-size:13px;margin-bottom:8px"><b style="font-size:11px;color:var(--accent)">회신 완료</b><br>${escapeHtml(r.reply)}</div>` : ''}
       ${r.status !== '처리완료' ? `
         <div style="display:flex;gap:8px;align-items:flex-end">
           <textarea class="form-control" id="reply-${r.id}" rows="2" placeholder="회신 내용 입력..." style="flex:1">${r.reply || ''}</textarea>
@@ -3419,8 +3438,8 @@ function renderAdminRequests() {
 
   // 수신자 옵션 생성
   const receiverOptions = [
-    ...DB.mentors.map(m => `<option value="${m.name}|mentor|${m.id}">멘토 · ${m.name}</option>`),
-    ...DB.mentees.map(m => `<option value="${m.name}|mentee|${m.id}">멘티 · ${m.name}</option>`)
+    ...DB.mentors.map(m => `<option value="${escapeAttr(m.name)}|mentor|${m.id}">멘토 · ${escapeHtml(m.name)}</option>`),
+    ...DB.mentees.map(m => `<option value="${escapeAttr(m.name)}|mentee|${m.id}">멘티 · ${escapeHtml(m.name)}</option>`)
   ].join('');
 
   el.innerHTML = `
@@ -3453,11 +3472,11 @@ function renderAdminRequests() {
           adminMsgs.slice().reverse().map(r => `
           <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
             <div class="flex-between" style="margin-bottom:4px">
-              <span style="font-weight:600">${r.title}</span>
+              <span style="font-weight:600">${escapeHtml(r.title)}</span>
               <span class="badge ${r.replyRead === true || r.replyRead === 'true' ? 'badge-green' : 'badge-warn'}">${r.replyRead === true || r.replyRead === 'true' ? '읽음' : '미확인'}</span>
             </div>
-            <div style="font-size:12px;color:var(--text3)">→ ${normalizeRoleKey(r.receiverRole) === 'mentor' ? '멘토' : '멘티'} ${r.receiver} · ${r.messageType} · ${r.createdAt || ''}</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:4px">${r.content || ''}</div>
+            <div style="font-size:12px;color:var(--text3)">→ ${normalizeRoleKey(r.receiverRole) === 'mentor' ? '멘토' : '멘티'} ${escapeHtml(r.receiver)} · ${escapeHtml(r.messageType)} · ${escapeHtml(r.createdAt || '')}</div>
+            <div style="font-size:13px;color:var(--text2);margin-top:4px">${escapeHtml(r.content || '')}</div>
           </div>`).join('')}
       </div>
     </div>
@@ -3579,13 +3598,13 @@ function renderAdminNotices() {
           sorted.map(n => `
             <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:10px;margin-bottom:8px;border-left:3px solid ${n.isImportant ? 'var(--danger)' : 'var(--accent)'}">
               <div class="flex-between">
-                <span style="font-weight:600">${n.isImportant ? '❗ ' : ''}${n.title}</span>
+                <span style="font-weight:600">${n.isImportant ? '❗ ' : ''}${escapeHtml(n.title)}</span>
                 <div style="display:flex;align-items:center;gap:8px">
-                  <span style="font-size:11px;color:var(--text3)">${n.target} · ${n.createdAt || ''}</span>
+                  <span style="font-size:11px;color:var(--text3)">${escapeHtml(n.target)} · ${escapeHtml(n.createdAt || '')}</span>
                   <button class="btn btn-sm" style="color:var(--danger);border:1px solid var(--danger);background:transparent;padding:2px 8px;font-size:11px" onclick="deleteNotice('${n.id}')">삭제</button>
                 </div>
               </div>
-              <div style="font-size:13px;color:var(--text2);margin-top:4px">${(n.content || '').slice(0,100)}${(n.content || '').length > 100 ? '...' : ''}</div>
+              <div style="font-size:13px;color:var(--text2);margin-top:4px">${escapeHtml((n.content || '').slice(0,100))}${(n.content || '').length > 100 ? '...' : ''}</div>
             </div>`).join('')}
       </div>
     </div>`;
@@ -3675,7 +3694,7 @@ function renderAdminJournals() {
   if (filterEl) {
     const currentVal = filterEl.value;
     filterEl.innerHTML = `<option value="all">전체 멘토</option>` +
-      DB.mentors.map(m => `<option value="${m.id}" ${currentVal === m.id ? 'selected' : ''}>${m.name}</option>`).join('');
+      DB.mentors.map(m => `<option value="${m.id}" ${currentVal === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
     if (currentVal) filterEl.value = currentVal;
   }
 
@@ -3684,7 +3703,7 @@ function renderAdminJournals() {
   if (menteeFilterEl) {
     const cur = menteeFilterEl.value;
     menteeFilterEl.innerHTML = `<option value="all">전체 멘티</option>` +
-      DB.mentees.map(m => `<option value="${m.id}" ${cur===m.id?'selected':''}>${m.name}</option>`).join('');
+      DB.mentees.map(m => `<option value="${m.id}" ${cur===m.id?'selected':''}>${escapeHtml(m.name)}</option>`).join('');
     if (cur) menteeFilterEl.value = cur;
   }
 
@@ -3706,18 +3725,25 @@ function renderAdminJournals() {
     return;
   }
   el.innerHTML = `<div class="page-grid">${journals.map(j => {
+    const safeMentorName = escapeHtml(getMentorName(j.mentorId));
+    const safeMenteeName = escapeHtml(getMenteeName(j.menteeId));
+    const safeDate = escapeHtml(formatDate(j.date));
+    const safeMeta = `${escapeHtml(j.type || '')} ${escapeHtml(j.duration || '')}`.trim();
+    const safeSubmittedAt = escapeHtml(j.submittedAt || '');
+    const safeRating = escapeHtml(j.rating || '');
+    const safeSnippet = escapeHtml((j.content || '').substring(0, 80));
     return `<div class="page-col"><div class="card">
       <div class="flex-between" style="margin-bottom:12px">
         <div>
-          <div class="fw-600" style="font-size:15px">${getMentorName(j.mentorId)} → ${getMenteeName(j.menteeId)}</div>
-          <div class="text-muted">${formatDate(j.date)} · ${j.type || ''} ${j.duration || ''} · 제출: ${j.submittedAt}</div>
+          <div class="fw-600" style="font-size:15px">${safeMentorName} → ${safeMenteeName}</div>
+          <div class="text-muted">${safeDate} · ${safeMeta} · 제출: ${safeSubmittedAt}</div>
         </div>
         <div class="flex gap-8">
-          <span class="badge badge-blue">${j.rating}</span>
+          <span class="badge badge-blue">${safeRating}</span>
           <button class="btn btn-sm btn-secondary" onclick="viewJournalById('${j.id}')">상세 보기</button>
         </div>
       </div>
-      <div class="session-topic">${(j.content || '').substring(0, 80)}…</div>
+      <div class="session-topic">${safeSnippet}…</div>
     </div></div>`;
   }).join('')}</div>`;
 }
@@ -3742,10 +3768,14 @@ function renderMenteeMatch() {
       <h4 style="margin-bottom:12px;color:var(--success)">✅ 확정된 매칭</h4>
       ${confirmed.map(p => {
         const mentor = _idx.mentor[p.mentorId];
+        const safeMentorName = escapeHtml(mentor?.name || '알 수 없음');
+        const safeField = escapeHtml(mentor?.field || '');
+        const safeCreatedAt = escapeHtml(formatDate(p.createdAt));
+        const safeAdminMemo = escapeHtml(p.adminMemo || '');
         return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
-          <strong>${mentor?.name || '알 수 없음'}</strong> 멘토 <span class="text-muted">(${mentor?.field || ''})</span>
-          <br><span class="text-muted" style="font-size:12px">확정일: ${formatDate(p.createdAt)}</span>
-          ${p.adminMemo ? `<br><span style="font-size:12px;color:var(--text3)">메모: ${p.adminMemo}</span>` : ''}
+          <strong>${safeMentorName}</strong> 멘토 <span class="text-muted">(${safeField})</span>
+          <br><span class="text-muted" style="font-size:12px">확정일: ${safeCreatedAt}</span>
+          ${p.adminMemo ? `<br><span style="font-size:12px;color:var(--text3)">메모: ${safeAdminMemo}</span>` : ''}
         </div>`;
       }).join('')}
     </div>` : ''}
@@ -3781,11 +3811,11 @@ function renderMenteeMatch() {
           <div class="flex-between">
             <div>
               <span class="badge ${statusBadge}">${r.status}</span>
-              <span style="margin-left:8px;font-size:13px">${r.preferredField || '분야 미지정'}</span>
+              <span style="margin-left:8px;font-size:13px">${escapeHtml(r.preferredField || '분야 미지정')}</span>
             </div>
-            <span class="text-muted" style="font-size:12px">${formatDate(r.createdAt)}</span>
+            <span class="text-muted" style="font-size:12px">${escapeHtml(formatDate(r.createdAt))}</span>
           </div>
-          ${r.requestNote ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${r.requestNote.substring(0, 80)}${r.requestNote.length > 80 ? '...' : ''}</div>` : ''}
+          ${r.requestNote ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${escapeHtml(r.requestNote.substring(0, 80))}${r.requestNote.length > 80 ? '...' : ''}</div>` : ''}
         </div>`;
       }).join('')}
     </div>` : ''}`;
@@ -3793,6 +3823,13 @@ function renderMenteeMatch() {
 
 async function submitMatchRequest() {
   if (!ensureAuthorized('매칭 신청', ['mentee'])) return;
+  const hasOpenRequest = DB.matchRequests.some(r =>
+    r.menteeId === currentUser?.id && (r.status === '대기중' || r.status === '제안됨')
+  );
+  if (hasOpenRequest) {
+    toast('이미 진행 중인 매칭 신청이 있습니다. 처리 결과를 먼저 확인해주세요', 'warn');
+    return;
+  }
   const fields = [...document.querySelectorAll('#match-field-tags input:checked')].map(i => i.value);
   const schedules = [...document.querySelectorAll('#match-schedule-tags input:checked')].map(i => i.value);
   const note = document.getElementById('match-request-note').value.trim();
@@ -3833,15 +3870,21 @@ function renderMentorMatch() {
       ${pending.map(p => {
         const mentee = _idx.mentee[p.menteeId];
         const req = DB.matchRequests.find(r => r.id === p.requestId);
+        const safeMenteeName = escapeHtml(mentee?.name || '멘티');
+        const safeCreatedAt = escapeHtml(formatDate(p.createdAt));
+        const safePreferredField = escapeHtml(req?.preferredField || '');
+        const safePreferredSchedule = escapeHtml(req?.preferredSchedule || '');
+        const safeRequestNote = escapeHtml(req?.requestNote || '');
+        const safeAdminMemo = escapeHtml(p.adminMemo || '');
         return `<div class="card" style="margin-bottom:12px;background:var(--surface2)">
           <div class="flex-between" style="margin-bottom:8px">
-            <strong style="font-size:15px">${mentee?.name || '멘티'}</strong>
-            <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+            <strong style="font-size:15px">${safeMenteeName}</strong>
+            <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
           </div>
-          ${req ? `<div style="font-size:13px;margin-bottom:4px"><strong>희망 분야:</strong> ${req.preferredField}</div>
-          <div style="font-size:13px;margin-bottom:4px"><strong>희망 일정:</strong> ${req.preferredSchedule}</div>
-          ${req.requestNote ? `<div style="font-size:13px;margin-bottom:8px"><strong>요청사항:</strong> ${req.requestNote}</div>` : ''}` : ''}
-          ${p.adminMemo ? `<div style="font-size:12px;color:var(--text3);margin-bottom:8px">담당자 메모: ${p.adminMemo}</div>` : ''}
+          ${req ? `<div style="font-size:13px;margin-bottom:4px"><strong>희망 분야:</strong> ${safePreferredField}</div>
+          <div style="font-size:13px;margin-bottom:4px"><strong>희망 일정:</strong> ${safePreferredSchedule}</div>
+          ${req.requestNote ? `<div style="font-size:13px;margin-bottom:8px"><strong>요청사항:</strong> ${safeRequestNote}</div>` : ''}` : ''}
+          ${p.adminMemo ? `<div style="font-size:12px;color:var(--text3);margin-bottom:8px">담당자 메모: ${safeAdminMemo}</div>` : ''}
           <div style="display:flex;gap:8px;margin-top:8px">
             <button class="btn btn-primary btn-sm" onclick="respondMatchProposal('${p.id}', '수락')">수락</button>
             <button class="btn btn-danger btn-sm" onclick="respondMatchProposal('${p.id}', '거절')">거절</button>
@@ -3858,14 +3901,16 @@ function renderMentorMatch() {
         const statusBadge = p.status === '확정' ? 'badge-green' : 'badge-gray';
         const respBadge = p.mentorResponse === '수락' ? 'badge-green' : p.mentorResponse === '거절' ? 'badge-gray' : 'badge-warn';
         const needsSlot = p.status === '확정' && p.mentorResponse === '수락' && myAvailSlots === 0;
+        const safeMenteeName = escapeHtml(mentee?.name || '멘티');
+        const safeCreatedAt = escapeHtml(formatDate(p.createdAt));
         return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <div>
-              <strong>${mentee?.name || '멘티'}</strong>
+              <strong>${safeMenteeName}</strong>
               <span class="badge ${statusBadge}" style="margin-left:8px">${p.status}</span>
               <span class="badge ${respBadge}" style="margin-left:4px">${p.mentorResponse}</span>
             </div>
-            <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+            <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
           </div>
           ${needsSlot ? `<div style="margin-top:8px;padding:8px 12px;background:#EBF5FB;border-radius:8px;font-size:12px;color:#37474F;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span>✅ 수락 완료 — 가용 일정을 등록하면 멘티가 예약할 수 있어요</span>
@@ -3879,8 +3924,13 @@ function renderMentorMatch() {
 
 
 async function respondMatchProposal(proposalId, response) {
+  if (!ensureAuthorized('매칭 응답', ['mentor'])) return;
   const p = DB.matchProposals.find(x => x.id === proposalId);
   if (!p) return;
+  if (String(p.mentorId || '') !== String(currentUser?.id || '')) {
+    toast('본인에게 온 제안만 처리할 수 있습니다', 'error');
+    return;
+  }
   const newStatus = response === '수락' ? '확정' : '거절';
   const prevResponse = p.mentorResponse;
   const prevStatus = p.status;
@@ -3888,9 +3938,12 @@ async function respondMatchProposal(proposalId, response) {
   p.status = newStatus;
   // 수락 시 관련 match_request도 확정
   let prevReqStatus;
-  if (response === '수락' && p.requestId) {
+  if (p.requestId) {
     const req = DB.matchRequests.find(r => r.id === p.requestId);
-    if (req) { prevReqStatus = req.status; req.status = '확정'; }
+    if (req) {
+      prevReqStatus = req.status;
+      req.status = response === '수락' ? '확정' : '대기중';
+    }
   }
   renderMentorMatch();
   const menteeName = _idx.mentee[p.menteeId]?.name || '멘티';
@@ -3901,8 +3954,8 @@ async function respondMatchProposal(proposalId, response) {
   }
   try {
     const ops = [{ action: 'update', sheet: 'match_proposals', id: proposalId, updates: { mentor_response: response, status: newStatus } }];
-    if (response === '수락' && p.requestId) {
-      ops.push({ action: 'update', sheet: 'match_requests', id: p.requestId, updates: { status: '확정' } });
+    if (p.requestId) {
+      ops.push({ action: 'update', sheet: 'match_requests', id: p.requestId, updates: { status: response === '수락' ? '확정' : '대기중' } });
     }
     await syncBatch(ops);
     // 이메일 발송
@@ -3922,6 +3975,7 @@ async function respondMatchProposal(proposalId, response) {
 function showMatchAcceptedModal(menteeName) {
   let overlay = document.getElementById('match-accepted-overlay');
   if (overlay) overlay.remove();
+  const safeMenteeName = escapeHtml(menteeName || '멘티');
   overlay = document.createElement('div');
   overlay.id = 'match-accepted-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s';
@@ -3930,7 +3984,7 @@ function showMatchAcceptedModal(menteeName) {
     <div style="background:#fff;border-radius:16px;max-width:420px;width:90%;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;animation:modalPop 0.25s ease-out">
       <div style="width:56px;height:56px;border-radius:50%;background:#E8F5E9;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px">✅</div>
       <h3 style="margin:0 0 8px;font-size:18px;color:var(--text)">매칭이 수락되었습니다!</h3>
-      <p style="margin:0 0 20px;font-size:14px;color:var(--text2);line-height:1.6"><strong>${menteeName}</strong> 멘티와의 멘토링이 확정되었습니다.</p>
+      <p style="margin:0 0 20px;font-size:14px;color:var(--text2);line-height:1.6"><strong>${safeMenteeName}</strong> 멘티와의 멘토링이 확정되었습니다.</p>
       <div style="background:#EBF5FB;border-radius:12px;padding:16px;margin-bottom:24px;text-align:left">
         <div style="font-size:13px;font-weight:700;color:#1976D2;margin-bottom:8px">📅 다음 단계</div>
         <p style="margin:0;font-size:13px;color:#37474F;line-height:1.7">멘티가 멘토링을 예약할 수 있도록<br>가용 일정을 등록해주세요.<br>등록한 시간 중 멘티가 원하는<br>시간을 선택해 신청합니다.</p>
@@ -3982,14 +4036,20 @@ function renderAdminMatchRequests(el) {
       <h4 style="margin-bottom:12px">대기 중인 신청 (${pending.length}건)</h4>
       ${pending.map(r => {
         const mentee = _idx.mentee[r.menteeId];
+        const safeMenteeName = escapeHtml(mentee?.name || '멘티');
+        const safeTeam = escapeHtml(mentee?.team || '');
+        const safeCreatedAt = escapeHtml(formatDate(r.createdAt));
+        const safePreferredField = escapeHtml(r.preferredField || '');
+        const safePreferredSchedule = escapeHtml(r.preferredSchedule || '');
+        const safeRequestNote = escapeHtml(r.requestNote || '');
         return `<div class="card" style="background:var(--surface2);margin-bottom:10px">
           <div class="flex-between" style="margin-bottom:8px">
-            <div><strong>${mentee?.name || '멘티'}</strong> <span class="text-muted">(${mentee?.team || ''})</span></div>
-            <span class="text-muted" style="font-size:12px">${formatDate(r.createdAt)}</span>
+            <div><strong>${safeMenteeName}</strong> <span class="text-muted">(${safeTeam})</span></div>
+            <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
           </div>
-          <div style="font-size:13px;margin-bottom:4px">희망 분야: <strong>${r.preferredField}</strong></div>
-          <div style="font-size:13px;margin-bottom:4px">희망 일정: <strong>${r.preferredSchedule}</strong></div>
-          ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2)">요청사항: ${r.requestNote}</div>` : ''}
+          <div style="font-size:13px;margin-bottom:4px">희망 분야: <strong>${safePreferredField}</strong></div>
+          <div style="font-size:13px;margin-bottom:4px">희망 일정: <strong>${safePreferredSchedule}</strong></div>
+          ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2)">요청사항: ${safeRequestNote}</div>` : ''}
           <button class="btn btn-primary btn-sm" onclick="openMatchProposeModal('${r.id}')">멘토 선택 후 제안</button>
         </div>`;
       }).join('')}
@@ -3999,9 +4059,12 @@ function renderAdminMatchRequests(el) {
       ${other.map(r => {
         const mentee = _idx.mentee[r.menteeId];
         const statusBadge = r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : 'badge-gray';
+        const safeMenteeName = escapeHtml(mentee?.name || '멘티');
+        const safePreferredField = escapeHtml(r.preferredField || '');
+        const safeCreatedAt = escapeHtml(formatDate(r.createdAt));
         return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-          <div><strong>${mentee?.name || '멘티'}</strong> — ${r.preferredField} <span class="badge ${statusBadge}">${r.status}</span></div>
-          <span class="text-muted" style="font-size:12px">${formatDate(r.createdAt)}</span>
+          <div><strong>${safeMenteeName}</strong> — ${safePreferredField} <span class="badge ${statusBadge}">${r.status}</span></div>
+          <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
         </div>`;
       }).join('')}
     </div>` : ''}`;
@@ -4039,21 +4102,25 @@ function renderAdminMatchProposals(el) {
           ${completedCnt === 0 && upcomingCnt === 0 ? `<span style="background:#FFF3E0;color:#E65100;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">⏳ 멘토링 미진행</span>` : ''}
         </div>` : '';
         const unmatchBtn = p.status === '확정' ? `<button class="btn btn-sm" style="background:#ffebee;color:#c62828;border:none;font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer" onclick="adminUnmatch('${p.id}')">매칭 해제</button>` : '';
+        const safeMentorName = escapeHtml(mentor?.name || '멘토');
+        const safeMenteeName = escapeHtml(mentee?.name || '멘티');
+        const safeCreatedAt = escapeHtml(formatDate(p.createdAt));
+        const safeAdminMemo = escapeHtml(p.adminMemo || '');
         return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
           <div class="flex-between">
             <div>
               ${flowBadge}
-              <strong style="margin-left:6px">${mentor?.name || '멘토'}</strong> → <strong>${mentee?.name || '멘티'}</strong>
+              <strong style="margin-left:6px">${safeMentorName}</strong> → <strong>${safeMenteeName}</strong>
               <span class="badge ${statusBadge}" style="margin-left:6px">${p.status}</span>
               ${p.mentorResponse !== '대기' ? `<span class="text-muted" style="font-size:11px;margin-left:4px">(멘토: ${p.mentorResponse})</span>` : ''}
             </div>
             <div style="display:flex;align-items:center;gap:8px">
               ${unmatchBtn}
-              <span class="text-muted" style="font-size:12px">${formatDate(p.createdAt)}</span>
+              <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
             </div>
           </div>
           ${activityHtml}
-          ${p.adminMemo ? `<div class="text-muted" style="font-size:12px;margin-top:4px">메모: ${p.adminMemo}</div>` : ''}
+          ${p.adminMemo ? `<div class="text-muted" style="font-size:12px;margin-top:4px">메모: ${safeAdminMemo}</div>` : ''}
         </div>`;
       }).join('') : '<div class="empty-state"><span class="icon">📭</span><h4>매칭 기록 없음</h4></div>'}
     </div>`;
@@ -4068,14 +4135,14 @@ function renderAdminMatchDirect(el) {
         <label class="form-label">멘토 선택</label>
         <select id="direct-mentor-select" class="form-control">
           <option value="">— 멘토를 선택하세요 —</option>
-          ${DB.mentors.filter(m => m.active !== false).map(m => `<option value="${m.id}">${m.name} (${m.field || ''})</option>`).join('')}
+          ${DB.mentors.filter(m => m.active !== false).map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.field || '')})</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
         <label class="form-label">멘티 선택</label>
         <select id="direct-mentee-select" class="form-control">
           <option value="">— 멘티를 선택하세요 —</option>
-          ${DB.mentees.map(m => `<option value="${m.id}">${m.name} (${m.team || ''})</option>`).join('')}
+          ${DB.mentees.map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.team || '')})</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
@@ -4091,17 +4158,23 @@ function openMatchProposeModal(requestId) {
   _proposeRequestId = requestId;
   const sel = document.getElementById('propose-mentor-select');
   sel.innerHTML = `<option value="">— 멘토를 선택하세요 —</option>` +
-    DB.mentors.filter(m => m.active !== false).map(m => `<option value="${m.id}">${m.name} (${m.field || ''})</option>`).join('');
+    DB.mentors.filter(m => m.active !== false).map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.field || '')})</option>`).join('');
   document.getElementById('propose-admin-memo').value = '';
   openModal('modal-match-propose');
 }
 
 async function confirmMatchPropose() {
+  if (!ensureAuthorized('매칭 제안', ['admin'])) return;
   const mentorId = document.getElementById('propose-mentor-select').value;
   const memo = document.getElementById('propose-admin-memo').value.trim();
   if (!mentorId) { toast('멘토를 선택해주세요', 'error'); return; }
   const req = DB.matchRequests.find(r => r.id === _proposeRequestId);
   if (!req) return;
+  const hasOpenProposal = DB.matchProposals.some(p => p.requestId === req.id && p.status === '제안중');
+  if (hasOpenProposal) {
+    toast('이미 진행 중인 매칭 제안이 있습니다', 'warn');
+    return;
+  }
   const proposal = {
     id: 'mp' + Date.now(),
     mentorId,
@@ -4169,13 +4242,27 @@ async function adminUnmatch(proposalId) {
   const p = DB.matchProposals.find(x => x.id === proposalId);
   if (!p) { toast('매칭 정보를 찾을 수 없습니다', 'error'); return; }
   const prevStatus = p.status;
+  let prevReqStatus = null;
   p.status = '해제';
+  if (p.requestId) {
+    const req = DB.matchRequests.find(r => r.id === p.requestId);
+    if (req) {
+      prevReqStatus = req.status;
+      req.status = '대기중';
+    }
+  }
   renderAdminMatch();
   toast('매칭이 해제되었습니다', 'success');
   try {
-    await syncBatch([{ action: 'update', sheet: 'match_proposals', id: proposalId, updates: { status: '해제' } }]);
+    const ops = [{ action: 'update', sheet: 'match_proposals', id: proposalId, updates: { status: '해제' } }];
+    if (p.requestId) ops.push({ action: 'update', sheet: 'match_requests', id: p.requestId, updates: { status: '대기중' } });
+    await syncBatch(ops);
   } catch(e) {
     p.status = prevStatus;
+    if (p.requestId && prevReqStatus !== null) {
+      const req = DB.matchRequests.find(r => r.id === p.requestId);
+      if (req) req.status = prevReqStatus;
+    }
     renderAdminMatch();
     toast('매칭 해제 동기화 실패 — 복원되었습니다', 'error');
   }
@@ -4340,6 +4427,11 @@ async function addSlots() {
 
 async function deleteSlot(id) {
   if (!ensureAuthorized('일정 삭제', ['mentor'])) return;
+  const targetSlot = DB.slots.find(s => s.id === id);
+  if (!targetSlot || String(targetSlot.mentorId || '') !== String(currentUser?.id || '')) {
+    toast('본인 일정만 삭제할 수 있습니다', 'error');
+    return;
+  }
   const backup = DB.slots.slice();
   DB.slots = DB.slots.filter(s => s.id !== id);
   renderMentorSchedule();
@@ -4355,12 +4447,18 @@ async function deleteSlot(id) {
 
 async function cancelSession(sessionId, callerRole) {
   if (!ensureAuthorized('세션 취소', callerRole === 'mentor' ? ['mentor'] : ['mentee'])) return;
-  if (!confirm('취소하시겠습니까? 슬롯이 다시 열립니다.')) return;
   const session = DB.sessions.find(s => s.id === sessionId);
   if (!session) return;
+  const isOwner = callerRole === 'mentor'
+    ? String(session.mentorId || '') === String(currentUser?.id || '')
+    : String(session.menteeId || '') === String(currentUser?.id || '');
+  if (!isOwner) {
+    toast('본인 세션만 취소할 수 있습니다', 'error');
+    return;
+  }
+  if (!confirm('취소하시겠습니까? 슬롯이 다시 열립니다.')) return;
   const backupSessions = DB.sessions.slice();
   const backupSlots = DB.slots.slice();
-  const prevSlotStatus = DB.slots.find(s => s.id === session.slotId)?.status;
   const slot = DB.slots.find(s => s.id === session.slotId);
   if (slot) { slot.status = 'available'; delete slot.sessionId; }
   DB.sessions = DB.sessions.filter(s => s.id !== sessionId);
@@ -4412,6 +4510,10 @@ async function confirmSession(sessionId) {
   if (!ensureAuthorized('세션 확정', ['mentor'])) return;
   const session = DB.sessions.find(s => s.id === sessionId);
   if (!session) return;
+  if (String(session.mentorId || '') !== String(currentUser?.id || '')) {
+    toast('본인에게 신청된 세션만 확정할 수 있습니다', 'error');
+    return;
+  }
   const prevStatus = session.status;
   const slot = DB.slots.find(s => s.id === session.slotId);
   const prevSlotStatus = slot?.status;
@@ -4436,12 +4538,17 @@ async function rejectSession(sessionId) {
   if (!ensureAuthorized('세션 거절', ['mentor'])) return;
   const session = DB.sessions.find(s => s.id === sessionId);
   if (!session) return;
+  if (String(session.mentorId || '') !== String(currentUser?.id || '')) {
+    toast('본인에게 신청된 세션만 거절할 수 있습니다', 'error');
+    return;
+  }
   if (!confirm('신청을 거절하시겠습니까? 슬롯이 다시 열립니다.')) return;
   const backupSessions = DB.sessions.slice();
   const backupSlots = DB.slots.slice();
   const slot = DB.slots.find(s => s.id === session.slotId);
   if (slot) { slot.status = 'available'; delete slot.sessionId; }
   DB.sessions = DB.sessions.filter(s => s.id !== sessionId);
+  _rebuildIndex();
   renderMentorSessions();
   toast('신청을 거절했습니다', 'error');
   try {
@@ -4452,6 +4559,7 @@ async function rejectSession(sessionId) {
     ]);
   } catch(e) {
     DB.sessions = backupSessions; DB.slots = backupSlots;
+    _rebuildIndex();
     renderMentorSessions();
     toast('거절 동기화 실패 — 복원되었습니다', 'error');
   }
@@ -4461,6 +4569,10 @@ async function completeSession(sessionId) {
   if (!ensureAuthorized('완료 처리', ['mentor'])) return;
   const session = DB.sessions.find(s => s.id === sessionId);
   if (!session) return;
+  if (String(session.mentorId || '') !== String(currentUser?.id || '')) {
+    toast('본인 세션만 완료 처리할 수 있습니다', 'error');
+    return;
+  }
 
   // 멘토링 시작 시간 이전에는 완료 처리 불가 (KST 기준)
   if (session.date && session.time) {
@@ -4495,6 +4607,13 @@ function openBookModal(slotId) {
     renderMenteeBook();
     return;
   }
+  const isMatchedMentor = DB.matchProposals.some(p =>
+    p.menteeId === currentUser?.id && p.mentorId === slot.mentorId && p.status === '확정'
+  );
+  if (currentRole === 'mentee' && !isMatchedMentor) {
+    toast('확정된 매칭 멘토의 일정만 예약할 수 있습니다', 'error');
+    return;
+  }
   // 같은 멘토에 진행 중인 예약이 있으면 중복 방지
   const hasActive = DB.sessions.some(s => s.menteeId === currentUser?.id && s.mentorId === slot.mentorId && (s.status === 'pending' || s.status === 'upcoming'));
   if (hasActive) {
@@ -4504,7 +4623,7 @@ function openBookModal(slotId) {
   bookingSlotId = slotId;
   document.getElementById('book-slot-id').value = slotId;
   document.getElementById('book-summary').innerHTML =
-    `<strong>🎓 ${getMentorName(slot.mentorId)}</strong> 멘토<br>📅 ${formatDate(slot.date)} ${slot.time}<br>📍 ${slot.location}`;
+    `<strong>🎓 ${escapeHtml(getMentorName(slot.mentorId))}</strong> 멘토<br>📅 ${escapeHtml(formatDate(slot.date))} ${escapeHtml(slot.time)}<br>📍 ${escapeHtml(slot.location)}`;
   openModal('modal-book');
 }
 
@@ -4578,10 +4697,15 @@ async function confirmBooking() {
 function openJournalModal(sessionId) {
   journalSessionId = sessionId;
   const s = DB.sessions.find(x => x.id === sessionId);
+  if (!s) return;
+  if (String(s.mentorId || '') !== String(currentUser?.id || '')) {
+    toast('본인 세션의 일지만 작성할 수 있습니다', 'error');
+    return;
+  }
   const mentee = _idx.mentee[s.menteeId];
   document.getElementById('j-session-id').value = sessionId;
   document.getElementById('journal-session-info').innerHTML =
-    `👤 <strong>${getMenteeName(s.menteeId)}</strong> (${mentee?.team || ''}) · ${formatDate(s.date)} ${s.time}`;
+    `👤 <strong>${escapeHtml(getMenteeName(s.menteeId))}</strong> (${escapeHtml(mentee?.team || '')}) · ${escapeHtml(formatDate(s.date))} ${escapeHtml(s.time || '')}`;
 
   // 필드 초기화
   ['j-content','j-issues','j-next','j-detail-location'].forEach(id => {
@@ -4607,7 +4731,18 @@ function openJournalModal(sessionId) {
     document.getElementById('j-edit-notice').style.display = 'block';
     document.getElementById('j-submit-btn').textContent = '수정 제출';
     if (existingJournal.photoUrl) {
-      document.getElementById('j-photo-status').innerHTML = `현재 등록된 사진이 있습니다. <a href="${existingJournal.photoUrl}" target="_blank" style="color:var(--accent);font-weight:600">기존 사진 보기</a>`;
+      const statusEl = document.getElementById('j-photo-status');
+      statusEl.textContent = '기존 사진 링크 준비 중...';
+      resolveStoredPhotoUrl(existingJournal.photoUrl).then(url => {
+        if (journalSessionId !== sessionId) return;
+        if (!url) {
+          statusEl.textContent = '기존 사진 링크를 불러오지 못했습니다';
+          return;
+        }
+        statusEl.innerHTML = `현재 등록된 사진이 있습니다. <a href="${url}" ${externalLinkAttrs()} style="color:var(--accent);font-weight:600">기존 사진 보기</a>`;
+      }).catch(() => {
+        if (journalSessionId === sessionId) statusEl.textContent = '기존 사진 링크를 불러오지 못했습니다';
+      });
     }
   } else {
     // 임시 저장 드래프트 복원
@@ -4707,12 +4842,8 @@ async function uploadPhotoToDrive(file, sessionId) {
     });
   if (error) throw new Error(error.message || '업로드 실패');
 
-  // 공개 URL 생성
-  const { data: urlData } = sb.storage
-    .from('journal-photos')
-    .getPublicUrl(filePath);
-
-  return urlData.publicUrl;
+  const previewUrl = await resolveStoredPhotoUrl(filePath);
+  return { storedValue: filePath, previewUrl };
 }
 
 async function submitJournal() {
@@ -4780,6 +4911,7 @@ async function submitJournal() {
   if (errBox) errBox.style.display = 'none';
 
   let photoUrl = '';
+  let previewPhotoUrl = '';
   const submitBtn = document.getElementById('j-submit-btn');
 
   if (photoFile) {
@@ -4787,13 +4919,15 @@ async function submitJournal() {
     submitBtn.textContent = '사진 업로드 중...';
     document.getElementById('j-photo-status').innerHTML = '📤 사진 업로드 중... <span style="color:var(--text3)">(잠시 기다려 주세요)</span>';
     try {
-      photoUrl = await uploadPhotoToDrive(photoFile, journalSessionId);
+      const uploaded = await uploadPhotoToDrive(photoFile, journalSessionId);
+      photoUrl = uploaded.storedValue;
+      previewPhotoUrl = uploaded.previewUrl;
       document.getElementById('j-photo-status').innerHTML =
-        `✅ 사진 업로드 완료 &nbsp;<a href="${photoUrl}" target="_blank" style="color:var(--accent);font-weight:600">🔗 사진 바로 보기</a>` +
+        `✅ 사진 업로드 완료 &nbsp;<a href="${previewPhotoUrl}" ${externalLinkAttrs()} style="color:var(--accent);font-weight:600">🔗 사진 바로 보기</a>` +
         `<br><span style="font-size:11px;color:var(--text3)">※ 사진은 Supabase Storage에 저장됩니다. 위 링크로 확인하세요.</span>`;
     } catch(e) {
       document.getElementById('j-photo-status').innerHTML =
-        `<span style="color:var(--danger)">⚠️ 사진 업로드 실패 — ${e.toString().slice(0,60)}</span><br><span style="font-size:11px">사진을 다시 선택 후 제출해주세요</span>`;
+        `<span style="color:var(--danger)">⚠️ 사진 업로드 실패 — ${escapeHtml(e.toString().slice(0,60))}</span><br><span style="font-size:11px">사진을 다시 선택 후 제출해주세요</span>`;
       toast('사진 업로드 실패 — 사진을 다시 첨부해주세요', 'error');
       submitBtn.disabled = false;
       submitBtn.textContent = document.getElementById('j-edit-notice').style.display !== 'none' ? '수정 제출' : '제출하기';
@@ -4804,6 +4938,10 @@ async function submitJournal() {
   }
 
   const session = DB.sessions.find(s => s.id === journalSessionId);
+  if (!session || String(session.mentorId || '') !== String(currentUser?.id || '')) {
+    toast('본인 세션의 일지만 제출할 수 있습니다', 'error');
+    return;
+  }
 
   if (existingJournal) {
     // 수정 모드 — 기존 일지 업데이트
@@ -4861,9 +4999,17 @@ async function submitJournal() {
 function openFeedbackModal(sessionId) {
   feedbackSessionId = sessionId;
   const s = DB.sessions.find(x => x.id === sessionId);
+   if (!s) {
+     toast('세션 정보를 찾을 수 없습니다', 'error');
+     return;
+   }
+   if (String(s.menteeId || '') !== String(currentUser?.id || '')) {
+     toast('본인 세션의 피드백만 작성할 수 있습니다', 'error');
+     return;
+   }
   document.getElementById('fb-session-id').value = sessionId;
   document.getElementById('feedback-session-info').innerHTML =
-    `🎓 <strong>${getMentorName(s.mentorId)}</strong> 멘토 · ${formatDate(s.date)} ${s.time}`;
+    `🎓 <strong>${escapeHtml(getMentorName(s.mentorId))}</strong> 멘토 · ${escapeHtml(formatDate(s.date))} ${escapeHtml(s.time || '')}`;
   ['fb-good','fb-improve'].forEach(id => document.getElementById(id).value = '');
   openModal('modal-feedback');
 }
@@ -4875,10 +5021,14 @@ async function submitFeedback() {
   const improve = document.getElementById('fb-improve').value;
   if (!good.trim()) { toast('도움이 된 점을 입력해주세요', 'error'); return; }
   const session = DB.sessions.find(s => s.id === feedbackSessionId);
+  if (!session || String(session.menteeId || '') !== String(currentUser?.id || '')) {
+    toast('본인 세션의 피드백만 제출할 수 있습니다', 'error');
+    return;
+  }
   const feedback = {
     id: 'fb' + Date.now(), sessionId: feedbackSessionId,
     mentorId: session.mentorId, menteeId: session.menteeId,
-    rating, good, improve, submittedAt: serverTimestamp()
+    rating, good: good.trim(), improve: improve.trim(), submittedAt: serverTimestamp()
   };
   DB.feedbacks.push(feedback);
   session.hasFeedback = true;
@@ -4915,39 +5065,58 @@ async function viewJournal(sessionId) {
     } catch(e) { console.warn('일지 직접 조회 실패:', e); }
   }
   if (!j) { toast('일지 데이터를 찾을 수 없습니다', 'error'); return; }
-  viewJournalById(j.id);
+  await viewJournalById(j.id);
 }
 
-function viewJournalById(jid) {
+async function viewJournalById(jid) {
   let j = DB.journals.find(x => x.id === jid);
   if (!j && window._adminFullDB?.journals) {
     j = window._adminFullDB.journals.find(x => x.id === jid);
   }
+  if (!j) {
+    toast('일지 데이터를 찾을 수 없습니다', 'error');
+    return;
+  }
+  let fb = DB.feedbacks.find(f => f.sessionId === j.sessionId);
+  if (!fb && window._adminFullDB?.feedbacks) {
+    fb = window._adminFullDB.feedbacks.find(f => f.sessionId === j.sessionId);
+  }
+  let photoHtml = '';
+  if (j.photoUrl) {
+    try {
+      const resolvedPhotoUrl = await resolveStoredPhotoUrl(j.photoUrl);
+      if (resolvedPhotoUrl) {
+        photoHtml = `<div style="margin-bottom:16px"><img src="${resolvedPhotoUrl}" alt="멘토링 일지 사진" style="width:100%;border-radius:var(--radius-sm);object-fit:cover;max-height:280px"><div style="margin-top:6px;font-size:12px;color:var(--text3)">📎 <a href="${resolvedPhotoUrl}" ${externalLinkAttrs()} style="color:var(--accent)">원본 사진 보기</a></div></div>`;
+      }
+    } catch(e) {
+      photoHtml = `<div style="margin-bottom:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text3)">📎 사진 링크를 불러오지 못했습니다</div>`;
+    }
+  }
   const meta = [
-    j.type ? `🏷 ${j.type}` : '',
-    j.duration ? `⏱ ${j.duration}` : '',
-    j.detailLocation ? `📍 ${j.detailLocation}` : ''
+    j.type ? `🏷 ${escapeHtml(j.type)}` : '',
+    j.duration ? `⏱ ${escapeHtml(j.duration)}` : '',
+    j.detailLocation ? `📍 ${escapeHtml(j.detailLocation)}` : ''
   ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+  const renderMultilineText = value => escapeHtml(value || '').replace(/\n/g, '<br>');
   document.getElementById('journal-detail').innerHTML = `
     <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px;font-size:13px;line-height:1.7">
-      <strong>${getMentorName(j.mentorId)}</strong> → <strong>${getMenteeName(j.menteeId)}</strong> · ${formatDate(j.date)}<br>
-      평가: <span class="badge badge-blue">${j.rating}</span> · 제출: ${j.submittedAt}
+      <strong>${escapeHtml(getMentorName(j.mentorId))}</strong> → <strong>${escapeHtml(getMenteeName(j.menteeId))}</strong> · ${escapeHtml(formatDate(j.date))}<br>
+      평가: <span class="badge badge-blue">${escapeHtml(j.rating)}</span> · 제출: ${escapeHtml(j.submittedAt)}
       ${meta ? `<br><span style="color:var(--text3)">${meta}</span>` : ''}
     </div>
-    ${j.photoUrl ? `<div style="margin-bottom:16px"><img src="${j.photoUrl}" style="width:100%;border-radius:var(--radius-sm);object-fit:cover;max-height:280px"><div style="margin-top:6px;font-size:12px;color:var(--text3)">📎 <a href="${j.photoUrl}" target="_blank" style="color:var(--accent)">원본 사진 보기</a></div></div>` : ''}
+    ${photoHtml}
     ${[['주요 상담 내용', j.content], ['멘티 현황 및 문제점', j.issues], ['다음 멘토링 계획', j.next]].map(([label, val]) => val ? `
     <div style="margin-bottom:16px">
       <div class="form-label" style="margin-bottom:8px">${label}</div>
-      <div style="font-size:13px;line-height:1.7;background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px">${val}</div>
+      <div style="font-size:13px;line-height:1.7;background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px">${renderMultilineText(val)}</div>
     </div>` : '').join('')}
     ${(() => {
-      const fb = DB.feedbacks.find(f => f.sessionId === j.sessionId);
       if (!fb) return '<div style="margin-top:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text3)">💬 멘티 피드백 미제출</div>';
       return `<div style="margin-top:16px;border:1px solid var(--accent-light);border-radius:var(--radius-sm);padding:14px 16px;background:var(--accent-ultra)">
         <div class="form-label" style="margin-bottom:8px;color:var(--accent)">💬 멘티 피드백</div>
-        <div style="display:flex;gap:8px;margin-bottom:8px"><span class="badge badge-blue">${fb.rating}</span><span style="font-size:11px;color:var(--text3)">제출: ${fb.submittedAt}</span></div>
-        <div style="font-size:13px;margin-bottom:6px"><strong>도움이 된 점:</strong> ${fb.good}</div>
-        ${fb.improve ? `<div style="font-size:13px;color:var(--text2)"><strong>개선 바라는 점:</strong> ${fb.improve}</div>` : ''}
+        <div style="display:flex;gap:8px;margin-bottom:8px"><span class="badge badge-blue">${escapeHtml(fb.rating)}</span><span style="font-size:11px;color:var(--text3)">제출: ${escapeHtml(fb.submittedAt)}</span></div>
+        <div style="font-size:13px;margin-bottom:6px"><strong>도움이 된 점:</strong> ${renderMultilineText(fb.good)}</div>
+        ${fb.improve ? `<div style="font-size:13px;color:var(--text2)"><strong>개선 바라는 점:</strong> ${renderMultilineText(fb.improve)}</div>` : ''}
       </div>`;
     })()}`;
   openModal('modal-journal-view');
@@ -5306,10 +5475,8 @@ const _tableMap = {
 // ═══ Supabase INSERT ═══
 async function syncInsert(type, data) {
   if (!hasSupabaseIntegration() || isDemoMode) return;
-  const table = _tableMap[type] || _tableMap[type + 's'] || type;
   try {
-    const { error } = await getSupabase().from(table).insert(toSnake(data));
-    if (error) throw new Error(error.message);
+    await syncBatch([{ action: 'append', sheet: type, data }]);
   } catch(e) {
     toast(`${type} 저장 실패: ${e.message}`, 'error');
     throw e;
@@ -5320,14 +5487,7 @@ async function syncInsert(type, data) {
 async function syncUserAccount(data) {
   if (!hasSupabaseIntegration() || isDemoMode) return;
   try {
-    const row = {
-      email: String(data.email || '').trim().toLowerCase(),
-      role: normalizeRoleKey(data.role),
-      name: data.name || '',
-      linked_id: data.linkedId || ''
-    };
-    const { error } = await getSupabase().from('users').upsert(row, { onConflict: 'email,role' });
-    if (error) throw new Error(error.message);
+    await syncBatch([{ action: 'upsertUser', data }]);
   } catch(e) {
     toast(`계정 동기화 실패: ${e.message}`, 'error');
     throw e;
@@ -5337,10 +5497,8 @@ async function syncUserAccount(data) {
 // ═══ Supabase UPDATE ═══
 async function syncUpdate(sheet, id, updates) {
   if (!hasSupabaseIntegration() || isDemoMode) return;
-  const table = _tableMap[sheet] || sheet;
   try {
-    const { error } = await getSupabase().from(table).update(toSnake(updates)).eq('id', id);
-    if (error) throw new Error(error.message);
+    await syncBatch([{ action: 'update', sheet, id, updates }]);
   } catch(e) {
     toast(`${sheet} 업데이트 실패: ${e.message}`, 'error');
     throw e;
@@ -5374,6 +5532,41 @@ async function syncBatch(operations) {
 
 
 // ═══ 유틸 ═══
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
+function sanitizeUrl(url) {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
+  return /^(https?:|data:image\/)/i.test(raw) ? raw.replace(/"/g, '%22') : '';
+}
+
+function externalLinkAttrs() {
+  return 'target="_blank" rel="noopener noreferrer"';
+}
+
+async function resolveStoredPhotoUrl(storedValue, expiresIn = 3600) {
+  const raw = String(storedValue || '').trim();
+  if (!raw) return '';
+  if (/^https?:/i.test(raw)) return sanitizeUrl(raw);
+  const sb = getSupabase();
+  if (!sb) return '';
+  const { data, error } = await sb.storage.from('journal-photos').createSignedUrl(raw, expiresIn);
+  if (error) throw new Error(error.message || '사진 링크 생성 실패');
+  return sanitizeUrl(data?.signedUrl || '');
+}
 
 // 삭제된 멘토/멘티 이름도 안전하게 조회 (세션·일지 표시용)
 function getMentorName(id) {
