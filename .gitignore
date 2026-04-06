@@ -1,8 +1,13 @@
 # IDE / editor
 .claude/
+.codex/
 .vscode/
 *.swp
 *.swatch
+
+# Local secrets
+.env
+.env.*
 
 # OS
 .DS_Store

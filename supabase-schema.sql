@@ -297,7 +297,7 @@ CREATE TABLE public.match_proposals (
   flow_type       text DEFAULT 'request_based' CHECK (flow_type IN ('request_based','admin_direct')),
   mentor_response text DEFAULT '대기' CHECK (mentor_response IN ('대기','수락','거절')),
   admin_memo      text DEFAULT '',
-  status          text DEFAULT '제안중' CHECK (status IN ('제안중','확정','거절')),
+  status          text DEFAULT '제안중' CHECK (status IN ('제안중','확정','거절','해제')),
   created_at      timestamptz DEFAULT now()
 );
 
@@ -314,8 +314,21 @@ CREATE TABLE public.email_queue (
 -- send_match_email RPC
 CREATE OR REPLACE FUNCTION send_match_email(p_to text, p_subject text, p_body text)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_role text := get_user_role();
 BEGIN
-  INSERT INTO email_queue (to_email, subject, body) VALUES (p_to, p_subject, p_body);
+  IF v_role NOT IN ('admin', 'mentor') THEN
+    RAISE EXCEPTION 'match email queue access denied';
+  END IF;
+
+  IF COALESCE(trim(p_to), '') = ''
+    OR COALESCE(trim(p_subject), '') = ''
+    OR COALESCE(trim(p_body), '') = '' THEN
+    RAISE EXCEPTION 'email payload is incomplete';
+  END IF;
+
+  INSERT INTO public.email_queue (to_email, subject, body)
+  VALUES (lower(trim(p_to)), trim(p_subject), p_body);
 END;
 $$;
 
@@ -375,6 +388,16 @@ BEGIN
     RETURN json_build_object('ok', false, 'error', '현재 예약할 수 없는 멘토입니다');
   END IF;
 
+  IF v_role = 'mentee' AND NOT EXISTS (
+    SELECT 1
+    FROM public.match_proposals mp
+    WHERE mp.mentee_id = p_mentee_id
+      AND mp.mentor_id = v_slot.mentor_id
+      AND mp.status = '확정'
+  ) THEN
+    RETURN json_build_object('ok', false, 'error', '확정된 매칭의 멘토만 예약할 수 있습니다.');
+  END IF;
+
   -- 같은 멘토와 이미 진행 중인 예약이 있으면 중복 방지
   IF EXISTS (
     SELECT 1 FROM public.sessions
@@ -427,7 +450,9 @@ BEGIN
         'journals', COALESCE((SELECT json_agg(to_jsonb(j) ORDER BY j.submitted_at DESC) FROM public.journals j), '[]'::json),
         'feedbacks', COALESCE((SELECT json_agg(to_jsonb(f) ORDER BY f.submitted_at DESC) FROM public.feedbacks f), '[]'::json),
         'requests', COALESCE((SELECT json_agg(to_jsonb(r) ORDER BY r.created_at DESC) FROM public.requests r), '[]'::json),
-        'notices', COALESCE((SELECT json_agg(to_jsonb(n) ORDER BY n.created_at DESC) FROM public.notices n), '[]'::json)
+        'notices', COALESCE((SELECT json_agg(to_jsonb(n) ORDER BY n.created_at DESC) FROM public.notices n), '[]'::json),
+        'match_requests', COALESCE((SELECT json_agg(to_jsonb(mr) ORDER BY mr.created_at DESC) FROM public.match_requests mr), '[]'::json),
+        'match_proposals', COALESCE((SELECT json_agg(to_jsonb(mp) ORDER BY mp.created_at DESC) FROM public.match_proposals mp), '[]'::json)
       )
     );
   ELSIF v_role = 'mentor' THEN
@@ -439,11 +464,19 @@ BEGIN
           SELECT json_agg(to_jsonb(me) ORDER BY me.created_at DESC)
           FROM public.mentees me
           WHERE COALESCE(me.is_deleted, false) = false
-            AND EXISTS (
-              SELECT 1
-              FROM public.sessions s
-              WHERE s.mentor_id = v_linked_id
-                AND s.mentee_id = me.id
+            AND (
+              EXISTS (
+                SELECT 1
+                FROM public.sessions s
+                WHERE s.mentor_id = v_linked_id
+                  AND s.mentee_id = me.id
+              )
+              OR EXISTS (
+                SELECT 1
+                FROM public.match_proposals mp
+                WHERE mp.mentor_id = v_linked_id
+                  AND mp.mentee_id = me.id
+              )
             )
         ), '[]'::json),
         'slots', COALESCE((SELECT json_agg(to_jsonb(sl) ORDER BY sl.date, sl.time) FROM public.slots sl WHERE sl.mentor_id = v_linked_id AND sl.status <> 'deleted'), '[]'::json),
@@ -451,7 +484,18 @@ BEGIN
         'journals', COALESCE((SELECT json_agg(to_jsonb(j) ORDER BY j.submitted_at DESC) FROM public.journals j WHERE j.mentor_id = v_linked_id), '[]'::json),
         'feedbacks', COALESCE((SELECT json_agg(to_jsonb(f) ORDER BY f.submitted_at DESC) FROM public.feedbacks f WHERE f.mentor_id = v_linked_id), '[]'::json),
         'requests', COALESCE((SELECT json_agg(to_jsonb(r) ORDER BY r.created_at DESC) FROM public.requests r WHERE r.author_id = v_linked_id OR r.receiver_id = v_linked_id), '[]'::json),
-        'notices', COALESCE((SELECT json_agg(to_jsonb(n) ORDER BY n.created_at DESC) FROM public.notices n WHERE COALESCE(n.is_deleted, false) = false AND n.target IN ('전체', '멘토만')), '[]'::json)
+        'notices', COALESCE((SELECT json_agg(to_jsonb(n) ORDER BY n.created_at DESC) FROM public.notices n WHERE COALESCE(n.is_deleted, false) = false AND n.target IN ('전체', '멘토만')), '[]'::json),
+        'match_requests', COALESCE((
+          SELECT json_agg(to_jsonb(mr) ORDER BY mr.created_at DESC)
+          FROM public.match_requests mr
+          WHERE EXISTS (
+            SELECT 1
+            FROM public.match_proposals mp
+            WHERE mp.request_id = mr.id
+              AND mp.mentor_id = v_linked_id
+          )
+        ), '[]'::json),
+        'match_proposals', COALESCE((SELECT json_agg(to_jsonb(mp) ORDER BY mp.created_at DESC) FROM public.match_proposals mp WHERE mp.mentor_id = v_linked_id), '[]'::json)
       )
     );
   END IF;
@@ -464,7 +508,13 @@ BEGIN
         FROM public.mentors m
         WHERE COALESCE(m.is_deleted, false) = false
           AND (
-            COALESCE(m.active, true) = true
+            EXISTS (
+              SELECT 1
+              FROM public.match_proposals mp
+              WHERE mp.mentee_id = v_linked_id
+                AND mp.mentor_id = m.id
+                AND mp.status = '확정'
+            )
             OR EXISTS (
               SELECT 1
               FROM public.sessions s
@@ -480,8 +530,11 @@ BEGIN
         WHERE sl.status <> 'deleted'
           AND EXISTS (
             SELECT 1
-            FROM public.mentors m
-            WHERE m.id = sl.mentor_id
+            FROM public.match_proposals mp
+            JOIN public.mentors m ON m.id = mp.mentor_id
+            WHERE mp.mentee_id = v_linked_id
+              AND mp.mentor_id = sl.mentor_id
+              AND mp.status = '확정'
               AND COALESCE(m.is_deleted, false) = false
               AND COALESCE(m.active, true) = true
           )
@@ -490,7 +543,9 @@ BEGIN
       'journals', '[]'::json,
       'feedbacks', COALESCE((SELECT json_agg(to_jsonb(f) ORDER BY f.submitted_at DESC) FROM public.feedbacks f WHERE f.mentee_id = v_linked_id), '[]'::json),
       'requests', COALESCE((SELECT json_agg(to_jsonb(r) ORDER BY r.created_at DESC) FROM public.requests r WHERE r.author_id = v_linked_id OR r.receiver_id = v_linked_id), '[]'::json),
-      'notices', COALESCE((SELECT json_agg(to_jsonb(n) ORDER BY n.created_at DESC) FROM public.notices n WHERE COALESCE(n.is_deleted, false) = false AND n.target IN ('전체', '멘티만')), '[]'::json)
+      'notices', COALESCE((SELECT json_agg(to_jsonb(n) ORDER BY n.created_at DESC) FROM public.notices n WHERE COALESCE(n.is_deleted, false) = false AND n.target IN ('전체', '멘티만')), '[]'::json),
+      'match_requests', COALESCE((SELECT json_agg(to_jsonb(mr) ORDER BY mr.created_at DESC) FROM public.match_requests mr WHERE mr.mentee_id = v_linked_id), '[]'::json),
+      'match_proposals', COALESCE((SELECT json_agg(to_jsonb(mp) ORDER BY mp.created_at DESC) FROM public.match_proposals mp WHERE mp.mentee_id = v_linked_id), '[]'::json)
     )
   );
 END;
@@ -505,7 +560,13 @@ DECLARE
   v_id text;
   v_data jsonb;
   v_updates jsonb;
+  v_role text := get_user_role();
+  v_linked_id text := get_user_linked_id();
 BEGIN
+  IF v_role IS NULL OR v_role = '' THEN
+    RAISE EXCEPTION 'account_not_found';
+  END IF;
+
   IF p_operations IS NULL OR jsonb_typeof(p_operations) <> 'array' THEN
     RAISE EXCEPTION 'operations must be a JSON array';
   END IF;
@@ -521,7 +582,10 @@ BEGIN
     IF v_action = 'append' THEN
       CASE v_sheet
         WHEN 'mentors' THEN
-          INSERT INTO public.mentors (id, name, field, org, email, bio, active, is_deleted, created_at)
+          IF v_role <> 'admin' THEN
+            RAISE EXCEPTION 'Only admins can append mentors';
+          END IF;
+          INSERT INTO public.mentors (id, name, field, org, email, bio, notification_email, active, is_deleted, created_at)
           VALUES (
             v_data->>'id',
             COALESCE(v_data->>'name', ''),
@@ -529,21 +593,56 @@ BEGIN
             COALESCE(v_data->>'org', ''),
             lower(COALESCE(v_data->>'email', '')),
             COALESCE(v_data->>'bio', ''),
+            COALESCE(v_data->>'notification_email', v_data->>'notificationEmail', ''),
             COALESCE(NULLIF(v_data->>'active', '')::boolean, true),
             COALESCE(NULLIF(v_data->>'is_deleted', '')::boolean, false),
             COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
           );
         WHEN 'mentees' THEN
-          INSERT INTO public.mentees (id, name, team, email, is_deleted, created_at)
+          IF v_role <> 'admin' THEN
+            RAISE EXCEPTION 'Only admins can append mentees';
+          END IF;
+          INSERT INTO public.mentees (id, name, team, email, notification_email, is_deleted, created_at)
           VALUES (
             v_data->>'id',
             COALESCE(v_data->>'name', ''),
             COALESCE(v_data->>'team', ''),
             lower(COALESCE(v_data->>'email', '')),
+            COALESCE(v_data->>'notification_email', v_data->>'notificationEmail', ''),
             COALESCE(NULLIF(v_data->>'is_deleted', '')::boolean, false),
             COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
           );
+        WHEN 'slots' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR (
+              v_role = 'mentor'
+              AND COALESCE(v_data->>'mentor_id', v_data->>'mentorId', '') = COALESCE(v_linked_id, '')
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only the owning mentor can append slots';
+          END IF;
+          INSERT INTO public.slots (id, mentor_id, date, time, location, status, session_id, created_at)
+          VALUES (
+            v_data->>'id',
+            COALESCE(v_data->>'mentor_id', v_data->>'mentorId', ''),
+            COALESCE(v_data->>'date', ''),
+            COALESCE(v_data->>'time', ''),
+            COALESCE(v_data->>'location', ''),
+            COALESCE(v_data->>'status', 'available'),
+            COALESCE(v_data->>'session_id', v_data->>'sessionId', ''),
+            COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
+          );
         WHEN 'journals' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR (
+              v_role = 'mentor'
+              AND COALESCE(v_data->>'mentor_id', v_data->>'mentorId', '') = COALESCE(v_linked_id, '')
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only the owning mentor can append journals';
+          END IF;
           INSERT INTO public.journals (id, session_id, mentor_id, mentee_id, date, type, duration, detail_location, content, issues, next_plan, rating, photo_url, submitted_at)
           VALUES (
             v_data->>'id',
@@ -562,6 +661,15 @@ BEGIN
             COALESCE(NULLIF(v_data->>'submitted_at', '')::timestamptz, now())
           );
         WHEN 'feedbacks' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR (
+              v_role = 'mentee'
+              AND COALESCE(v_data->>'mentee_id', v_data->>'menteeId', '') = COALESCE(v_linked_id, '')
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only the owning mentee can append feedbacks';
+          END IF;
           INSERT INTO public.feedbacks (id, session_id, mentor_id, mentee_id, rating, good, improve, submitted_at)
           VALUES (
             v_data->>'id',
@@ -574,6 +682,20 @@ BEGIN
             COALESCE(NULLIF(v_data->>'submitted_at', '')::timestamptz, now())
           );
         WHEN 'sessionLog' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR EXISTS (
+              SELECT 1
+              FROM public.sessions s
+              WHERE s.id = COALESCE(v_data->>'session_id', '')
+                AND (
+                  (v_role = 'mentor' AND s.mentor_id = v_linked_id)
+                  OR (v_role = 'mentee' AND s.mentee_id = v_linked_id)
+                )
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only related users can append session logs';
+          END IF;
           INSERT INTO public.session_log (session_id, action, cancelled_by, cancelled_at)
           VALUES (
             COALESCE(v_data->>'session_id', ''),
@@ -582,6 +704,19 @@ BEGIN
             COALESCE(NULLIF(v_data->>'cancelled_at', '')::timestamptz, now())
           );
         WHEN 'requests' THEN
+          IF COALESCE(v_data->>'type', '') = '관리자발신' THEN
+            IF v_role <> 'admin' THEN
+              RAISE EXCEPTION 'Only admins can append admin messages';
+            END IF;
+          ELSIF NOT (
+            v_role = 'admin'
+            OR (
+              COALESCE(v_data->>'author_role', '') = v_role
+              AND COALESCE(v_data->>'author_id', '') = COALESCE(v_linked_id, '')
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only the owning user can append requests';
+          END IF;
           INSERT INTO public.requests (id, author_id, author_name, author_role, type, title, content, status, reply, reply_read, sender, receiver_id, receiver, receiver_role, message_type, created_at)
           VALUES (
             v_data->>'id',
@@ -602,6 +737,9 @@ BEGIN
             COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
           );
         WHEN 'notices' THEN
+          IF v_role <> 'admin' THEN
+            RAISE EXCEPTION 'Only admins can append notices';
+          END IF;
           INSERT INTO public.notices (id, target, title, content, is_important, is_deleted, created_at)
           VALUES (
             v_data->>'id',
@@ -612,12 +750,51 @@ BEGIN
             COALESCE(NULLIF(v_data->>'is_deleted', '')::boolean, false),
             COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
           );
+        WHEN 'match_requests' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR (
+              v_role = 'mentee'
+              AND COALESCE(v_data->>'mentee_id', v_data->>'menteeId', '') = COALESCE(v_linked_id, '')
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only the owning mentee can append match requests';
+          END IF;
+          INSERT INTO public.match_requests (id, mentee_id, preferred_field, preferred_schedule, request_note, status, created_at)
+          VALUES (
+            v_data->>'id',
+            COALESCE(v_data->>'mentee_id', v_data->>'menteeId', ''),
+            COALESCE(v_data->>'preferred_field', v_data->>'preferredField', ''),
+            COALESCE(v_data->>'preferred_schedule', v_data->>'preferredSchedule', ''),
+            COALESCE(v_data->>'request_note', v_data->>'requestNote', ''),
+            COALESCE(v_data->>'status', '대기중'),
+            COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
+          );
+        WHEN 'match_proposals' THEN
+          IF v_role <> 'admin' THEN
+            RAISE EXCEPTION 'Only admins can append match proposals';
+          END IF;
+          INSERT INTO public.match_proposals (id, mentor_id, mentee_id, request_id, flow_type, mentor_response, admin_memo, status, created_at)
+          VALUES (
+            v_data->>'id',
+            COALESCE(v_data->>'mentor_id', v_data->>'mentorId', ''),
+            COALESCE(v_data->>'mentee_id', v_data->>'menteeId', ''),
+            COALESCE(v_data->>'request_id', v_data->>'requestId', ''),
+            COALESCE(v_data->>'flow_type', v_data->>'flowType', 'request_based'),
+            COALESCE(v_data->>'mentor_response', v_data->>'mentorResponse', '대기'),
+            COALESCE(v_data->>'admin_memo', v_data->>'adminMemo', ''),
+            COALESCE(v_data->>'status', '제안중'),
+            COALESCE(NULLIF(v_data->>'created_at', '')::timestamptz, now())
+          );
         ELSE
           RAISE EXCEPTION 'Unsupported append target: %', v_sheet;
       END CASE;
     ELSIF v_action = 'update' THEN
       CASE v_sheet
         WHEN 'mentors' THEN
+          IF v_role <> 'admin' THEN
+            RAISE EXCEPTION 'Only admins can update mentors';
+          END IF;
           UPDATE public.mentors
           SET
             name = CASE WHEN v_updates ? 'name' THEN COALESCE(v_updates->>'name', '') ELSE name END,
@@ -625,18 +802,35 @@ BEGIN
             org = CASE WHEN v_updates ? 'org' THEN COALESCE(v_updates->>'org', '') ELSE org END,
             email = CASE WHEN v_updates ? 'email' THEN lower(COALESCE(v_updates->>'email', '')) ELSE email END,
             bio = CASE WHEN v_updates ? 'bio' THEN COALESCE(v_updates->>'bio', '') ELSE bio END,
+            notification_email = CASE WHEN v_updates ? 'notification_email' THEN COALESCE(v_updates->>'notification_email', '') ELSE notification_email END,
             active = CASE WHEN v_updates ? 'active' THEN COALESCE(NULLIF(v_updates->>'active', '')::boolean, active) ELSE active END,
             is_deleted = CASE WHEN v_updates ? 'is_deleted' THEN COALESCE(NULLIF(v_updates->>'is_deleted', '')::boolean, is_deleted) ELSE is_deleted END
           WHERE id = v_id;
         WHEN 'mentees' THEN
+          IF v_role <> 'admin' THEN
+            RAISE EXCEPTION 'Only admins can update mentees';
+          END IF;
           UPDATE public.mentees
           SET
             name = CASE WHEN v_updates ? 'name' THEN COALESCE(v_updates->>'name', '') ELSE name END,
             team = CASE WHEN v_updates ? 'team' THEN COALESCE(v_updates->>'team', '') ELSE team END,
             email = CASE WHEN v_updates ? 'email' THEN lower(COALESCE(v_updates->>'email', '')) ELSE email END,
+            notification_email = CASE WHEN v_updates ? 'notification_email' THEN COALESCE(v_updates->>'notification_email', '') ELSE notification_email END,
             is_deleted = CASE WHEN v_updates ? 'is_deleted' THEN COALESCE(NULLIF(v_updates->>'is_deleted', '')::boolean, is_deleted) ELSE is_deleted END
           WHERE id = v_id;
         WHEN 'slots' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR EXISTS (
+              SELECT 1
+              FROM public.slots sl
+              WHERE sl.id = v_id
+                AND v_role = 'mentor'
+                AND sl.mentor_id = v_linked_id
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only the owning mentor can update slots';
+          END IF;
           UPDATE public.slots
           SET
             date = CASE WHEN v_updates ? 'date' THEN COALESCE(v_updates->>'date', '') ELSE date END,
@@ -646,6 +840,20 @@ BEGIN
             session_id = CASE WHEN v_updates ? 'session_id' THEN COALESCE(v_updates->>'session_id', '') ELSE session_id END
           WHERE id = v_id;
         WHEN 'sessions' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR EXISTS (
+              SELECT 1
+              FROM public.sessions s
+              WHERE s.id = v_id
+                AND (
+                  (v_role = 'mentor' AND s.mentor_id = v_linked_id)
+                  OR (v_role = 'mentee' AND s.mentee_id = v_linked_id)
+                )
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only related users can update sessions';
+          END IF;
           UPDATE public.sessions
           SET
             status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', status) ELSE status END,
@@ -655,6 +863,18 @@ BEGIN
             has_feedback = CASE WHEN v_updates ? 'has_feedback' THEN COALESCE(NULLIF(v_updates->>'has_feedback', '')::boolean, has_feedback) ELSE has_feedback END
           WHERE id = v_id;
         WHEN 'journals' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR EXISTS (
+              SELECT 1
+              FROM public.journals j
+              WHERE j.id = v_id
+                AND v_role = 'mentor'
+                AND j.mentor_id = v_linked_id
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only the owning mentor can update journals';
+          END IF;
           UPDATE public.journals
           SET
             type = CASE WHEN v_updates ? 'type' THEN COALESCE(v_updates->>'type', '') ELSE type END,
@@ -672,6 +892,20 @@ BEGIN
             submitted_at = CASE WHEN v_updates ? 'submitted_at' THEN COALESCE(NULLIF(v_updates->>'submitted_at', '')::timestamptz, submitted_at) ELSE submitted_at END
           WHERE id = v_id;
         WHEN 'requests' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR EXISTS (
+              SELECT 1
+              FROM public.requests r
+              WHERE r.id = v_id
+                AND (
+                  r.author_id = v_linked_id
+                  OR r.receiver_id = v_linked_id
+                )
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only related users can update requests';
+          END IF;
           UPDATE public.requests
           SET
             status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', '') ELSE status END,
@@ -681,6 +915,9 @@ BEGIN
             content = CASE WHEN v_updates ? 'content' THEN COALESCE(v_updates->>'content', '') ELSE content END
           WHERE id = v_id;
         WHEN 'notices' THEN
+          IF v_role <> 'admin' THEN
+            RAISE EXCEPTION 'Only admins can update notices';
+          END IF;
           UPDATE public.notices
           SET
             target = CASE WHEN v_updates ? 'target' THEN COALESCE(v_updates->>'target', target) ELSE target END,
@@ -688,6 +925,55 @@ BEGIN
             content = CASE WHEN v_updates ? 'content' THEN COALESCE(v_updates->>'content', '') ELSE content END,
             is_important = CASE WHEN v_updates ? 'is_important' THEN COALESCE(NULLIF(v_updates->>'is_important', '')::boolean, is_important) ELSE is_important END,
             is_deleted = CASE WHEN v_updates ? 'is_deleted' THEN COALESCE(NULLIF(v_updates->>'is_deleted', '')::boolean, is_deleted) ELSE is_deleted END
+          WHERE id = v_id;
+        WHEN 'match_requests' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR EXISTS (
+              SELECT 1
+              FROM public.match_requests mr
+              WHERE mr.id = v_id
+                AND (
+                  (v_role = 'mentee' AND mr.mentee_id = v_linked_id)
+                  OR (
+                    v_role = 'mentor'
+                    AND EXISTS (
+                      SELECT 1
+                      FROM public.match_proposals mp
+                      WHERE mp.request_id = mr.id
+                        AND mp.mentor_id = v_linked_id
+                    )
+                  )
+                )
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only the owning mentee can update match requests';
+          END IF;
+          UPDATE public.match_requests
+          SET
+            preferred_field = CASE WHEN v_updates ? 'preferred_field' THEN COALESCE(v_updates->>'preferred_field', '') ELSE preferred_field END,
+            preferred_schedule = CASE WHEN v_updates ? 'preferred_schedule' THEN COALESCE(v_updates->>'preferred_schedule', '') ELSE preferred_schedule END,
+            request_note = CASE WHEN v_updates ? 'request_note' THEN COALESCE(v_updates->>'request_note', '') ELSE request_note END,
+            status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', status) ELSE status END
+          WHERE id = v_id;
+        WHEN 'match_proposals' THEN
+          IF NOT (
+            v_role = 'admin'
+            OR EXISTS (
+              SELECT 1
+              FROM public.match_proposals mp
+              WHERE mp.id = v_id
+                AND v_role = 'mentor'
+                AND mp.mentor_id = v_linked_id
+            )
+          ) THEN
+            RAISE EXCEPTION 'Only admins or the owning mentor can update match proposals';
+          END IF;
+          UPDATE public.match_proposals
+          SET
+            mentor_response = CASE WHEN v_updates ? 'mentor_response' THEN COALESCE(v_updates->>'mentor_response', mentor_response) ELSE mentor_response END,
+            admin_memo = CASE WHEN v_updates ? 'admin_memo' THEN COALESCE(v_updates->>'admin_memo', '') ELSE admin_memo END,
+            status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', status) ELSE status END
           WHERE id = v_id;
         ELSE
           RAISE EXCEPTION 'Unsupported update target: %', v_sheet;
@@ -697,6 +983,9 @@ BEGIN
         RAISE EXCEPTION 'Update target not found: % (%).', v_sheet, v_id;
       END IF;
     ELSIF v_action = 'upsertUser' THEN
+      IF v_role <> 'admin' THEN
+        RAISE EXCEPTION 'Only admins can upsert user accounts';
+      END IF;
       INSERT INTO public.users (email, role, name, linked_id, created_at)
       VALUES (
         lower(COALESCE(v_data->>'email', '')),
@@ -728,6 +1017,20 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.notices;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.mentors;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.mentees;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.journals;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.match_requests;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.match_proposals;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.feedbacks;
+
+REVOKE ALL ON FUNCTION public.get_my_account() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.book_session(text, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_app_bundle() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.apply_batch_operations(jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.send_match_email(text, text, text) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.get_my_account() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.book_session(text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_app_bundle() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.apply_batch_operations(jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.send_match_email(text, text, text) TO authenticated;
 
 SET check_function_bodies = on;

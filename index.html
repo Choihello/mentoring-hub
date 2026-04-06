@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="version" content="2.2.0-20260406">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -378,6 +382,7 @@ body {
 .badge-warn { background: var(--warn-bg); color: var(--warn); }
 .badge-blue { background: var(--info-bg); color: var(--info); }
 .badge-gray { background: var(--surface2); color: var(--text2); }
+.badge-red { background: #FFEBEE; color: #C62828; }
 .badge-danger { background: var(--danger-bg); color: var(--danger); }
 
 /* ── 폼 ── */
@@ -723,6 +728,7 @@ tr:hover td { background: var(--accent-ultra); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.1);color:#EF4444;border:1px solid rgba(239,68,68,0.25)">🚪 로그아웃</button>
+        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px">v2.2.0 · 2026-04-06</div>
       </div>
     </aside>
 
@@ -3115,23 +3121,43 @@ function getMenteeEmailAddress(menteeId) {
 
 async function sendHubEmail({ to, subject, body, type = 'general' }) {
   if (!to || !hasSupabaseIntegration() || isDemoMode) return;
+  const supabaseUrl = (DB.settings.supabaseUrl || '').replace(/\/+$/, '');
+  const supabaseKey = DB.settings.supabaseAnonKey || '';
+  if (!supabaseUrl || !supabaseKey) return;
+  const edgeUrl = `${supabaseUrl}/functions/v1/send-email`;
+  const edgeHeaders = {
+    'Authorization': `Bearer ${supabaseKey}`,
+    'apikey': supabaseKey,
+    'Content-Type': 'application/json; charset=utf-8'
+  };
   try {
-    const sb = getSupabase();
-    const { data, error } = await sb.functions.invoke('send-email', {
-      body: { mode: 'direct', to, subject, body }
+    const res = await fetch(edgeUrl, {
+      method: 'POST',
+      headers: edgeHeaders,
+      body: JSON.stringify({ mode: 'direct', to, subject, emailBody: body })
     });
-    if (error) throw error;
+    // 401/403 등 비정상 응답도 처리
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
     if (data?.success) {
-      console.log(`[이메일 발송 ✅] ${type} → ${to} (resendId: ${data.resendId})`);
+      console.log(`[이메일 발송 ✅] ${type} → ${to} (messageId: ${data.messageId})`);
     } else {
       console.warn(`[이메일 발송 ⚠️] ${type} → ${to}: ${data?.error}`);
     }
   } catch(e) {
-    // Edge Function 실패 시 email_queue에 직접 삽입 (폴백)
+    console.warn(`[이메일 직접발송 실패] ${type} → ${to}: ${e.message} — 큐 폴백 시도`);
     try {
       const sb = getSupabase();
       await sb.rpc('send_match_email', { p_to: to, p_subject: subject, p_body: body });
-      console.log(`[이메일 큐 등록] ${type} → ${to} (Edge Function 실패, 큐 폴백)`);
+      console.log(`[이메일 큐 등록] ${type} → ${to}`);
+      // 큐 등록 후 즉시 처리 시도
+      fetch(edgeUrl, {
+        method: 'POST',
+        headers: edgeHeaders,
+        body: JSON.stringify({ mode: 'process' })
+      }).then(r => {
+        if (r.ok) return r.json().then(d => console.log(`[큐 처리 완료] sent: ${d.sent}`));
+      }).catch(() => {});
     } catch(e2) {
       console.warn(`[이메일 발송 실패] ${type} → ${to}:`, e.message, e2.message);
     }
@@ -3173,15 +3199,26 @@ async function sendSessionCancelledEmail(session, cancelledBy) {
   const mentor = _idx.mentor[session.mentorId];
   const mentee = _idx.mentee[session.menteeId];
   const hubUrl = window.location.href;
-  const targetTo = cancelledBy === 'mentor' ? getMenteeEmailAddress(session.menteeId) : getMentorEmailAddress(session.mentorId);
-  const targetName = cancelledBy === 'mentor' ? mentee?.name : mentor?.name;
-  const cancellerName = cancelledBy === 'mentor' ? mentor?.name : mentee?.name;
-  if (targetTo) {
-    await sendHubEmail({
-      to: targetTo, type: 'session_cancelled',
-      subject: '[멘토링 허브] 멘토링 세션이 취소되었습니다',
-      body: `안녕하세요 ${targetName}님,\n\n${cancellerName}님이 멘토링 세션을 취소했습니다.\n\n일시: ${session.date} ${session.time}\n\n멘토링 허브에서 확인하세요:\n${hubUrl}\n\n감사합니다.`
-    });
+  const subject = '[멘토링 허브] 멘토링 세션이 취소되었습니다';
+
+  if (cancelledBy === 'admin') {
+    // 관리자 취소: 멘토+멘티 양쪽에게 알림
+    const mentorTo = getMentorEmailAddress(session.mentorId);
+    const menteeTo = getMenteeEmailAddress(session.menteeId);
+    const bodyBase = `관리자에 의해 멘토링 세션이 취소되었습니다.\n\n일시: ${session.date} ${session.time}\n\n멘토링 허브에서 확인하세요:\n${hubUrl}\n\n감사합니다.`;
+    if (mentorTo) await sendHubEmail({ to: mentorTo, type: 'session_cancelled', subject, body: `안녕하세요 ${mentor?.name} 멘토님,\n\n${bodyBase}` });
+    if (menteeTo) await sendHubEmail({ to: menteeTo, type: 'session_cancelled', subject, body: `안녕하세요 ${mentee?.name} 멘티님,\n\n${bodyBase}` });
+  } else {
+    // 멘토/멘티 취소: 상대방에게 알림
+    const targetTo = cancelledBy === 'mentor' ? getMenteeEmailAddress(session.menteeId) : getMentorEmailAddress(session.mentorId);
+    const targetName = cancelledBy === 'mentor' ? mentee?.name : mentor?.name;
+    const cancellerName = cancelledBy === 'mentor' ? mentor?.name : mentee?.name;
+    if (targetTo) {
+      await sendHubEmail({
+        to: targetTo, type: 'session_cancelled', subject,
+        body: `안녕하세요 ${targetName}님,\n\n${cancellerName}님이 멘토링 세션을 취소했습니다.\n\n일시: ${session.date} ${session.time}\n\n멘토링 허브에서 확인하세요:\n${hubUrl}\n\n감사합니다.`
+      });
+    }
   }
 }
 
@@ -3841,7 +3878,7 @@ function renderMenteeMatch() {
     ${myRequests.length ? `<div class="card">
       <h4 style="margin-bottom:12px">신청 현황</h4>
       ${myRequests.map(r => {
-        const statusBadge = r.status === '대기중' ? 'badge-warn' : r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : 'badge-gray';
+        const statusBadge = r.status === '대기중' ? 'badge-warn' : r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : r.status === '거절' ? 'badge-red' : 'badge-gray';
         return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
           <div class="flex-between">
             <div>
@@ -3858,13 +3895,6 @@ function renderMenteeMatch() {
 
 async function submitMatchRequest() {
   if (!ensureAuthorized('매칭 신청', ['mentee'])) return;
-  const hasOpenRequest = DB.matchRequests.some(r =>
-    r.menteeId === currentUser?.id && (r.status === '대기중' || r.status === '제안됨')
-  );
-  if (hasOpenRequest) {
-    toast('이미 진행 중인 매칭 신청이 있습니다. 처리 결과를 먼저 확인해주세요', 'warn');
-    return;
-  }
   const fields = [...document.querySelectorAll('#match-field-tags input:checked')].map(i => i.value);
   const schedules = [...document.querySelectorAll('#match-schedule-tags input:checked')].map(i => i.value);
   const note = document.getElementById('match-request-note').value.trim();
@@ -4085,7 +4115,10 @@ function renderAdminMatchRequests(el) {
           <div style="font-size:13px;margin-bottom:4px">희망 분야: <strong>${safePreferredField}</strong></div>
           <div style="font-size:13px;margin-bottom:4px">희망 일정: <strong>${safePreferredSchedule}</strong></div>
           ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2)">요청사항: ${safeRequestNote}</div>` : ''}
-          <button class="btn btn-primary btn-sm" onclick="openMatchProposeModal('${r.id}')">멘토 선택 후 제안</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="openMatchProposeModal('${r.id}')">멘토 선택 후 제안</button>
+            <button class="btn btn-sm" style="background:#ffebee;color:#c62828;border:none;font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer" onclick="adminRejectMatchRequest('${r.id}')">신청 거절</button>
+          </div>
         </div>`;
       }).join('')}
     </div>` : '<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>대기 중인 신청 없음</h4></div></div>'}
@@ -4093,7 +4126,7 @@ function renderAdminMatchRequests(el) {
       <h4 style="margin-bottom:12px">처리된 신청</h4>
       ${other.map(r => {
         const mentee = _idx.mentee[r.menteeId];
-        const statusBadge = r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : 'badge-gray';
+        const statusBadge = r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : r.status === '거절' ? 'badge-red' : 'badge-gray';
         const safeMenteeName = escapeHtml(mentee?.name || '멘티');
         const safePreferredField = escapeHtml(r.preferredField || '');
         const safeCreatedAt = escapeHtml(formatDate(r.createdAt));
@@ -4198,6 +4231,25 @@ function openMatchProposeModal(requestId) {
   openModal('modal-match-propose');
 }
 
+async function adminRejectMatchRequest(requestId) {
+  if (!ensureAuthorized('매칭 신청 거절', ['admin'])) return;
+  const req = DB.matchRequests.find(r => r.id === requestId);
+  if (!req) { toast('신청 정보를 찾을 수 없습니다', 'error'); return; }
+  const mentee = _idx.mentee[req.menteeId];
+  if (!confirm(`${mentee?.name || '멘티'}의 매칭 신청을 거절하시겠습니까?\n거절 시 해당 신청은 종료 처리됩니다.`)) return;
+  const prevStatus = req.status;
+  req.status = '거절';
+  renderAdminMatch();
+  toast('매칭 신청을 거절했습니다', 'success');
+  try {
+    await syncBatch([{ action: 'update', sheet: 'match_requests', id: requestId, updates: { status: '거절' } }]);
+  } catch(e) {
+    req.status = prevStatus;
+    renderAdminMatch();
+    toast('거절 처리 동기화 실패 — 복원되었습니다', 'error');
+  }
+}
+
 async function confirmMatchPropose() {
   if (!ensureAuthorized('매칭 제안', ['admin'])) return;
   const mentorId = document.getElementById('propose-mentor-select').value;
@@ -4205,10 +4257,11 @@ async function confirmMatchPropose() {
   if (!mentorId) { toast('멘토를 선택해주세요', 'error'); return; }
   const req = DB.matchRequests.find(r => r.id === _proposeRequestId);
   if (!req) return;
-  const hasOpenProposal = DB.matchProposals.some(p => p.requestId === req.id && p.status === '제안중');
-  if (hasOpenProposal) {
-    toast('이미 진행 중인 매칭 제안이 있습니다', 'warn');
-    return;
+  // 기존 제안중인 건이 있으면 자동으로 취소 처리 후 재제안
+  const oldProposals = DB.matchProposals.filter(p => p.requestId === req.id && p.status === '제안중');
+  for (const op of oldProposals) {
+    op.status = '취소';
+    try { await syncBatch([{ action: 'update', sheet: 'match_proposals', id: op.id, updates: { status: '취소' } }]); } catch(e) {}
   }
   const proposal = {
     id: 'mp' + Date.now(),
@@ -4283,14 +4336,14 @@ async function adminUnmatch(proposalId) {
     const req = DB.matchRequests.find(r => r.id === p.requestId);
     if (req) {
       prevReqStatus = req.status;
-      req.status = '대기중';
+      req.status = '종료';
     }
   }
   renderAdminMatch();
   toast('매칭이 해제되었습니다', 'success');
   try {
     const ops = [{ action: 'update', sheet: 'match_proposals', id: proposalId, updates: { status: '해제' } }];
-    if (p.requestId) ops.push({ action: 'update', sheet: 'match_requests', id: p.requestId, updates: { status: '대기중' } });
+    if (p.requestId) ops.push({ action: 'update', sheet: 'match_requests', id: p.requestId, updates: { status: '종료' } });
     await syncBatch(ops);
   } catch(e) {
     p.status = prevStatus;
@@ -4336,7 +4389,7 @@ async function sendMatchEmail(type, proposal) {
       });
       if (menteeTo) emails.push({
         to: menteeTo, subject: subj,
-        body: `안녕하세요 ${mentee?.name} 멘티님,\n\n${mentor?.name} 멘토님과의 멘토링 매칭이 확정되었습니다.${memoLine}\n\n멘토링 허브에서 일정을 확인해주세요:\n${hubUrl}\n\n감사합니다.`
+        body: `안녕하세요 ${mentee?.name} 멘티님,\n\n${mentor?.name} 멘토님과의 멘토링 매칭이 확정되었습니다.\n\n멘토링 허브에서 일정을 확인해주세요:\n${hubUrl}\n\n감사합니다.`
       });
     } else if (type === 'rejected') {
       // 담당자에게 거절 알림 (admin users 테이블에서 이메일 조회)
@@ -4544,6 +4597,8 @@ async function cancelSession(sessionId, callerRole) {
   _rebuildIndex();
   if (callerRole === 'mentor') renderMentorSessions(); else renderMenteeSessions();
   toast('취소되었습니다');
+  // 상대방에게 세션 취소 알림 이메일 발송
+  sendSessionCancelledEmail(session, callerRole);
   try {
     await syncBatch([
       { action: 'update', sheet: 'sessions', id: sessionId, updates: { status: 'cancelled' } },
@@ -4571,6 +4626,8 @@ async function adminCancelSession(sessionId) {
   _rebuildIndex();
   renderAdminDashboard();
   toast('세션이 취소되었습니다');
+  // 멘토+멘티 모두에게 관리자 취소 알림 이메일 발송
+  sendSessionCancelledEmail(session, 'admin');
   try {
     await syncBatch([
       { action: 'update', sheet: 'sessions', id: sessionId, updates: { status: 'cancelled' } },
@@ -4600,6 +4657,8 @@ async function confirmSession(sessionId) {
   if (slot) slot.status = 'booked';
   renderMentorSessions();
   toast('멘토링이 확정되었습니다 ✅', 'success');
+  // 멘티에게 세션 확정 알림 이메일 발송
+  sendSessionConfirmedEmail(session);
   try {
     await syncBatch([
       { action: 'update', sheet: 'sessions', id: sessionId, updates: { status: 'upcoming' } },
@@ -4630,6 +4689,8 @@ async function rejectSession(sessionId) {
   _rebuildIndex();
   renderMentorSessions();
   toast('신청을 거절했습니다', 'error');
+  // 멘티에게 세션 거절 알림 이메일 발송
+  sendSessionCancelledEmail(session, 'mentor');
   try {
     await syncBatch([
       { action: 'update', sheet: 'sessions', id: sessionId, updates: { status: 'rejected' } },
@@ -4771,6 +4832,9 @@ async function confirmBooking() {
   selectedMentorId = null;
   toast('신청 완료 🎉 멘토 수락 후 확정됩니다. 아래에서 상태를 확인하세요.', 'success');
   navigateTo('page-mentee-sessions');
+  // 멘토에게 세션 예약 알림 이메일 발송
+  const bookedSession = DB.sessions.find(s => s.slotId === bookingSlotId);
+  if (bookedSession) sendSessionBookedEmail(bookedSession);
 }
 
 function openJournalModal(sessionId) {
