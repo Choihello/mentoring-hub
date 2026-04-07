@@ -1784,7 +1784,7 @@ function adminPreviewAs(role) {
     DB.sessions = full.sessions.filter(s => s.mentorId === uid);
     DB.slots = full.slots.filter(s => s.mentorId === uid && s.status !== 'deleted');
     DB.journals = full.journals.filter(j => j.mentorId === uid);
-    DB.feedbacks = full.feedbacks.filter(f => f.mentorId === uid);
+    DB.feedbacks = []; // 멘티 피드백은 멘토에게 비공개
     DB.requests = full.requests.filter(r => r.authorId === uid || r.receiverId === uid);
     DB.notices = full.notices.filter(n => n.target === '전체' || n.target === '멘토만');
     // 멘티는 세션에 연결된 멘티만 표시
@@ -2437,8 +2437,7 @@ function renderMentorSessions() {
     rightHtml += `<div class="card"><div class="card-title">✅ 완료 세션 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>`;
     rightHtml += completed.map(s => sessionCard(s,
       `<span class="badge badge-green">완료</span>
-       ${!s.hasJournal ? `<button class="btn btn-sm btn-primary" onclick="openJournalModal('${s.id}')">일지 작성</button>` : `<button class="btn btn-sm btn-secondary" onclick="viewJournal('${s.id}')">일지 보기</button>`}
-       ${(() => { const fb = DB.feedbacks.find(f => f.sessionId === s.id); return fb ? `<span class="badge badge-blue" title="멘티 피드백: ${fb.good?.substring(0,30)}..." style="cursor:default">⭐ 멘티평가: ${fb.rating}</span>` : ''; })()}`
+       ${!s.hasJournal ? `<button class="btn btn-sm btn-primary" onclick="openJournalModal('${s.id}')">일지 작성</button>` : `<button class="btn btn-sm btn-secondary" onclick="viewJournal('${s.id}')">일지 보기</button>`}`
     )).join('');
     rightHtml += '</div>';
   }
@@ -5254,6 +5253,9 @@ async function viewJournalById(jid) {
       <div style="font-size:13px;line-height:1.7;background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px">${renderMultilineText(val)}</div>
     </div>` : '').join('')}
     ${(() => {
+      // 멘티 피드백은 관리자에게만 표시 (멘토에게 비공개)
+      const isMentorView = currentRole === 'mentor' || _adminPreviewRole === 'mentor';
+      if (isMentorView) return '';
       if (!fb) return '<div style="margin-top:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text3)">💬 멘티 피드백 미제출</div>';
       return `<div style="margin-top:16px;border:1px solid var(--accent-light);border-radius:var(--radius-sm);padding:14px 16px;background:var(--accent-ultra)">
         <div class="form-label" style="margin-bottom:8px;color:var(--accent)">💬 멘티 피드백</div>
@@ -5490,7 +5492,7 @@ async function _syncData({ silent = false } = {}) {
         DB.sessions = full.sessions.filter(s => s.mentorId === uid);
         DB.slots = full.slots.filter(s => s.mentorId === uid && s.status !== 'deleted');
         DB.journals = full.journals.filter(j => j.mentorId === uid);
-        DB.feedbacks = full.feedbacks.filter(f => f.mentorId === uid);
+        DB.feedbacks = []; // 멘티 피드백은 멘토에게 비공개
         DB.requests = full.requests.filter(r => r.authorId === uid || r.receiverId === uid);
         DB.notices = full.notices.filter(n => n.target === '전체' || n.target === '멘토만');
         const linkedMenteeIds = new Set(DB.sessions.map(s => s.menteeId));
