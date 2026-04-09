@@ -2442,11 +2442,19 @@ function renderMentorSessions() {
   }
   if (!leftHtml) leftHtml = `<div class="card"><div class="empty-state"><span class="icon">✅</span><h4>대기/확정 세션 없음</h4></div></div>`;
   if (completed.length) {
-    rightHtml += `<div class="card"><div class="card-title">✅ 완료 세션 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>`;
-    rightHtml += completed.map(s => sessionCard(s,
+    const SHOW_LIMIT = 3;
+    const recentCompleted = completed.slice(0, SHOW_LIMIT);
+    const olderCompleted = completed.slice(SHOW_LIMIT);
+    const renderCompletedCard = s => sessionCard(s,
       `<span class="badge badge-green">완료</span>
        ${!s.hasJournal ? `<button class="btn btn-sm btn-primary" onclick="openJournalModal('${s.id}')">일지 작성</button>` : `<button class="btn btn-sm btn-secondary" onclick="viewJournal('${s.id}')">일지 보기</button>`}`
-    )).join('');
+    );
+    rightHtml += `<div class="card"><div class="card-title">✅ 완료 세션 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>`;
+    rightHtml += recentCompleted.map(renderCompletedCard).join('');
+    if (olderCompleted.length) {
+      rightHtml += `<div id="mentor-completed-more" style="display:none">${olderCompleted.map(renderCompletedCard).join('')}</div>`;
+      rightHtml += `<button id="mentor-completed-toggle" class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:13px;color:var(--accent)" onclick="toggleCollapse('mentor-completed-more','');var b=this;var el=document.getElementById('mentor-completed-more');b.textContent=el.style.display==='none'?'이전 완료 세션 더보기 (${olderCompleted.length}건) ▼':'접기 ▲'">이전 완료 세션 더보기 (${olderCompleted.length}건) ▼</button>`;
+    }
     rightHtml += '</div>';
   }
   if (!rightHtml) rightHtml = `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>완료 세션 없음</h4></div></div>`;
@@ -2703,9 +2711,20 @@ function renderMenteeSessions() {
     let leftHtml = active.length
       ? `<div class="card"><div class="card-title">📅 진행 중 <span class="badge badge-blue" style="margin-left:4px">${active.length}</span></div>${active.map(sessionCardHtml).join('')}</div>`
       : `<div class="card"><div class="empty-state"><span class="icon">✅</span><h4>진행 중인 세션 없음</h4></div></div>`;
-    let rightHtml = completed.length
-      ? `<div class="card"><div class="card-title">✅ 완료 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>${completed.map(sessionCardHtml).join('')}</div>`
-      : `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>완료 세션 없음</h4></div></div>`;
+    let rightHtml = '';
+    if (completed.length) {
+      const CLIMIT = 3;
+      const recentC = completed.slice(0, CLIMIT);
+      const olderC = completed.slice(CLIMIT);
+      rightHtml = `<div class="card"><div class="card-title">✅ 완료 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>${recentC.map(sessionCardHtml).join('')}`;
+      if (olderC.length) {
+        rightHtml += `<div id="mentee-completed-more" style="display:none">${olderC.map(sessionCardHtml).join('')}</div>`;
+        rightHtml += `<button id="mentee-completed-toggle" class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:13px;color:var(--accent)" onclick="toggleCollapse('mentee-completed-more','');var el=document.getElementById('mentee-completed-more');this.textContent=el.style.display==='none'?'이전 완료 세션 더보기 (${olderC.length}건) ▼':'접기 ▲'">이전 완료 세션 더보기 (${olderC.length}건) ▼</button>`;
+      }
+      rightHtml += `</div>`;
+    } else {
+      rightHtml = `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>완료 세션 없음</h4></div></div>`;
+    }
     el.innerHTML = viewToggle + `<div class="page-grid"><div class="page-col">${leftHtml}</div><div class="page-col">${rightHtml}</div></div>`;
   }
 }
@@ -3982,7 +4001,11 @@ function renderMenteeMatch() {
     </div>
     <div class="page-grid" style="gap:16px">
       <div class="card" style="border-left:4px solid var(--success)">
-        <h4 style="margin-bottom:12px;color:var(--success)">✅ 확정된 매칭</h4>
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none" onclick="toggleCollapse('mentee-confirmed-list','mentee-confirmed-arrow')">
+          <h4 style="margin:0;color:var(--success)">✅ 확정된 매칭 <span class="text-muted" style="font-size:13px;font-weight:400">(${confirmed.length}건)</span></h4>
+          <span id="mentee-confirmed-arrow" style="font-size:11px;color:var(--text3);transition:transform 0.2s">${confirmed.length ? '▼' : ''}</span>
+        </div>
+        <div id="mentee-confirmed-list" style="display:${confirmed.length ? 'none' : 'block'};margin-top:12px">
         ${confirmed.length ? confirmed.map(p => {
           const mentor = _idx.mentor[p.mentorId];
           const safeMentorName = escapeHtml(mentor?.name || '알 수 없음');
@@ -3995,9 +4018,14 @@ function renderMenteeMatch() {
             ${p.adminMemo ? `<br><span style="font-size:12px;color:var(--text3)">메모: ${safeAdminMemo}</span>` : ''}
           </div>`;
         }).join('') : `<div class="empty-state" style="padding:20px 0"><span class="icon" style="font-size:28px">🤝</span><p style="font-size:13px;color:var(--text3);margin:0">확정된 매칭이 없습니다</p></div>`}
+        </div>
       </div>
       <div class="card">
-        <h4 style="margin-bottom:12px">📋 신청 현황</h4>
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none" onclick="toggleCollapse('mentee-requests-list','mentee-requests-arrow')">
+          <h4 style="margin:0">📋 신청 현황 <span class="text-muted" style="font-size:13px;font-weight:400">(${myRequests.length}건)</span></h4>
+          <span id="mentee-requests-arrow" style="font-size:11px;color:var(--text3);transition:transform 0.2s">${myRequests.length ? '▼' : ''}</span>
+        </div>
+        <div id="mentee-requests-list" style="display:${myRequests.length > 3 ? 'none' : 'block'};margin-top:12px">
         ${myRequests.length ? myRequests.map(r => {
           const statusBadge = r.status === '대기중' ? 'badge-warn' : r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : r.status === '거절' ? 'badge-red' : 'badge-gray';
           return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
@@ -4011,6 +4039,7 @@ function renderMenteeMatch() {
             ${r.requestNote ? `<div class="text-muted" style="font-size:12px;margin-top:4px">${escapeHtml(r.requestNote.substring(0, 80))}${r.requestNote.length > 80 ? '...' : ''}</div>` : ''}
           </div>`;
         }).join('') : `<div class="empty-state" style="padding:20px 0"><span class="icon" style="font-size:28px">📭</span><p style="font-size:13px;color:var(--text3);margin:0">신청 내역이 없습니다</p></div>`}
+        </div>
       </div>
     </div>`;
 }
@@ -4302,22 +4331,22 @@ function renderAdminMatchRequests(el) {
     </div>` : ''}`;
 }
 
-function toggleMatchReqDetail(id) {
-  const detail = document.getElementById(id);
-  const arrow = document.getElementById(id + '-arrow');
-  if (!detail) return;
-  const isHidden = detail.style.display === 'none';
-  detail.style.display = isHidden ? 'block' : 'none';
+// 공통 접기/펼치기 토글
+function toggleCollapse(contentId, arrowId) {
+  const content = document.getElementById(contentId);
+  const arrow = arrowId ? document.getElementById(arrowId) : null;
+  if (!content) return;
+  const isHidden = content.style.display === 'none';
+  content.style.display = isHidden ? 'block' : 'none';
   if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : '';
 }
 
+function toggleMatchReqDetail(id) {
+  toggleCollapse(id, id + '-arrow');
+}
+
 function toggleMatchReqProcessed() {
-  const list = document.getElementById('mreq-processed-list');
-  const arrow = document.getElementById('mreq-processed-arrow');
-  if (!list) return;
-  const isHidden = list.style.display === 'none';
-  list.style.display = isHidden ? 'block' : 'none';
-  if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : '';
+  toggleCollapse('mreq-processed-list', 'mreq-processed-arrow');
 }
 
 function renderAdminMatchProposals(el) {
@@ -4336,43 +4365,55 @@ function renderAdminMatchProposals(el) {
           <option value="해제" ${statusFilter==='해제'?'selected':''}>해제</option>
         </select>
       </div>
-      ${proposals.length ? proposals.map(p => {
-        const mentor = _idx.mentor[p.mentorId];
-        const mentee = _idx.mentee[p.menteeId];
-        const statusBadge = p.status === '제안중' ? 'badge-warn' : p.status === '확정' ? 'badge-green' : p.status === '해제' ? 'badge-gray' : 'badge-gray';
-        const flowBadge = p.flowType === 'admin_direct'
-          ? '<span style="background:#E8F5E9;color:#2E7D32;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600">직접매칭</span>'
-          : '<span style="background:#E3F2FD;color:#1565C0;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600">신청기반</span>';
-        const sessions = DB.sessions.filter(s => s.mentorId === p.mentorId && s.menteeId === p.menteeId);
-        const completedCnt = sessions.filter(s => s.status === 'completed').length;
-        const upcomingCnt = sessions.filter(s => s.status === 'upcoming' || s.status === 'pending').length;
-        const activityHtml = p.status === '확정' ? `<div style="margin-top:6px;display:flex;gap:8px;align-items:center">
-          ${completedCnt > 0 ? `<span style="background:#E8F5E9;color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">✅ 멘토링 ${completedCnt}회 완료</span>` : ''}
-          ${upcomingCnt > 0 ? `<span style="background:#E3F2FD;color:#1565C0;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">📅 예정 ${upcomingCnt}건</span>` : ''}
-          ${completedCnt === 0 && upcomingCnt === 0 ? `<span style="background:#FFF3E0;color:#E65100;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">⏳ 멘토링 미진행</span>` : ''}
-        </div>` : '';
-        const unmatchBtn = p.status === '확정' ? `<button class="btn btn-sm" style="background:#ffebee;color:#c62828;border:none;font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer" onclick="adminUnmatch('${p.id}')">매칭 해제</button>` : '';
-        const safeMentorName = escapeHtml(mentor?.name || '멘토');
-        const safeMenteeName = escapeHtml(mentee?.name || '멘티');
-        const safeCreatedAt = escapeHtml(formatDate(p.createdAt));
-        const safeAdminMemo = escapeHtml(p.adminMemo || '');
-        return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-          <div class="flex-between">
-            <div>
-              ${flowBadge}
-              <strong style="margin-left:6px">${safeMentorName}</strong> → <strong>${safeMenteeName}</strong>
-              <span class="badge ${statusBadge}" style="margin-left:6px">${p.status}</span>
-              ${p.mentorResponse !== '대기' ? `<span class="text-muted" style="font-size:11px;margin-left:4px">(멘토: ${p.mentorResponse})</span>` : ''}
+      ${(() => {
+        if (!proposals.length) return '<div class="empty-state"><span class="icon">📭</span><h4>매칭 기록 없음</h4></div>';
+        const PLIMIT = 5;
+        const renderProposal = p => {
+          const mentor = _idx.mentor[p.mentorId];
+          const mentee = _idx.mentee[p.menteeId];
+          const statusBadge = p.status === '제안중' ? 'badge-warn' : p.status === '확정' ? 'badge-green' : p.status === '해제' ? 'badge-gray' : 'badge-gray';
+          const flowBadge = p.flowType === 'admin_direct'
+            ? '<span style="background:#E8F5E9;color:#2E7D32;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600">직접매칭</span>'
+            : '<span style="background:#E3F2FD;color:#1565C0;font-size:10px;padding:1px 6px;border-radius:999px;font-weight:600">신청기반</span>';
+          const sessions = DB.sessions.filter(s => s.mentorId === p.mentorId && s.menteeId === p.menteeId);
+          const completedCnt = sessions.filter(s => s.status === 'completed').length;
+          const upcomingCnt = sessions.filter(s => s.status === 'upcoming' || s.status === 'pending').length;
+          const activityHtml = p.status === '확정' ? `<div style="margin-top:6px;display:flex;gap:8px;align-items:center">
+            ${completedCnt > 0 ? `<span style="background:#E8F5E9;color:#2E7D32;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">✅ 멘토링 ${completedCnt}회 완료</span>` : ''}
+            ${upcomingCnt > 0 ? `<span style="background:#E3F2FD;color:#1565C0;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">📅 예정 ${upcomingCnt}건</span>` : ''}
+            ${completedCnt === 0 && upcomingCnt === 0 ? `<span style="background:#FFF3E0;color:#E65100;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600">⏳ 멘토링 미진행</span>` : ''}
+          </div>` : '';
+          const unmatchBtn = p.status === '확정' ? `<button class="btn btn-sm" style="background:#ffebee;color:#c62828;border:none;font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer" onclick="adminUnmatch('${p.id}')">매칭 해제</button>` : '';
+          const safeMentorName = escapeHtml(mentor?.name || '멘토');
+          const safeMenteeName = escapeHtml(mentee?.name || '멘티');
+          const safeCreatedAt = escapeHtml(formatDate(p.createdAt));
+          const safeAdminMemo = escapeHtml(p.adminMemo || '');
+          return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+            <div class="flex-between">
+              <div>
+                ${flowBadge}
+                <strong style="margin-left:6px">${safeMentorName}</strong> → <strong>${safeMenteeName}</strong>
+                <span class="badge ${statusBadge}" style="margin-left:6px">${p.status}</span>
+                ${p.mentorResponse !== '대기' ? `<span class="text-muted" style="font-size:11px;margin-left:4px">(멘토: ${p.mentorResponse})</span>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                ${unmatchBtn}
+                <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
+              </div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              ${unmatchBtn}
-              <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
-            </div>
-          </div>
-          ${activityHtml}
-          ${p.adminMemo ? `<div class="text-muted" style="font-size:12px;margin-top:4px">메모: ${safeAdminMemo}</div>` : ''}
-        </div>`;
-      }).join('') : '<div class="empty-state"><span class="icon">📭</span><h4>매칭 기록 없음</h4></div>'}
+            ${activityHtml}
+            ${p.adminMemo ? `<div class="text-muted" style="font-size:12px;margin-top:4px">메모: ${safeAdminMemo}</div>` : ''}
+          </div>`;
+        };
+        const recent = proposals.slice(0, PLIMIT);
+        const older = proposals.slice(PLIMIT);
+        let html = recent.map(renderProposal).join('');
+        if (older.length) {
+          html += `<div id="admin-proposals-more" style="display:none">${older.map(renderProposal).join('')}</div>`;
+          html += `<button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:13px;color:var(--accent)" onclick="toggleCollapse('admin-proposals-more','');var el=document.getElementById('admin-proposals-more');this.textContent=el.style.display==='none'?'이전 매칭 더보기 (${older.length}건) ▼':'접기 ▲'">이전 매칭 더보기 (${older.length}건) ▼</button>`;
+        }
+        return html;
+      })()}
     </div>`;
 }
 
