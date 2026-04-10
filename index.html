@@ -4200,8 +4200,8 @@ async function respondMatchProposal(proposalId, response) {
       ops.push({ action: 'update', sheet: 'match_requests', id: p.requestId, updates: { status: response === '수락' ? '확정' : '대기중' } });
     }
     await syncBatch(ops);
-    // 이메일 발송
-    await sendMatchEmail(response === '수락' ? 'confirmed_a' : 'rejected', p);
+    // 이메일 발송 (fire-and-forget — UI 블로킹 방지)
+    sendMatchEmail(response === '수락' ? 'confirmed_a' : 'rejected', p).catch(e => console.warn('[매칭 이메일 발송 실패]', e?.message));
   } catch(e) {
     p.mentorResponse = prevResponse;
     p.status = prevStatus;
@@ -4556,7 +4556,7 @@ async function confirmMatchPropose() {
       { action: 'append', sheet: 'match_proposals', data: proposal },
       { action: 'update', sheet: 'match_requests', id: req.id, updates: { status: '제안됨' } }
     ]);
-    await sendMatchEmail('propose', proposal);
+    sendMatchEmail('propose', proposal).catch(e => console.warn('[매칭제안 이메일 발송 실패]', e?.message));
   } catch(e) {
     DB.matchProposals = DB.matchProposals.filter(p => p.id !== proposal.id);
     req.status = '대기중';
@@ -4588,7 +4588,7 @@ async function adminDirectMatch() {
   toast('매칭이 확정되었습니다 ✅', 'success');
   try {
     await syncBatch([{ action: 'append', sheet: 'match_proposals', data: proposal }]);
-    await sendMatchEmail('confirmed_b', proposal);
+    sendMatchEmail('confirmed_b', proposal).catch(e => console.warn('[직접매칭 이메일 발송 실패]', e?.message));
   } catch(e) {
     DB.matchProposals = DB.matchProposals.filter(p => p.id !== proposal.id);
     renderAdminMatch();
