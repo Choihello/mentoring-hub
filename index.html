@@ -5393,9 +5393,15 @@ async function submitJournal() {
     try {
       await syncUpdate('journals', existingJournal.id, { type, duration, detailLocation, content, issues, next, rating, photoUrl: photoUrl || prevPhotoUrl, submittedAt: existingJournal.submittedAt });
     } catch(e) {
-      Object.assign(existingJournal, backup);
-      renderPage(document.querySelector('.page.active')?.id || '');
-      toast('일지 수정 동기화 실패 — 복원되었습니다', 'error');
+      console.error('[일지 수정 동기화 실패]', e?.message || e, { id: existingJournal.id, type, duration, detailLocation });
+      // account_not_found = 세션 만료, 재로그인 유도
+      if (String(e?.message || '').includes('account_not_found')) {
+        toast('로그인 세션이 만료되었습니다. 다시 로그인 후 수정해주세요.', 'error');
+      } else {
+        Object.assign(existingJournal, backup);
+        renderPage(document.querySelector('.page.active')?.id || '');
+        toast(`일지 수정 동기화 실패: ${e?.message || '서버 오류'} — 복원되었습니다`, 'error');
+      }
     }
   } else {
     // 신규 제출
@@ -5935,12 +5941,7 @@ async function syncUserAccount(data) {
 // ═══ Supabase UPDATE ═══
 async function syncUpdate(sheet, id, updates) {
   if (!hasSupabaseIntegration() || isDemoMode) return;
-  try {
-    await syncBatch([{ action: 'update', sheet, id, updates }]);
-  } catch(e) {
-    toast(`${sheet} 업데이트 실패: ${e.message}`, 'error');
-    throw e;
-  }
+  await syncBatch([{ action: 'update', sheet, id, updates }]);
 }
 
 // ═══ Supabase 배치 (병렬 실행) ═══
