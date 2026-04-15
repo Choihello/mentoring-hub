@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.3.1-20260415">
+<meta name="version" content="2.3.2-20260415">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -728,7 +728,7 @@ tr:hover td { background: var(--accent-ultra); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.1);color:#EF4444;border:1px solid rgba(239,68,68,0.25)">🚪 로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px">v2.3.1 · 2026-04-15</div>
+        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px">v2.3.2 · 2026-04-15</div>
       </div>
     </aside>
 
@@ -3498,20 +3498,76 @@ function renderRequestPage(role) {
       (normalizeRoleKey(r.receiverRole) === role || !r.receiverRole);
   });
   const statusBadge = s => s === '대기중' ? `<span class="badge badge-warn">대기중</span>` : s === '처리중' ? `<span class="badge badge-blue">처리중</span>` : `<span class="badge badge-green">처리완료</span>`;
+
+  // 관리자 메시지 카드 (접이식)
+  const adminMsgCardHtml = r => {
+    const isRead = r.replyRead === true || r.replyRead === 'true';
+    const bodyId = `adminmsg-body-${r.id}`;
+    const arrowId = `adminmsg-arrow-${r.id}`;
+    return `<div style="border:1px solid ${isRead ? 'var(--border)' : 'var(--accent)'};border-radius:var(--radius-xs);margin-bottom:8px">
+      <div style="padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px" onclick="toggleCollapse('${bodyId}','${arrowId}');markReplyRead('${r.id}')">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isRead ? '' : '🔴 '}${escapeHtml(r.title)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${escapeHtml(r.createdAt || '')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <span class="badge badge-blue">${escapeHtml(r.messageType || '안내')}</span>
+          <span id="${arrowId}" style="color:var(--text3);transition:transform 0.2s;font-size:11px">▼</span>
+        </div>
+      </div>
+      <div id="${bodyId}" style="display:none;padding:10px 12px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">${escapeHtml(r.content || '')}</div>
+    </div>`;
+  };
+
+  // 내 요청 카드 (접이식)
+  const myReqCardHtml = r => {
+    const bodyId = `myreq-body-${r.id}`;
+    const arrowId = `myreq-arrow-${r.id}`;
+    const hasNewReply = r.reply && !r.replyRead;
+    return `<div style="border:1px solid ${hasNewReply ? 'var(--accent)' : 'var(--border)'};border-radius:var(--radius-xs);margin-bottom:8px">
+      <div style="padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px" onclick="toggleCollapse('${bodyId}','${arrowId}');${hasNewReply ? `markReplyRead('${r.id}')` : ''}">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hasNewReply ? '🔴 ' : ''}${escapeHtml(r.title)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${escapeHtml(r.type)} · ${escapeHtml(r.createdAt || '')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${statusBadge(r.status)}
+          <span id="${arrowId}" style="color:var(--text3);transition:transform 0.2s;font-size:11px">▼</span>
+        </div>
+      </div>
+      <div id="${bodyId}" style="display:none;padding:10px 12px;border-top:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">${escapeHtml(r.content || '')}</div>
+        ${r.reply ? `<div style="margin-top:8px;padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent)">
+          <span style="font-size:11px;color:var(--accent);font-weight:600">관리자 회신 ${r.replyRead ? '✅ 읽음' : '🔴 새 회신'}</span>
+          <br><span style="font-size:13px;white-space:pre-wrap">${escapeHtml(r.reply)}</span>
+        </div>` : ''}
+      </div>
+    </div>`;
+  };
+
+  // 리스트 렌더(+ 초과분 접기)
+  const LIMIT = 5;
+  const buildList = (items, cardFn, moreId) => {
+    if (!items.length) return '';
+    const head = items.slice(0, LIMIT);
+    const tail = items.slice(LIMIT);
+    let html = head.map(cardFn).join('');
+    if (tail.length) {
+      html += `<div id="${moreId}" style="display:none">${tail.map(cardFn).join('')}</div>`;
+      html += `<button class="btn btn-ghost" style="width:100%;margin-top:4px;font-size:13px;color:var(--accent)" onclick="toggleCollapse('${moreId}','');var el=document.getElementById('${moreId}');this.textContent=el.style.display==='none'?'더보기 (${tail.length}건) ▼':'접기 ▲'">더보기 (${tail.length}건) ▼</button>`;
+    }
+    return html;
+  };
+
+  const adminMsgsRev = adminMsgsIn.slice().reverse();
+  const myReqsRev = myRequests.slice().reverse();
+
   el.innerHTML = `
     <div class="page-col">
       ${adminMsgsIn.length ? `
       <div class="card" style="margin-bottom:16px">
         <div class="card-title">📬 관리자 메시지 <span class="badge" style="background:var(--danger);color:#fff">${adminMsgsIn.filter(r => r.replyRead !== true && r.replyRead !== 'true').length}새글</span></div>
-        ${adminMsgsIn.slice().reverse().map(r => `
-          <div style="border:1px solid ${r.replyRead === true || r.replyRead === 'true' ? 'var(--border)' : 'var(--accent)'};border-radius:var(--radius-xs);padding:12px;margin-bottom:8px;cursor:pointer" onclick="markReplyRead('${r.id}')">
-            <div class="flex-between" style="margin-bottom:4px">
-              <span style="font-weight:600">${r.replyRead === true || r.replyRead === 'true' ? '' : '🔴 '}${escapeHtml(r.title)}</span>
-              <span class="badge badge-blue">${escapeHtml(r.messageType || '안내')}</span>
-            </div>
-            <div style="font-size:12px;color:var(--text3)">${escapeHtml(r.createdAt || '')}</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:6px">${escapeHtml(r.content || '')}</div>
-          </div>`).join('')}
+        ${buildList(adminMsgsRev, adminMsgCardHtml, `adminmsg-more-${role}`)}
       </div>` : ''}
       <div class="card">
         <div class="card-title">✉️ 새 요청 작성</div>
@@ -3535,19 +3591,7 @@ function renderRequestPage(role) {
     <div class="page-col">
       <div class="card">
         <div class="card-title">📋 내 요청 내역 <span class="badge" style="background:var(--accent-ultra);color:var(--accent)">${myRequests.length}</span></div>
-        ${!myRequests.length ? `<p class="text-muted">아직 제출한 요청이 없습니다</p>` :
-          myRequests.slice().reverse().map(r => `
-            <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
-              <div class="flex-between" style="margin-bottom:4px">
-                <span style="font-weight:600">${escapeHtml(r.title)}</span>${statusBadge(r.status)}
-              </div>
-              <div style="font-size:12px;color:var(--text3);margin-bottom:4px">유형: ${escapeHtml(r.type)} · ${escapeHtml(r.createdAt || '')}</div>
-              <div style="font-size:13px;color:var(--text2)">${escapeHtml(r.content || '')}</div>
-              ${r.reply ? `<div style="margin-top:8px;padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent);cursor:pointer" onclick="markReplyRead('${r.id}')">
-                <span style="font-size:11px;color:var(--accent);font-weight:600">관리자 회신 ${r.replyRead ? '✅ 읽음' : '🔴 새 회신'}</span>
-                <br><span style="font-size:13px">${escapeHtml(r.reply)}</span>
-              </div>` : ''}
-            </div>`).join('')}
+        ${!myRequests.length ? `<p class="text-muted">아직 제출한 요청이 없습니다</p>` : buildList(myReqsRev, myReqCardHtml, `myreq-more-${role}`)}
       </div>
     </div>`;
 }
@@ -3616,20 +3660,69 @@ function renderAdminRequests() {
   const pending   = DB.requests.filter(r => r.status === '대기중');
   const others    = DB.requests.filter(r => r.status !== '대기중');
   const statusBadge = s => s === '대기중' ? `<span class="badge badge-warn">대기중</span>` : s === '처리중' ? `<span class="badge badge-blue">처리중</span>` : `<span class="badge badge-green">처리완료</span>`;
-  const cardHtml = (r) => `
-    <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
-      <div class="flex-between" style="margin-bottom:4px">
-        <span style="font-weight:600">${escapeHtml(r.title)}</span>${statusBadge(r.status)}
+
+  // 접이식 사용자 요청 카드
+  const cardHtml = (r, prefix = 'adminreq') => {
+    const bodyId = `${prefix}-body-${r.id}`;
+    const arrowId = `${prefix}-arrow-${r.id}`;
+    // 대기중은 기본 펼침, 처리완료는 기본 접힘
+    const defaultOpen = r.status === '대기중';
+    return `<div style="border:1px solid var(--border);border-radius:var(--radius-xs);margin-bottom:8px">
+      <div style="padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px" onclick="toggleCollapse('${bodyId}','${arrowId}')">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.title)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${normalizeRoleKey(r.authorRole) === 'mentor' ? '멘토' : '멘티'} ${escapeHtml(r.authorName)} · ${escapeHtml(r.type)} · ${escapeHtml(r.createdAt || '')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          ${statusBadge(r.status)}
+          <span id="${arrowId}" style="color:var(--text3);transition:transform 0.2s;font-size:11px;${defaultOpen ? 'transform:rotate(180deg)' : ''}">▼</span>
+        </div>
       </div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:6px">${normalizeRoleKey(r.authorRole) === 'mentor' ? '멘토' : '멘티'} ${escapeHtml(r.authorName)} · 유형: ${escapeHtml(r.type)} · ${escapeHtml(r.createdAt || '')}</div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${escapeHtml(r.content || '')}</div>
-      ${r.reply ? `<div style="padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent);font-size:13px;margin-bottom:8px"><b style="font-size:11px;color:var(--accent)">회신 완료</b><br>${escapeHtml(r.reply)}</div>` : ''}
-      ${r.status !== '처리완료' ? `
-        <div style="display:flex;gap:8px;align-items:flex-end">
-          <textarea class="form-control" id="reply-${r.id}" rows="2" placeholder="회신 내용 입력..." style="flex:1">${r.reply || ''}</textarea>
-          <button class="btn btn-primary btn-sm" onclick="replyRequest('${r.id}')">회신 보내기</button>
-        </div>` : ''}
+      <div id="${bodyId}" style="display:${defaultOpen ? 'block' : 'none'};padding:10px 12px;border-top:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px;white-space:pre-wrap;line-height:1.6">${escapeHtml(r.content || '')}</div>
+        ${r.reply ? `<div style="padding:8px;background:var(--accent-ultra);border-radius:var(--radius-xs);border-left:3px solid var(--accent);font-size:13px;margin-bottom:8px"><b style="font-size:11px;color:var(--accent)">회신 완료</b><br><span style="white-space:pre-wrap">${escapeHtml(r.reply)}</span></div>` : ''}
+        ${r.status !== '처리완료' ? `
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <textarea class="form-control" id="reply-${r.id}" rows="2" placeholder="회신 내용 입력..." style="flex:1">${r.reply || ''}</textarea>
+            <button class="btn btn-primary btn-sm" onclick="replyRequest('${r.id}')">회신 보내기</button>
+          </div>` : ''}
+      </div>
     </div>`;
+  };
+
+  // 발신 메시지 카드 (접이식)
+  const adminSentCardHtml = r => {
+    const isRead = r.replyRead === true || r.replyRead === 'true';
+    const bodyId = `adminsent-body-${r.id}`;
+    const arrowId = `adminsent-arrow-${r.id}`;
+    return `<div style="border:1px solid var(--border);border-radius:var(--radius-xs);margin-bottom:8px">
+      <div style="padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px" onclick="toggleCollapse('${bodyId}','${arrowId}')">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.title)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">→ ${normalizeRoleKey(r.receiverRole) === 'mentor' ? '멘토' : '멘티'} ${escapeHtml(r.receiver)} · ${escapeHtml(r.messageType)} · ${escapeHtml(r.createdAt || '')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <span class="badge ${isRead ? 'badge-green' : 'badge-warn'}">${isRead ? '읽음' : '미확인'}</span>
+          <span id="${arrowId}" style="color:var(--text3);transition:transform 0.2s;font-size:11px">▼</span>
+        </div>
+      </div>
+      <div id="${bodyId}" style="display:none;padding:10px 12px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap">${escapeHtml(r.content || '')}</div>
+    </div>`;
+  };
+
+  // 초과분 접기 헬퍼
+  const LIMIT = 5;
+  const buildList = (items, cardFn, moreId) => {
+    if (!items.length) return '';
+    const head = items.slice(0, LIMIT);
+    const tail = items.slice(LIMIT);
+    let html = head.map(cardFn).join('');
+    if (tail.length) {
+      html += `<div id="${moreId}" style="display:none">${tail.map(cardFn).join('')}</div>`;
+      html += `<button class="btn btn-ghost" style="width:100%;margin-top:4px;font-size:13px;color:var(--accent)" onclick="toggleCollapse('${moreId}','');var el=document.getElementById('${moreId}');this.textContent=el.style.display==='none'?'더보기 (${tail.length}건) ▼':'접기 ▲'">더보기 (${tail.length}건) ▼</button>`;
+    }
+    return html;
+  };
   // 관리자 발신 메시지 / 일반 요청 분리
   const adminMsgs = DB.requests.filter(r => r.type === '관리자발신');
   const userReqs  = DB.requests.filter(r => r.type !== '관리자발신');
@@ -3668,26 +3761,17 @@ function renderAdminRequests() {
       </div>
       <div class="card">
         <div class="card-title">📤 발신 메시지 내역 <span class="badge" style="background:var(--accent-ultra);color:var(--accent)">${adminMsgs.length}</span></div>
-        ${!adminMsgs.length ? `<p class="text-muted">발신한 메시지가 없습니다</p>` :
-          adminMsgs.slice().reverse().map(r => `
-          <div style="border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px">
-            <div class="flex-between" style="margin-bottom:4px">
-              <span style="font-weight:600">${escapeHtml(r.title)}</span>
-              <span class="badge ${r.replyRead === true || r.replyRead === 'true' ? 'badge-green' : 'badge-warn'}">${r.replyRead === true || r.replyRead === 'true' ? '읽음' : '미확인'}</span>
-            </div>
-            <div style="font-size:12px;color:var(--text3)">→ ${normalizeRoleKey(r.receiverRole) === 'mentor' ? '멘토' : '멘티'} ${escapeHtml(r.receiver)} · ${escapeHtml(r.messageType)} · ${escapeHtml(r.createdAt || '')}</div>
-            <div style="font-size:13px;color:var(--text2);margin-top:4px">${escapeHtml(r.content || '')}</div>
-          </div>`).join('')}
+        ${!adminMsgs.length ? `<p class="text-muted">발신한 메시지가 없습니다</p>` : buildList(adminMsgs.slice().reverse(), adminSentCardHtml, 'adminsent-more')}
       </div>
     </div>
     <div class="page-col">
       <div class="card" style="margin-bottom:16px">
         <div class="card-title">⏳ 대기중 <span class="badge" style="background:var(--danger);color:#fff">${pendingUser.length}</span></div>
-        ${!pendingUser.length ? `<p class="text-muted">대기 중인 요청이 없습니다</p>` : pendingUser.map(cardHtml).join('')}
+        ${!pendingUser.length ? `<p class="text-muted">대기 중인 요청이 없습니다</p>` : buildList(pendingUser, (r) => cardHtml(r, 'adminreq-pending'), 'adminreq-pending-more')}
       </div>
       <div class="card">
         <div class="card-title">✅ 처리완료 / 처리중 <span class="badge" style="background:var(--accent-ultra);color:var(--accent)">${othersUser.length}</span></div>
-        ${!othersUser.length ? `<p class="text-muted">처리된 요청이 없습니다</p>` : othersUser.slice().reverse().map(cardHtml).join('')}
+        ${!othersUser.length ? `<p class="text-muted">처리된 요청이 없습니다</p>` : buildList(othersUser.slice().reverse(), (r) => cardHtml(r, 'adminreq-others'), 'adminreq-others-more')}
       </div>
     </div>`;
 }
