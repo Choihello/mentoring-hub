@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.3.2-20260415">
+<meta name="version" content="2.3.3-20260415">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -728,7 +728,7 @@ tr:hover td { background: var(--accent-ultra); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.1);color:#EF4444;border:1px solid rgba(239,68,68,0.25)">🚪 로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px">v2.3.2 · 2026-04-15</div>
+        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px">v2.3.3 · 2026-04-15</div>
       </div>
     </aside>
 
@@ -4059,12 +4059,17 @@ function renderMenteeMatch() {
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">희망 일정 (복수 선택 가능)</label>
+        <label class="form-label">희망 일정대 (복수 선택 가능, 선택사항)</label>
         <div id="match-schedule-tags" style="display:flex;flex-wrap:wrap;gap:6px">
           ${MATCH_SCHEDULES.map(s => `<label style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:999px;font-size:13px;cursor:pointer;user-select:none">
             <input type="checkbox" value="${s}" style="display:none" onchange="this.parentElement.style.background=this.checked?'var(--accent-ultra)':'';this.parentElement.style.borderColor=this.checked?'var(--accent)':'var(--border)'"> ${s}
           </label>`).join('')}
         </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">희망 시간 (구체적인 요일/시간대 직접 입력)</label>
+        <textarea id="match-preferred-time-detail" class="form-control" rows="2" placeholder="예) 매주 화요일 19~21시, 토요일 오전, 목요일 오후 3시 이후 등"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">※ 위 일정대 선택 또는 희망 시간 중 최소 1개 이상 입력해주세요</div>
       </div>
       <div class="form-group">
         <label class="form-label">요청사항</label>
@@ -4122,14 +4127,20 @@ async function submitMatchRequest() {
   const selectedField = document.querySelector('#match-field-tags input[name="match-field-radio"]:checked');
   const fields = selectedField ? [selectedField.value] : [];
   const schedules = [...document.querySelectorAll('#match-schedule-tags input:checked')].map(i => i.value);
+  const timeDetail = (document.getElementById('match-preferred-time-detail')?.value || '').trim();
   const note = document.getElementById('match-request-note').value.trim();
   if (!fields.length) { toast('희망 분야를 선택해주세요', 'error'); return; }
-  if (!schedules.length) { toast('희망 일정을 1개 이상 선택해주세요', 'error'); return; }
+  if (!schedules.length && !timeDetail) { toast('희망 일정대를 선택하거나 희망 시간을 입력해주세요', 'error'); return; }
+  // 체크박스 선택 + 직접 입력한 시간을 한 필드에 합쳐 저장 (스키마 변경 없음)
+  const parts = [];
+  if (schedules.length) parts.push(schedules.join(', '));
+  if (timeDetail) parts.push(`희망 시간: ${timeDetail}`);
+  const combinedSchedule = parts.join('\n');
   const req = {
     id: 'mr' + Date.now(),
     menteeId: currentUser.id,
     preferredField: fields.join(', '),
-    preferredSchedule: schedules.join(', '),
+    preferredSchedule: combinedSchedule,
     requestNote: note,
     status: '대기중',
     createdAt: serverTimestamp()
@@ -4172,8 +4183,8 @@ function renderMentorMatch() {
             <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
           </div>
           ${req ? `<div style="font-size:13px;margin-bottom:4px"><strong>희망 분야:</strong> ${safePreferredField}</div>
-          <div style="font-size:13px;margin-bottom:4px"><strong>희망 일정:</strong> ${safePreferredSchedule}</div>
-          ${req.requestNote ? `<div style="font-size:13px;margin-bottom:8px"><strong>요청사항:</strong> ${safeRequestNote}</div>` : ''}` : ''}
+          <div style="font-size:13px;margin-bottom:4px"><strong>희망 일정:</strong> <span style="white-space:pre-wrap">${safePreferredSchedule}</span></div>
+          ${req.requestNote ? `<div style="font-size:13px;margin-bottom:8px;white-space:pre-wrap"><strong>요청사항:</strong> ${safeRequestNote}</div>` : ''}` : ''}
           ${p.adminMemo ? `<div style="font-size:12px;color:var(--text3);margin-bottom:8px">담당자 메모: ${safeAdminMemo}</div>` : ''}
           <div style="display:flex;gap:8px;margin-top:8px">
             <button class="btn btn-primary btn-sm" onclick="respondMatchProposal('${p.id}', '수락')">수락</button>
@@ -4372,8 +4383,8 @@ function renderAdminMatchRequests(el) {
             </div>
             <div id="mreq-${idx}" style="display:none;padding:12px 14px;border-top:1px solid var(--border)">
               <div style="font-size:13px;margin-bottom:4px">희망 분야: <strong>${safePreferredField}</strong></div>
-              <div style="font-size:13px;margin-bottom:4px">희망 일정: <strong>${safePreferredSchedule}</strong></div>
-              ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2)">요청사항: ${safeRequestNote}</div>` : ''}
+              <div style="font-size:13px;margin-bottom:4px">희망 일정: <strong style="white-space:pre-wrap">${safePreferredSchedule}</strong></div>
+              ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2);white-space:pre-wrap">요청사항: ${safeRequestNote}</div>` : ''}
               <div style="display:flex;gap:8px;margin-top:8px">
                 <button class="btn btn-primary btn-sm" onclick="openMatchProposeModal('${r.id}')">멘토 선택 후 제안</button>
                 <button class="btn btn-sm" style="background:#ffebee;color:#c62828;border:none;font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer" onclick="adminRejectMatchRequest('${r.id}')">신청 거절</button>
@@ -4531,8 +4542,8 @@ function openMatchProposeModal(requestId) {
     infoEl.innerHTML = `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;line-height:1.7;border-left:3px solid var(--accent)">
       <div style="font-weight:700;color:var(--text);margin-bottom:4px">${escapeHtml(mentee.name)} ${mentee.team ? `<span style="font-weight:400;color:var(--text2)">· ${escapeHtml(mentee.team)}</span>` : ''}</div>
       ${req.preferredField ? `<div style="color:var(--text2)">희망 분야: <strong>${escapeHtml(req.preferredField)}</strong></div>` : ''}
-      ${req.preferredSchedule ? `<div style="color:var(--text2)">희망 일정: ${escapeHtml(req.preferredSchedule)}</div>` : ''}
-      ${req.requestNote ? `<div style="color:var(--text2)">요청사항: ${escapeHtml(req.requestNote)}</div>` : ''}
+      ${req.preferredSchedule ? `<div style="color:var(--text2);white-space:pre-wrap">희망 일정: ${escapeHtml(req.preferredSchedule)}</div>` : ''}
+      ${req.requestNote ? `<div style="color:var(--text2);white-space:pre-wrap">요청사항: ${escapeHtml(req.requestNote)}</div>` : ''}
     </div>`;
   } else {
     infoEl.innerHTML = '';
