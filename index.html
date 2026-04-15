@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.3.0-20260409">
+<meta name="version" content="2.3.1-20260415">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -728,7 +728,7 @@ tr:hover td { background: var(--accent-ultra); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.1);color:#EF4444;border:1px solid rgba(239,68,68,0.25)">🚪 로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px">v2.3.0 · 2026-04-09</div>
+        <div style="text-align:center;font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px">v2.3.1 · 2026-04-15</div>
       </div>
     </aside>
 
@@ -809,7 +809,7 @@ tr:hover td { background: var(--accent-ultra); }
             <h2>내 멘토링 내역</h2>
             <p>예약 및 완료된 세션 목록</p>
           </div>
-          <div class="page-grid" id="mentee-sessions-list"></div>
+          <div id="mentee-sessions-list"></div>
         </div>
 
         <!-- ══ 관리자 ══ -->
@@ -2599,22 +2599,15 @@ function selectMentor(id) {
   }).join('');
 }
 
-let _menteeSessionView = 'list'; // 'list' | 'calendar'
 let _menteeCalMonth = null; // Date object for calendar month
 
 function renderMenteeSessions() {
   const el = document.getElementById('mentee-sessions-list');
   const mySessions = getSessionsByMentee(currentUser?.id);
   if (!mySessions.length) {
-    el.innerHTML = `<div class="page-col"><div class="card"><div class="empty-state"><span class="icon">📭</span><h4>예약한 세션 없음</h4><p>멘토 예약하기에서 세션을 신청해보세요</p></div></div></div><div class="page-col"></div>`;
+    el.innerHTML = `<div class="page-grid"><div class="page-col"><div class="card"><div class="empty-state"><span class="icon">📭</span><h4>예약한 세션 없음</h4><p>멘토 예약하기에서 세션을 신청해보세요</p></div></div></div><div class="page-col"></div></div>`;
     return;
   }
-
-  // 뷰 전환 탭
-  const viewToggle = `<div style="display:flex;gap:4px;margin-bottom:16px;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;width:fit-content">
-    <button class="btn btn-sm" style="${_menteeSessionView === 'list' ? 'background:var(--accent);color:#fff' : 'background:transparent;color:var(--text2)'};border:none;font-size:13px;padding:6px 14px;border-radius:var(--radius-xs)" onclick="_menteeSessionView='list';renderMenteeSessions()">📋 목록</button>
-    <button class="btn btn-sm" style="${_menteeSessionView === 'calendar' ? 'background:var(--accent);color:#fff' : 'background:transparent;color:var(--text2)'};border:none;font-size:13px;padding:6px 14px;border-radius:var(--radius-xs)" onclick="_menteeSessionView='calendar';renderMenteeSessions()">📅 달력</button>
-  </div>`;
 
   const sessionCardHtml = s => {
     const mentor = _idx.mentor[s.mentorId];
@@ -2648,85 +2641,81 @@ function renderMenteeSessions() {
     </div>`;
   };
 
-  if (_menteeSessionView === 'calendar') {
-    // 달력 뷰
-    if (!_menteeCalMonth) _menteeCalMonth = new Date();
-    const year = _menteeCalMonth.getFullYear();
-    const month = _menteeCalMonth.getMonth();
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const monthLabel = `${year}년 ${month + 1}월`;
-    const dayNames = ['일','월','화','수','목','금','토'];
+  // ── 좌측: 달력 ──
+  if (!_menteeCalMonth) _menteeCalMonth = new Date();
+  const year = _menteeCalMonth.getFullYear();
+  const month = _menteeCalMonth.getMonth();
+  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthLabel = `${year}년 ${month + 1}월`;
+  const dayNames = ['일','월','화','수','목','금','토'];
 
-    // 날짜별 세션 매핑
-    const sessionsByDate = {};
-    mySessions.forEach(s => {
-      if (!s.date) return;
-      if (!sessionsByDate[s.date]) sessionsByDate[s.date] = [];
-      sessionsByDate[s.date].push(s);
-    });
+  // 날짜별 세션 매핑
+  const sessionsByDate = {};
+  mySessions.forEach(s => {
+    if (!s.date) return;
+    if (!sessionsByDate[s.date]) sessionsByDate[s.date] = [];
+    sessionsByDate[s.date].push(s);
+  });
 
-    let calCells = '';
-    // 빈 칸 (첫 주 시작)
-    for (let i = 0; i < firstDay; i++) calCells += `<div style="min-height:60px"></div>`;
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const daySessions = sessionsByDate[dateStr] || [];
-      const dots = daySessions.map(s => {
-        const color = s.status === 'completed' ? 'var(--success)' : s.status === 'upcoming' ? 'var(--accent)' : 'var(--warn)';
-        return `<div style="width:6px;height:6px;border-radius:50%;background:${color}" title="${escapeHtml(getMentorName(s.mentorId))} ${escapeHtml(s.time||'')}"></div>`;
-      }).join('');
-      const isToday = dateStr === localDateString(new Date());
-      calCells += `<div style="min-height:60px;padding:4px;border:1px solid var(--border);border-radius:var(--radius-xs);${isToday ? 'background:var(--accent-ultra);border-color:var(--accent)':''};${daySessions.length ? 'cursor:pointer' : ''}" ${daySessions.length ? `onclick="showMenteeCalDaySessions('${dateStr}')"` : ''}>
-        <div style="font-size:12px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--accent)':'var(--text1)'};margin-bottom:2px">${d}</div>
-        <div style="display:flex;gap:2px;flex-wrap:wrap">${dots}</div>
-      </div>`;
-    }
-
-    const calendarHtml = `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <button class="btn btn-ghost btn-sm" onclick="shiftMenteeCalMonth(-1)">◀</button>
-        <h4 style="margin:0">${monthLabel}</h4>
-        <button class="btn btn-ghost btn-sm" onclick="shiftMenteeCalMonth(1)">▶</button>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
-        ${dayNames.map(dn => `<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:4px 0">${dn}</div>`).join('')}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
-        ${calCells}
-      </div>
-      <div style="margin-top:10px;display:flex;gap:12px;font-size:11px;color:var(--text3)">
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);vertical-align:middle"></span> 대기</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);vertical-align:middle"></span> 확정</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);vertical-align:middle"></span> 완료</span>
-      </div>
-    </div>
-    <div id="mentee-cal-day-sessions" class="card" style="display:none;margin-top:16px"></div>`;
-
-    el.innerHTML = viewToggle + calendarHtml;
-  } else {
-    // 기존 목록 뷰
-    const active = mySessions.filter(s => s.status === 'pending' || s.status === 'upcoming');
-    const completed = mySessions.filter(s => s.status === 'completed');
-    let leftHtml = active.length
-      ? `<div class="card"><div class="card-title">📅 진행 중 <span class="badge badge-blue" style="margin-left:4px">${active.length}</span></div>${active.map(sessionCardHtml).join('')}</div>`
-      : `<div class="card"><div class="empty-state"><span class="icon">✅</span><h4>진행 중인 세션 없음</h4></div></div>`;
-    let rightHtml = '';
-    if (completed.length) {
-      const CLIMIT = 3;
-      const recentC = completed.slice(0, CLIMIT);
-      const olderC = completed.slice(CLIMIT);
-      rightHtml = `<div class="card"><div class="card-title">✅ 완료 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>${recentC.map(sessionCardHtml).join('')}`;
-      if (olderC.length) {
-        rightHtml += `<div id="mentee-completed-more" style="display:none">${olderC.map(sessionCardHtml).join('')}</div>`;
-        rightHtml += `<button id="mentee-completed-toggle" class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:13px;color:var(--accent)" onclick="toggleCollapse('mentee-completed-more','');var el=document.getElementById('mentee-completed-more');this.textContent=el.style.display==='none'?'이전 완료 세션 더보기 (${olderC.length}건) ▼':'접기 ▲'">이전 완료 세션 더보기 (${olderC.length}건) ▼</button>`;
-      }
-      rightHtml += `</div>`;
-    } else {
-      rightHtml = `<div class="card"><div class="empty-state"><span class="icon">📭</span><h4>완료 세션 없음</h4></div></div>`;
-    }
-    el.innerHTML = viewToggle + `<div class="page-grid"><div class="page-col">${leftHtml}</div><div class="page-col">${rightHtml}</div></div>`;
+  let calCells = '';
+  for (let i = 0; i < firstDay; i++) calCells += `<div style="min-height:56px"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const daySessions = sessionsByDate[dateStr] || [];
+    const dots = daySessions.map(s => {
+      const color = s.status === 'completed' ? 'var(--success)' : s.status === 'upcoming' ? 'var(--accent)' : 'var(--warn)';
+      return `<div style="width:6px;height:6px;border-radius:50%;background:${color}" title="${escapeHtml(getMentorName(s.mentorId))} ${escapeHtml(s.time||'')}"></div>`;
+    }).join('');
+    const isToday = dateStr === localDateString(new Date());
+    calCells += `<div style="min-height:56px;padding:4px;border:1px solid var(--border);border-radius:var(--radius-xs);${isToday ? 'background:var(--accent-ultra);border-color:var(--accent)':''};${daySessions.length ? 'cursor:pointer' : ''}" ${daySessions.length ? `onclick="showMenteeCalDaySessions('${dateStr}')"` : ''}>
+      <div style="font-size:12px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--accent)':'var(--text1)'};margin-bottom:2px">${d}</div>
+      <div style="display:flex;gap:2px;flex-wrap:wrap">${dots}</div>
+    </div>`;
   }
+
+  const calendarHtml = `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <button class="btn btn-ghost btn-sm" onclick="shiftMenteeCalMonth(-1)">◀</button>
+      <h4 style="margin:0">📅 ${monthLabel}</h4>
+      <button class="btn btn-ghost btn-sm" onclick="shiftMenteeCalMonth(1)">▶</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+      ${dayNames.map(dn => `<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:4px 0">${dn}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+      ${calCells}
+    </div>
+    <div style="margin-top:10px;display:flex;gap:12px;font-size:11px;color:var(--text3);flex-wrap:wrap">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warn);vertical-align:middle"></span> 대기</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);vertical-align:middle"></span> 확정</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);vertical-align:middle"></span> 완료</span>
+    </div>
+  </div>
+  <div id="mentee-cal-day-sessions" class="card" style="display:none;margin-top:12px"></div>`;
+
+  // ── 우측: 진행 중 + 완료 목록 ──
+  const active = mySessions.filter(s => s.status === 'pending' || s.status === 'upcoming');
+  const completed = mySessions.filter(s => s.status === 'completed');
+  let activeHtml = active.length
+    ? `<div class="card"><div class="card-title">📅 진행 중 <span class="badge badge-blue" style="margin-left:4px">${active.length}</span></div>${active.map(sessionCardHtml).join('')}</div>`
+    : `<div class="card"><div class="empty-state"><span class="icon">✅</span><h4>진행 중인 세션 없음</h4></div></div>`;
+  let completedHtml = '';
+  if (completed.length) {
+    const CLIMIT = 3;
+    const recentC = completed.slice(0, CLIMIT);
+    const olderC = completed.slice(CLIMIT);
+    completedHtml = `<div class="card" style="margin-top:12px"><div class="card-title">✅ 완료 <span class="badge badge-green" style="margin-left:4px">${completed.length}</span></div>${recentC.map(sessionCardHtml).join('')}`;
+    if (olderC.length) {
+      completedHtml += `<div id="mentee-completed-more" style="display:none">${olderC.map(sessionCardHtml).join('')}</div>`;
+      completedHtml += `<button id="mentee-completed-toggle" class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:13px;color:var(--accent)" onclick="toggleCollapse('mentee-completed-more','');var el=document.getElementById('mentee-completed-more');this.textContent=el.style.display==='none'?'이전 완료 세션 더보기 (${olderC.length}건) ▼':'접기 ▲'">이전 완료 세션 더보기 (${olderC.length}건) ▼</button>`;
+    }
+    completedHtml += `</div>`;
+  } else {
+    completedHtml = `<div class="card" style="margin-top:12px"><div class="empty-state"><span class="icon">📭</span><h4>완료 세션 없음</h4></div></div>`;
+  }
+
+  el.innerHTML = `<div class="page-grid"><div class="page-col">${calendarHtml}</div><div class="page-col">${activeHtml}${completedHtml}</div></div>`;
 }
 
 function shiftMenteeCalMonth(delta) {
