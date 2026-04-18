@@ -92,85 +92,197 @@ body {
 .screen { display: none; }
 .screen.active { display: block; }
 
-/* ── 로그인 (Dark SaaS Design) ── */
+/* ── 로그인 (Landing v3 — Interactive 3D Satellite) ── */
 #screen-login.active {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 48px 24px 80px;
+  position: fixed;
+  inset: 0;
   background: var(--bg);
-  background-image:
-    radial-gradient(circle at 20% 10%, rgba(163, 230, 53, 0.06), transparent 50%),
-    radial-gradient(circle at 80% 90%, rgba(163, 230, 53, 0.04), transparent 55%);
+  overflow: hidden;
+  z-index: 1;
+  display: grid;
+  place-items: center;
   font-family: var(--font-sans);
   color: var(--ink);
 }
-
-.login-brand {
-  text-align: center;
-  margin-bottom: 48px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
+#screen-login.active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(900px 600px at 50% 40%, var(--accent-soft), transparent 65%),
+    radial-gradient(1200px 700px at 50% 100%, rgba(163, 230, 53, 0.04), transparent 70%);
+  pointer-events: none;
 }
 
-/* ── Leaf Icon ── */
-.login-leaf-icon {
-  width: 68px; height: 68px;
-  background: var(--accent);
-  border-radius: 16px;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 20px 50px -20px rgba(163, 230, 53, 0.4),
-              0 0 0 1px rgba(163, 230, 53, 0.3);
-  animation: leaf-breathe 4s ease-in-out infinite;
-}
-.login-leaf-icon .material-symbols-outlined {
-  font-size: 34px; color: var(--accent-ink);
-  font-variation-settings: 'FILL' 1, 'wght' 500;
-}
-@keyframes leaf-breathe {
-  0%, 100% { box-shadow: 0 20px 50px -20px rgba(163, 230, 53, 0.4), 0 0 0 1px rgba(163, 230, 53, 0.3); transform: scale(1); }
-  50% { box-shadow: 0 24px 60px -20px rgba(163, 230, 53, 0.55), 0 0 0 1px rgba(163, 230, 53, 0.45); transform: scale(1.03); }
-}
-
-.login-brand h1 {
-  font-family: var(--font-display);
-  font-size: clamp(2.4rem, 5.5vw, 3.8rem);
-  font-weight: 700;
-  color: var(--ink);
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-}
-.login-brand .login-subtitle {
-  font-family: var(--font-sans);
-  font-weight: 500;
-  font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+/* Corner marks */
+.lv3-corner {
+  position: absolute;
+  font-size: 11px;
   color: var(--muted);
-  letter-spacing: -0.005em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
 }
-.login-brand .login-credit {
+.lv3-corner.mono {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--muted-2);
-  letter-spacing: 0.02em;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
-
-/* ── Role Cards (demo mode) ── */
-.role-cards {
-  display: flex; gap: 14px; flex-wrap: wrap;
-  justify-content: center; max-width: 600px; width: 100%;
+.lv3-corner.tl { top: 24px; left: 32px; }
+.lv3-corner.tr { top: 24px; right: 32px; }
+.lv3-corner.bl { bottom: 18px; left: 32px; }
+.lv3-corner.br { bottom: 18px; right: 32px; }
+.lv3-corner a {
+  color: inherit;
+  transition: color 0.15s;
 }
-.role-card {
-  flex: 1; min-width: 160px;
+.lv3-corner a:hover { color: var(--accent); }
+.lv3-logo-mark {
+  width: 22px; height: 22px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 6px;
+  display: grid; place-items: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* Centered column */
+.lv3-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  width: min(520px, calc(100% - 64px));
+  z-index: 2;
+}
+.lv3-satellite {
+  width: min(360px, 60vh);
+  aspect-ratio: 1;
+  margin-bottom: -10px;
+  position: relative;
+}
+.lv3-title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  margin: 0;
+  line-height: 1;
+  color: var(--ink);
+}
+.lv3-tag {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 10px;
+  margin-bottom: 20px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.lv3-credit {
+  font-size: 10px;
+  color: var(--muted-2);
+  margin-top: -8px;
+  margin-bottom: 20px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.lv3-panel {
+  width: 100%;
   background: var(--bg-1);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 32px 22px 28px;
-  cursor: pointer; text-align: center;
+  padding: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+
+/* ── Google 로그인 모드 ── (integrated in landing-v3) */
+.google-login-box {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  max-width: 100%; width: 100%;
+  text-align: center;
+}
+.google-login-box h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.google-login-box p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.65;
+  font-family: var(--font-sans);
+  margin: 0;
+}
+.google-login-info {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: left;
+  line-height: 1.7;
+  width: 100%;
+}
+.google-login-info strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: block;
+  margin-bottom: 2px;
+}
+.google-login-info a {
+  color: var(--accent); font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-line);
+}
+.google-login-info a:hover {
+  border-bottom-color: var(--accent);
+}
+.google-login-error {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--danger);
+  background: rgba(252, 165, 165, 0.08);
+  border: 1px solid rgba(252, 165, 165, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: none;
+  max-width: 100%; width: 100%;
+  text-align: center;
+}
+
+/* ── Role Cards (demo mode) — compact pill row inside panel ── */
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+.role-card {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 10px 12px;
+  cursor: pointer;
+  text-align: center;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
   position: relative;
   overflow: hidden;
@@ -185,86 +297,211 @@ body {
   transition: transform 0.2s ease;
 }
 .role-card:hover {
-  transform: translateY(-3px);
-  background: var(--bg-2);
+  transform: translateY(-2px);
+  background: var(--bg-3);
   border-color: var(--accent-line);
 }
-.role-card:hover::before {
-  transform: scaleY(1);
-}
-.role-card .icon { font-size: 32px; display: block; margin-bottom: 14px; line-height: 1; }
+.role-card:hover::before { transform: scaleY(1); }
+.role-card .icon { font-size: 22px; display: block; margin-bottom: 6px; line-height: 1; }
 .role-card h3 {
   font-family: var(--font-display);
-  font-size: 1.05rem; font-weight: 700; margin-bottom: 6px;
-  color: var(--ink); letter-spacing: -0.02em;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 3px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
 }
-.role-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.65; }
-
-.demo-notice {
-  margin-top: 32px; font-size: 0.7rem; color: var(--muted-2);
-  background: var(--bg-1); padding: 8px 18px;
-  border-radius: 9999px;
-  border: 1px solid var(--line);
-  font-family: var(--font-mono);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-/* ── Google 로그인 모드 ── */
-.google-login-box {
-  display: flex; flex-direction: column; align-items: center; gap: 22px;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 44px 48px;
-  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
-  max-width: 420px; width: 100%;
-  text-align: center;
-  position: relative;
-}
-.google-login-box h3 {
-  font-family: var(--font-display);
-  font-size: 1.1rem; font-weight: 700;
-  color: var(--ink); letter-spacing: -0.02em;
-}
-.google-login-box p {
-  font-size: 0.875rem; color: var(--muted); line-height: 1.7;
-  font-family: var(--font-sans);
-}
-.google-login-info {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 14px 18px;
-  font-size: 0.8rem;
+.role-card p {
+  font-size: 10px;
   color: var(--muted);
-  text-align: left;
-  line-height: 1.75;
-  width: 100%;
-}
-.google-login-info strong {
-  color: var(--accent);
+  line-height: 1.5;
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.demo-notice {
+  margin-top: 12px;
+  font-size: 10px;
+  color: var(--muted-2);
+  text-align: center;
+  font-family: var(--font-mono);
   letter-spacing: 0.05em;
-  display: block;
-  margin-bottom: 4px;
+  text-transform: uppercase;
 }
-.google-login-info a {
-  color: var(--accent); font-weight: 600;
-  text-decoration: none;
-  border-bottom: 1px solid var(--accent-line);
+
+/* ====== 3D Satellite ====== */
+.sat-wrap {
+  position: relative;
+  width: 100%; height: 100%;
+  perspective: 1600px;
+  display: grid; place-items: center;
 }
-.google-login-info a:hover {
-  border-bottom-color: var(--accent);
+.sat-grid {
+  position: absolute;
+  inset: -20%;
+  width: 140%; height: 140%;
+  pointer-events: none;
+  z-index: 0;
 }
-.google-login-error {
-  margin-top: 14px; font-size: 0.8rem; color: var(--danger);
-  background: rgba(252, 165, 165, 0.08);
-  border: 1px solid rgba(252, 165, 165, 0.3);
-  border-radius: 10px; padding: 12px 18px;
-  display: none; max-width: 420px; width: 100%; text-align: center;
+.sat-scene {
+  position: relative;
+  width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  display: grid; place-items: center;
+  z-index: 1;
+}
+.sat-object {
+  position: relative;
+  width: 200px; height: 200px;
+  transform-style: preserve-3d;
+  transition: transform 0.3s cubic-bezier(.2,.8,.2,1);
+  will-change: transform;
+}
+.sf {
+  position: absolute;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+}
+.sat-core {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 60px; height: 60px;
+  transform-style: preserve-3d;
+  transform: translate(-30px, -30px);
+}
+.sat-core .sf { width: 60px; height: 60px; }
+.sat-core .front { background: #1f1f1f; transform: translateZ(30px); }
+.sat-core .back { background: #0f0f0f; transform: translateZ(-30px) rotateY(180deg); }
+.sat-core .left { background: #161616; transform: rotateY(-90deg) translateZ(30px); }
+.sat-core .right { background: #1a1a1a; transform: rotateY(90deg) translateZ(30px); }
+.sat-core .top { background: var(--accent); border-color: var(--accent); transform: rotateX(90deg) translateZ(30px); }
+.sat-core .bottom { background: #0a0a0a; transform: rotateX(-90deg) translateZ(30px); }
+
+.sat-panel {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 70px; height: 30px;
+  transform-style: preserve-3d;
+}
+.sat-panel .sf { width: 70px; height: 30px; }
+.sat-panel .front { transform: translateZ(3px); background: linear-gradient(90deg, #1a1a1a 0%, #262626 12%, #1a1a1a 25%, #262626 37%, #1a1a1a 50%, #262626 62%, #1a1a1a 75%, #262626 87%, #1a1a1a 100%); border-color: var(--accent-line); }
+.sat-panel .back { transform: translateZ(-3px) rotateY(180deg); background: #111; }
+.sat-panel .top { width: 70px; height: 6px; transform: rotateX(90deg) translateZ(3px); background: #2a2a2a; }
+.sat-panel .bottom { width: 70px; height: 6px; transform: rotateX(-90deg) translateZ(3px); background: #0a0a0a; }
+.sat-panel .left { width: 6px; height: 30px; transform: rotateY(-90deg) translateZ(3px); background: #1a1a1a; }
+.sat-panel .right { width: 6px; height: 30px; transform: rotateY(90deg) translateZ(3px); background: #1a1a1a; }
+.sat-panel.pn-l { transform: translate(-100px, -15px); }
+.sat-panel.pn-r { transform: translate(30px, -15px); }
+
+.sat-dish {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a3a3a, #141414 70%);
+  border: 1px solid var(--accent-line);
+  transform: translate(-17px, -72px) rotateX(60deg);
+  box-shadow: inset 0 -4px 8px rgba(163, 230, 53, 0.15);
+}
+.sat-antenna {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 2px; height: 28px;
+  background: linear-gradient(to bottom, var(--accent), transparent);
+  transform: translate(-1px, -90px);
+}
+.sat-antenna::after {
+  content: '';
+  position: absolute;
+  top: -5px; left: -4px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+}
+
+.sat-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  border: 1px solid var(--accent-line);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.55;
+}
+.sat-ring.r-a {
+  width: 280px; height: 280px;
+  margin: -140px 0 0 -140px;
+  transform: rotateX(74deg);
+  border-style: dashed;
+}
+.sat-ring.r-b {
+  width: 340px; height: 340px;
+  margin: -170px 0 0 -170px;
+  transform: rotateX(68deg) rotateZ(20deg);
+  border-color: rgba(163, 230, 53, 0.15);
+}
+.sat-ring.r-c {
+  width: 400px; height: 400px;
+  margin: -200px 0 0 -200px;
+  transform: rotateX(78deg) rotateZ(-15deg);
+  border-color: rgba(163, 230, 53, 0.08);
+}
+
+.sat-orbiter {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 280px; height: 280px;
+  margin: -140px 0 0 -140px;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+.sat-orbiter .sf.dot {
+  position: absolute;
+  top: 50%; left: 0;
+  width: 8px; height: 8px;
+  margin-top: -4px;
+  background: var(--accent);
+  border-color: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--accent);
+}
+.sat-orbiter.o1 { transform: rotateX(74deg); animation: sat-orbit 8s linear infinite; --from: rotateX(74deg); }
+.sat-orbiter.o2 {
+  width: 340px; height: 340px;
+  margin: -170px 0 0 -170px;
+  transform: rotateX(68deg) rotateZ(20deg);
+  animation: sat-orbit 14s linear infinite reverse;
+  --from: rotateX(68deg) rotateZ(20deg);
+}
+.sat-orbiter.o3 {
+  width: 400px; height: 400px;
+  margin: -200px 0 0 -200px;
+  transform: rotateX(78deg) rotateZ(-15deg);
+  animation: sat-orbit 20s linear infinite;
+  --from: rotateX(78deg) rotateZ(-15deg);
+}
+@keyframes sat-orbit {
+  from { transform: var(--from, rotateX(74deg)) rotateZ(0deg); }
+  to   { transform: var(--from, rotateX(74deg)) rotateZ(360deg); }
+}
+
+@media (max-height: 760px) {
+  .lv3-satellite { width: min(280px, 50vh); margin-bottom: -20px; }
+  .lv3-title { font-size: clamp(28px, 4vw, 40px); }
+  .lv3-tag { margin-bottom: 14px; }
+  .lv3-panel { padding: 14px; }
+  .lv3-corner.tl, .lv3-corner.tr { top: 18px; }
+}
+@media (max-height: 620px) {
+  .lv3-satellite { width: min(200px, 38vh); }
+  .lv3-corner { display: none; }
+}
+@media (max-width: 520px) {
+  .role-cards { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .role-card { padding: 10px 6px; }
+  .role-card .icon { font-size: 18px; }
+  .role-card h3 { font-size: 12px; }
+  .role-card p { display: none; }
 }
 
 /* ── 앱 레이아웃 ── */
@@ -823,55 +1060,146 @@ tr:hover td { background: var(--bg-2); }
 </head>
 <body>
 
-<!-- ═══ 로그인 ═══ -->
+<!-- ═══ 로그인 (Landing v3 · Interactive 3D Satellite) ═══ -->
 <div id="screen-login" class="screen active">
-  <div class="login-brand">
-    <div class="login-leaf-icon">
-      <span class="material-symbols-outlined">eco</span>
-    </div>
-    <h1>Mentoring Hub</h1>
-    <p class="login-subtitle">광운대학교 멘토링 관리 시스템</p>
-    <p class="login-credit">made by NCI창업패키지사업단 최광범(neo@kw.ac.kr)</p>
+  <!-- Corner marks -->
+  <div class="lv3-corner tl">
+    <span class="lv3-logo-mark">M</span>
+    <span>멘토링허브</span>
   </div>
+  <div class="lv3-corner tr mono">v2.5 · KST</div>
+  <div class="lv3-corner bl mono">© 2026 광운대학교 NCI창업패키지사업단</div>
+  <div class="lv3-corner br mono"><a href="mailto:neo@kw.ac.kr">도움말 · 문의</a></div>
 
-  <!-- Google 로그인 모드 -->
-  <div id="login-google-mode" style="display:none">
-    <div class="google-login-box">
-      <h3>Google 계정으로 로그인</h3>
-      <p>등록된 Google 계정으로 접속하세요<br>역할이 자동으로 설정됩니다</p>
-      <div class="google-login-info">
-        <strong>처음 접속하시나요?</strong><br>
-        관리자에게 계정 등록을 먼저 요청하세요.<br>
-        문의: <a href="mailto:neo@kw.ac.kr">neo@kw.ac.kr</a>
+  <div class="lv3-center">
+    <!-- Interactive 3D Satellite -->
+    <div class="lv3-satellite">
+      <div class="sat-wrap" id="sat-wrap">
+        <svg class="sat-grid" viewBox="0 0 400 400" preserveAspectRatio="none">
+          <defs>
+            <radialGradient id="sat-fade" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.14"/>
+              <stop offset="60%" stop-color="var(--accent)" stop-opacity="0.02"/>
+              <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <rect width="400" height="400" fill="url(#sat-fade)"/>
+        </svg>
+        <div class="sat-scene">
+          <div class="sat-object" id="sat-object" style="transform:rotateX(-12deg) rotateY(0deg)">
+            <!-- Orbit rings -->
+            <div class="sat-ring r-a"></div>
+            <div class="sat-ring r-b"></div>
+            <div class="sat-ring r-c"></div>
+            <!-- Core body -->
+            <div class="sat-core">
+              <div class="sf front"></div><div class="sf back"></div>
+              <div class="sf left"></div><div class="sf right"></div>
+              <div class="sf top"></div><div class="sf bottom"></div>
+            </div>
+            <!-- Solar panels -->
+            <div class="sat-panel pn-l">
+              <div class="sf front"></div><div class="sf back"></div>
+              <div class="sf left"></div><div class="sf right"></div>
+              <div class="sf top"></div><div class="sf bottom"></div>
+            </div>
+            <div class="sat-panel pn-r">
+              <div class="sf front"></div><div class="sf back"></div>
+              <div class="sf left"></div><div class="sf right"></div>
+              <div class="sf top"></div><div class="sf bottom"></div>
+            </div>
+            <!-- Dish + antenna -->
+            <div class="sat-dish"></div>
+            <div class="sat-antenna"></div>
+            <!-- Orbiting dots -->
+            <div class="sat-orbiter o1"><div class="sf dot"></div></div>
+            <div class="sat-orbiter o2"><div class="sf dot"></div></div>
+            <div class="sat-orbiter o3"><div class="sf dot"></div></div>
+          </div>
+        </div>
       </div>
-      <div id="google-signin-btn"></div>
-      <div id="google-login-loading" style="display:none;font-size:13px;color:var(--text2)">로그인 중...</div>
     </div>
-    <div class="google-login-error" id="google-login-error"></div>
-  </div>
 
-  <!-- 데모 모드 -->
-  <div id="login-demo-mode">
-    <div class="role-cards">
-      <div class="role-card" onclick="enterAs('mentor')">
-        <span class="icon">🎓</span>
-        <h3>멘토</h3>
-        <p>가용 일정 등록<br>멘토링 일지 작성</p>
+    <h1 class="lv3-title">MentoringHub</h1>
+    <div class="lv3-tag">광운대학교 멘토링 관리 시스템</div>
+    <div class="lv3-credit">made by NCI창업패키지사업단 · 최광범</div>
+
+    <div class="lv3-panel">
+      <!-- Google 로그인 모드 -->
+      <div id="login-google-mode" style="display:none">
+        <div class="google-login-box">
+          <h3>Google 계정으로 로그인</h3>
+          <p>등록된 Google 계정으로 접속하세요<br>역할이 자동으로 설정됩니다</p>
+          <div class="google-login-info">
+            <strong>처음 접속하시나요?</strong>
+            관리자에게 계정 등록을 먼저 요청하세요.<br>
+            문의: <a href="mailto:neo@kw.ac.kr">neo@kw.ac.kr</a>
+          </div>
+          <div id="google-signin-btn"></div>
+          <div id="google-login-loading" style="display:none;font-size:13px;color:var(--text2)">로그인 중...</div>
+        </div>
+        <div class="google-login-error" id="google-login-error"></div>
       </div>
-      <div class="role-card" onclick="enterAs('mentee')">
-        <span class="icon">🚀</span>
-        <h3>멘티</h3>
-        <p>멘토 선택 및 예약<br>세션 내역 확인</p>
-      </div>
-      <div class="role-card" onclick="enterAs('admin')">
-        <span class="icon">📊</span>
-        <h3>담당자</h3>
-        <p>전체 현황 대시보드<br>매칭 관리</p>
+
+      <!-- 데모 모드 -->
+      <div id="login-demo-mode">
+        <div class="role-cards">
+          <div class="role-card" onclick="enterAs('mentor')">
+            <span class="icon">🎓</span>
+            <h3>멘토</h3>
+            <p>일정·일지</p>
+          </div>
+          <div class="role-card" onclick="enterAs('mentee')">
+            <span class="icon">🚀</span>
+            <h3>멘티</h3>
+            <p>예약·내역</p>
+          </div>
+          <div class="role-card" onclick="enterAs('admin')">
+            <span class="icon">📊</span>
+            <h3>담당자</h3>
+            <p>운영·매칭</p>
+          </div>
+        </div>
+        <p class="demo-notice">⚡ 데모 모드 — Supabase 연동 없이 기능 체험</p>
       </div>
     </div>
-    <p class="demo-notice">⚡ 데모 모드 — Supabase 연동 없이도 모든 기능 체험 가능</p>
   </div>
 </div>
+
+<script>
+// ═══ Interactive 3D Satellite — mouse-follow + idle auto-rotation ═══
+(function() {
+  const el = document.getElementById('sat-wrap');
+  const obj = document.getElementById('sat-object');
+  if (!el || !obj) return;
+  let hover = false;
+  let currentX = -12, currentY = 0;
+  const t0 = performance.now();
+
+  el.addEventListener('mouseenter', () => { hover = true; });
+  el.addEventListener('mouseleave', () => { hover = false; });
+  window.addEventListener('mousemove', (e) => {
+    if (!hover) return;
+    const b = el.getBoundingClientRect();
+    const dx = (e.clientX - (b.left + b.width / 2)) / (b.width / 2);
+    const dy = (e.clientY - (b.top + b.height / 2)) / (b.height / 2);
+    currentX = -12 + dy * 18;
+    currentY = dx * 50;
+    obj.style.transform = `rotateX(${currentX}deg) rotateY(${currentY}deg)`;
+  });
+
+  function tick() {
+    if (!hover) {
+      const t = (performance.now() - t0) / 1000;
+      currentX = -12 + Math.sin(t * 0.4) * 6;
+      currentY = t * 16;
+      obj.style.transform = `rotateX(${currentX}deg) rotateY(${currentY}deg)`;
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
 
 <!-- ═══ 앱 ═══ -->
 <div id="screen-app" class="screen">
@@ -880,8 +1208,8 @@ tr:hover td { background: var(--bg-2); }
     <aside class="sidebar">
       <div class="sidebar-brand">
         <div class="sidebar-logo-row">
-          <div class="sidebar-logo-icon">🌱</div>
-          <span class="brand-name">멘토링 허브</span>
+          <div class="sidebar-logo-icon">M</div>
+          <span class="brand-name">멘토링허브</span>
         </div>
         <span class="role-badge" id="role-badge">멘토</span>
         <div class="user-info-card" style="margin-top:10px">
@@ -892,7 +1220,7 @@ tr:hover td { background: var(--bg-2); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(252,165,165,0.08);color:var(--danger);border:1px solid rgba(252,165,165,0.25)">🚪 로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.05em">v2.4.0 · 2026-04-18</div>
+        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.05em">v2.5.0 · 2026-04-18</div>
       </div>
     </aside>
 
