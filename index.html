@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.3.3-20260415">
+<meta name="version" content="2.6.0-20260418">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,17 +16,17 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
-  /* ── Dark SaaS theme (Mentoring Hub redesign) ── */
-  --bg: #0a0a0a;
-  --bg-1: #111111;
-  --bg-2: #171717;
-  --bg-3: #1f1f1f;
-  --line: #242424;
-  --line-2: #2e2e2e;
-  --ink: #f5f5f5;
-  --ink-2: #d4d4d4;
-  --muted: #8a8a8a;
-  --muted-2: #595959;
+  /* ── Light theme (Mentoring Hub v2.6 — Orange accent) ── */
+  --bg: #fafaf7;
+  --bg-1: #ffffff;
+  --bg-2: #f4f4ef;
+  --bg-3: #ebebe4;
+  --line: #e5e5df;
+  --line-2: #d4d4cf;
+  --ink: #0a0a0a;
+  --ink-2: #262626;
+  --muted: #737373;
+  --muted-2: #a3a3a3;
 
   /* Legacy-compat aliases (existing classes reference these) */
   --surface: var(--bg-1);
@@ -38,26 +38,26 @@
   --border: var(--line);
   --border2: var(--line-2);
 
-  /* Accent — lime */
-  --accent: #a3e635;
+  /* Accent — orange */
+  --accent: #fb923c;
   --accent-ink: #0a0a0a;
-  --accent2: #84cc16;
-  --accent3: #65a30d;
-  --accent-soft: rgba(163, 230, 53, 0.12);
-  --accent-line: rgba(163, 230, 53, 0.35);
-  --accent-light: rgba(163, 230, 53, 0.22);
-  --accent-ultra: rgba(163, 230, 53, 0.08);
+  --accent2: #f97316;
+  --accent3: #ea580c;
+  --accent-soft: rgba(251, 146, 60, 0.14);
+  --accent-line: rgba(251, 146, 60, 0.4);
+  --accent-light: rgba(251, 146, 60, 0.22);
+  --accent-ultra: rgba(251, 146, 60, 0.06);
 
-  /* Semantic (dark-friendly pastel tokens) */
-  --success: #86efac;
-  --success-bg: rgba(134, 239, 172, 0.10);
-  --warning: #fde68a;
-  --warn: #fde68a;
-  --warn-bg: rgba(253, 230, 138, 0.10);
-  --danger: #fca5a5;
-  --danger-bg: rgba(252, 165, 165, 0.10);
-  --info: #93c5fd;
-  --info-bg: rgba(147, 197, 253, 0.10);
+  /* Semantic (light-friendly tokens) */
+  --success: #15803d;
+  --success-bg: rgba(34, 197, 94, 0.10);
+  --warning: #b45309;
+  --warn: #b45309;
+  --warn-bg: rgba(245, 158, 11, 0.12);
+  --danger: #b91c1c;
+  --danger-bg: rgba(220, 38, 38, 0.10);
+  --info: #1d4ed8;
+  --info-bg: rgba(59, 130, 246, 0.10);
 
   /* Type */
   --font-sans: 'Inter', 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -68,10 +68,10 @@
   --radius: 14px;
   --radius-sm: 10px;
   --radius-xs: 6px;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow: 0 4px 16px rgba(0,0,0,0.35);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.45);
-  --shadow-lg: 0 20px 48px rgba(0,0,0,0.55);
+  --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.06);
+  --shadow: 0 4px 16px rgba(24, 24, 27, 0.08);
+  --shadow-md: 0 8px 24px rgba(24, 24, 27, 0.10);
+  --shadow-lg: 0 20px 48px rgba(24, 24, 27, 0.14);
   --transition: 0.14s ease;
 }
 
@@ -110,7 +110,7 @@ body {
   inset: 0;
   background:
     radial-gradient(900px 600px at 50% 40%, var(--accent-soft), transparent 65%),
-    radial-gradient(1200px 700px at 50% 100%, rgba(163, 230, 53, 0.04), transparent 70%);
+    radial-gradient(1200px 700px at 50% 100%, rgba(251, 146, 60, 0.05), transparent 70%);
   pointer-events: none;
 }
 
@@ -199,7 +199,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 18px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  box-shadow: 0 20px 60px rgba(24, 24, 27, 0.10);
 }
 
 /* ── Google 로그인 모드 ── (integrated in landing-v3) */
@@ -260,8 +260,8 @@ body {
   margin-top: 12px;
   font-size: 12px;
   color: var(--danger);
-  background: rgba(252, 165, 165, 0.08);
-  border: 1px solid rgba(252, 165, 165, 0.3);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.3);
   border-radius: 10px;
   padding: 10px 14px;
   display: none;
@@ -370,12 +370,12 @@ body {
   transform: translate(-30px, -30px);
 }
 .sat-core .sf { width: 60px; height: 60px; }
-.sat-core .front { background: #1f1f1f; transform: translateZ(30px); }
-.sat-core .back { background: #0f0f0f; transform: translateZ(-30px) rotateY(180deg); }
-.sat-core .left { background: #161616; transform: rotateY(-90deg) translateZ(30px); }
-.sat-core .right { background: #1a1a1a; transform: rotateY(90deg) translateZ(30px); }
+.sat-core .front { background: #e8e8e2; transform: translateZ(30px); }
+.sat-core .back { background: #b4b4ac; transform: translateZ(-30px) rotateY(180deg); }
+.sat-core .left { background: #c4c4bc; transform: rotateY(-90deg) translateZ(30px); }
+.sat-core .right { background: #d4d4cc; transform: rotateY(90deg) translateZ(30px); }
 .sat-core .top { background: var(--accent); border-color: var(--accent); transform: rotateX(90deg) translateZ(30px); }
-.sat-core .bottom { background: #0a0a0a; transform: rotateX(-90deg) translateZ(30px); }
+.sat-core .bottom { background: #9a9a95; transform: rotateX(-90deg) translateZ(30px); }
 
 .sat-panel {
   position: absolute;
@@ -384,12 +384,12 @@ body {
   transform-style: preserve-3d;
 }
 .sat-panel .sf { width: 70px; height: 30px; }
-.sat-panel .front { transform: translateZ(3px); background: linear-gradient(90deg, #1a1a1a 0%, #262626 12%, #1a1a1a 25%, #262626 37%, #1a1a1a 50%, #262626 62%, #1a1a1a 75%, #262626 87%, #1a1a1a 100%); border-color: var(--accent-line); }
-.sat-panel .back { transform: translateZ(-3px) rotateY(180deg); background: #111; }
-.sat-panel .top { width: 70px; height: 6px; transform: rotateX(90deg) translateZ(3px); background: #2a2a2a; }
-.sat-panel .bottom { width: 70px; height: 6px; transform: rotateX(-90deg) translateZ(3px); background: #0a0a0a; }
-.sat-panel .left { width: 6px; height: 30px; transform: rotateY(-90deg) translateZ(3px); background: #1a1a1a; }
-.sat-panel .right { width: 6px; height: 30px; transform: rotateY(90deg) translateZ(3px); background: #1a1a1a; }
+.sat-panel .front { transform: translateZ(3px); background: linear-gradient(90deg, #d4d4cc 0%, #e8e8e2 12%, #d4d4cc 25%, #e8e8e2 37%, #d4d4cc 50%, #e8e8e2 62%, #d4d4cc 75%, #e8e8e2 87%, #d4d4cc 100%); border-color: var(--accent-line); }
+.sat-panel .back { transform: translateZ(-3px) rotateY(180deg); background: #b4b4ac; }
+.sat-panel .top { width: 70px; height: 6px; transform: rotateX(90deg) translateZ(3px); background: #c4c4bc; }
+.sat-panel .bottom { width: 70px; height: 6px; transform: rotateX(-90deg) translateZ(3px); background: #9a9a95; }
+.sat-panel .left { width: 6px; height: 30px; transform: rotateY(-90deg) translateZ(3px); background: #b4b4ac; }
+.sat-panel .right { width: 6px; height: 30px; transform: rotateY(90deg) translateZ(3px); background: #b4b4ac; }
 .sat-panel.pn-l { transform: translate(-100px, -15px); }
 .sat-panel.pn-r { transform: translate(30px, -15px); }
 
@@ -398,10 +398,10 @@ body {
   top: 50%; left: 50%;
   width: 34px; height: 34px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #3a3a3a, #141414 70%);
+  background: radial-gradient(circle at 40% 35%, #e8e8e2, #b4b4ac 70%);
   border: 1px solid var(--accent-line);
   transform: translate(-17px, -72px) rotateX(60deg);
-  box-shadow: inset 0 -4px 8px rgba(163, 230, 53, 0.15);
+  box-shadow: inset 0 -4px 8px rgba(251, 146, 60, 0.18);
 }
 .sat-antenna {
   position: absolute;
@@ -438,13 +438,13 @@ body {
   width: 340px; height: 340px;
   margin: -170px 0 0 -170px;
   transform: rotateX(68deg) rotateZ(20deg);
-  border-color: rgba(163, 230, 53, 0.15);
+  border-color: rgba(251, 146, 60, 0.22);
 }
 .sat-ring.r-c {
   width: 400px; height: 400px;
   margin: -200px 0 0 -200px;
   transform: rotateX(78deg) rotateZ(-15deg);
-  border-color: rgba(163, 230, 53, 0.08);
+  border-color: rgba(251, 146, 60, 0.12);
 }
 
 .sat-orbiter {
@@ -511,7 +511,7 @@ body {
   min-height: 100vh;
 }
 
-/* ── 사이드바 (dark SaaS) ── */
+/* ── 사이드바 (light SaaS) ── */
 .sidebar {
   background: var(--bg);
   border-right: 1px solid var(--line);
@@ -546,7 +546,7 @@ body {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 3px 8px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent3);
   border: 1px solid var(--accent-line);
   border-radius: 4px;
   font-family: var(--font-mono);
@@ -610,8 +610,8 @@ body {
   width: 100%; justify-content: center;
 }
 .btn-logout:hover {
-  color: var(--danger); border-color: rgba(252,165,165,0.35);
-  background: rgba(252,165,165,0.08);
+  color: var(--danger); border-color: rgba(220,38,38,0.35);
+  background: rgba(220,38,38,0.08);
 }
 
 /* ── 메인 콘텐츠 ── */
@@ -680,7 +680,7 @@ body {
   font-weight: 500;
   margin-bottom: 8px;
 }
-.stat-warn { border-color: rgba(253,230,138,0.3); background: rgba(253,230,138,0.06); }
+.stat-warn { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
 .stat-warn::before { background: var(--warning); }
 .stat-warn .stat-value { color: var(--warning); }
 
@@ -713,10 +713,10 @@ body {
 .btn-ghost:hover { background: var(--bg-2); color: var(--ink); }
 .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
 .btn-danger {
-  background: rgba(252,165,165,0.08); color: var(--danger);
-  border: 1px solid rgba(252,165,165,0.3);
+  background: rgba(220,38,38,0.08); color: var(--danger);
+  border: 1px solid rgba(220,38,38,0.3);
 }
-.btn-danger:hover { background: rgba(252,165,165,0.14); border-color: rgba(252,165,165,0.45); }
+.btn-danger:hover { background: rgba(220,38,38,0.14); border-color: rgba(220,38,38,0.45); }
 
 /* ── 배지 ── */
 .badge {
@@ -729,12 +729,12 @@ body {
   background: var(--bg-2);
   color: var(--muted);
 }
-.badge-green { color: var(--success); border-color: rgba(134,239,172,0.3); background: rgba(134,239,172,0.08); }
-.badge-warn { color: var(--warning); border-color: rgba(253,230,138,0.3); background: rgba(253,230,138,0.08); }
-.badge-blue { color: var(--info); border-color: rgba(147,197,253,0.3); background: rgba(147,197,253,0.08); }
+.badge-green { color: var(--success); border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.08); }
+.badge-warn { color: var(--warning); border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.08); }
+.badge-blue { color: var(--info); border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.08); }
 .badge-gray { color: var(--muted); border-color: var(--line); background: var(--bg-2); }
-.badge-red { color: var(--danger); border-color: rgba(252,165,165,0.3); background: rgba(252,165,165,0.08); }
-.badge-danger { color: var(--danger); border-color: rgba(252,165,165,0.3); background: rgba(252,165,165,0.08); }
+.badge-red { color: var(--danger); border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.08); }
+.badge-danger { color: var(--danger); border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.08); }
 
 /* ── 폼 ── */
 .form-group { margin-bottom: 16px; }
@@ -814,7 +814,7 @@ tr:hover td { background: var(--bg-2); }
 /* ── 모달 ── */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(24, 24, 27, 0.45);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   z-index: 1000; align-items: center; justify-content: center; padding: 20px;
 }
@@ -861,10 +861,10 @@ tr:hover td { background: var(--bg-2); }
   pointer-events: none;
 }
 #toast.show { opacity: 1; transform: translateY(0); }
-#toast.success { border-color: rgba(134,239,172,0.45); color: var(--success); background: rgba(134,239,172,0.10); }
-#toast.error { border-color: rgba(252,165,165,0.45); color: var(--danger); background: rgba(252,165,165,0.10); }
-#toast.warn { border-color: rgba(253,230,138,0.45); color: var(--warning); background: rgba(253,230,138,0.10); }
-#toast.info { border-color: rgba(147,197,253,0.45); color: var(--info); background: rgba(147,197,253,0.10); }
+#toast.success { border-color: rgba(34,197,94,0.45); color: var(--success); background: rgba(34,197,94,0.10); }
+#toast.error { border-color: rgba(220,38,38,0.45); color: var(--danger); background: rgba(220,38,38,0.10); }
+#toast.warn { border-color: rgba(245,158,11,0.45); color: var(--warning); background: rgba(245,158,11,0.10); }
+#toast.info { border-color: rgba(59,130,246,0.45); color: var(--info); background: rgba(59,130,246,0.10); }
 
 /* ── 빈 상태 ── */
 .empty-state { text-align: center; padding: 44px 20px; color: var(--muted); }
@@ -913,7 +913,7 @@ tr:hover td { background: var(--bg-2); }
 }
 .cal-day.selected { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 .cal-day.other-month { color: var(--muted-2); opacity: 0.4; }
-.cal-day.booked { background: rgba(253,230,138,0.08); color: var(--warning); }
+.cal-day.booked { background: rgba(245,158,11,0.08); color: var(--warning); }
 .cal-day.booked::after { background: var(--warning); }
 .cal-day.past { opacity: 0.3; cursor: default; pointer-events: none; }
 .cal-day.clickable { cursor: pointer; }
@@ -985,7 +985,7 @@ tr:hover td { background: var(--bg-2); }
 
 /* ── 설정 안내 ── */
 .setup-box {
-  background: rgba(147,197,253,0.06); border: 1px solid rgba(147,197,253,0.25);
+  background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.25);
   border-radius: var(--radius); padding: 16px 20px; margin-bottom: 24px;
 }
 .setup-box h4 { font-size: 13px; font-weight: 600; color: var(--info); margin-bottom: 8px; }
@@ -997,7 +997,7 @@ tr:hover td { background: var(--bg-2); }
   display: none; position: fixed; bottom: 0; left: 0; right: 0;
   background: var(--bg-1); border-top: 1px solid var(--line);
   padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
-  z-index: 100; box-shadow: 0 -4px 16px rgba(0,0,0,0.4);
+  z-index: 100; box-shadow: 0 -4px 16px rgba(24, 24, 27, 0.08);
 }
 #mobile-nav-items {
   display: flex; justify-content: center; gap: 4px;
@@ -1067,7 +1067,7 @@ tr:hover td { background: var(--bg-2); }
     <span class="lv3-logo-mark">M</span>
     <span>멘토링허브</span>
   </div>
-  <div class="lv3-corner tr mono">v2.5 · KST</div>
+  <div class="lv3-corner tr mono">v2.6 · KST</div>
   <div class="lv3-corner bl mono">© 2026 광운대학교 NCI창업패키지사업단</div>
   <div class="lv3-corner br mono"><a href="mailto:neo@kw.ac.kr">도움말 · 문의</a></div>
 
@@ -1219,8 +1219,8 @@ tr:hover td { background: var(--bg-2); }
       </div>
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
-        <button class="btn-logout" onclick="fullLogout()" style="background:rgba(252,165,165,0.08);color:var(--danger);border:1px solid rgba(252,165,165,0.25)">🚪 로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.05em">v2.5.0 · 2026-04-18</div>
+        <button class="btn-logout" onclick="fullLogout()" style="background:rgba(220,38,38,0.08);color:var(--danger);border:1px solid rgba(220,38,38,0.25)">🚪 로그아웃</button>
+        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.05em">v2.6.0 · 2026-04-18</div>
       </div>
     </aside>
 
@@ -1714,7 +1714,7 @@ tr:hover td { background: var(--bg-2); }
       </div>
       <div id="j-photo-status" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
     </div>
-    <div id="j-error-box" style="display:none;background:rgba(252,165,165,0.08);border:1px solid rgba(252,165,165,0.3);border-radius:var(--radius-xs);padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:12px"></div>
+    <div id="j-error-box" style="display:none;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.3);border-radius:var(--radius-xs);padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:12px"></div>
     <input type="hidden" id="j-session-id">
     <div id="j-draft-notice" style="display:none;background:var(--warn-bg);border:1px solid var(--warn);border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--warn);margin-bottom:12px">
       📝 임시 저장된 내용을 불러왔습니다 (<span id="j-draft-time"></span>) — 이어서 작성하거나 수정 후 제출하세요
@@ -3120,8 +3120,8 @@ function renderMenteeSessions() {
             <span>⏰ ${safeTime}</span>
             <span>📍 ${safeLocation}</span>
           </div>
-          ${s.status === 'pending' ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:var(--warn-bg);border:1px solid rgba(253,230,138,0.3);border-radius:var(--radius-xs);padding:6px 10px;font-size:12px;color:var(--warn)">⏳ 멘토 확인 대기 중입니다</div>` : ''}
-          ${s.status === 'upcoming' ? `<div style="margin-top:8px;background:var(--info-bg);border:1px solid rgba(147,197,253,0.3);border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--info);line-height:1.7">✅ <strong>멘토링이 확정되었습니다!</strong><br>📍 장소/방식: <strong>${safeLocation}</strong><br><span style="color:var(--text3)">일정 변경이 필요하면 신청 취소 후 재예약하세요</span></div>` : ''}
+          ${s.status === 'pending' ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:var(--warn-bg);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-xs);padding:6px 10px;font-size:12px;color:var(--warn)">⏳ 멘토 확인 대기 중입니다</div>` : ''}
+          ${s.status === 'upcoming' ? `<div style="margin-top:8px;background:var(--info-bg);border:1px solid rgba(59,130,246,0.3);border-radius:var(--radius-xs);padding:8px 12px;font-size:12px;color:var(--info);line-height:1.7">✅ <strong>멘토링이 확정되었습니다!</strong><br>📍 장소/방식: <strong>${safeLocation}</strong><br><span style="color:var(--text3)">일정 변경이 필요하면 신청 취소 후 재예약하세요</span></div>` : ''}
           <div style="margin-top:6px;font-size:12px;color:var(--text2)">📌 ${safeTopic}</div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
@@ -4797,10 +4797,10 @@ function showMatchAcceptedModal(menteeName) {
   const safeMenteeName = escapeHtml(menteeName || '멘티');
   overlay = document.createElement('div');
   overlay.id = 'match-accepted-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(24,24,27,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s';
   overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
   overlay.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:420px;width:90%;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.5);text-align:center;animation:modalPop 0.25s ease-out">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;max-width:420px;width:90%;padding:32px 28px;box-shadow:0 20px 60px rgba(24,24,27,0.15);text-align:center;animation:modalPop 0.25s ease-out">
       <div style="width:56px;height:56px;border-radius:50%;background:var(--accent-soft);border:1px solid var(--accent-line);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px">✅</div>
       <h3 style="margin:0 0 8px;font-size:18px;color:var(--text);font-family:var(--font-display);letter-spacing:-0.01em">매칭이 수락되었습니다!</h3>
       <p style="margin:0 0 20px;font-size:14px;color:var(--text2);line-height:1.6"><strong style="color:var(--text)">${safeMenteeName}</strong> 멘티와의 멘토링이 확정되었습니다.</p>
@@ -4880,7 +4880,7 @@ function renderAdminMatchRequests(el) {
               ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2);white-space:pre-wrap">요청사항: ${safeRequestNote}</div>` : ''}
               <div style="display:flex;gap:8px;margin-top:8px">
                 <button class="btn btn-primary btn-sm" onclick="openMatchProposeModal('${r.id}')">멘토 선택 후 제안</button>
-                <button class="btn btn-sm" style="background:rgba(252,165,165,0.12);color:var(--danger);border:1px solid rgba(252,165,165,0.3);font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700" onclick="adminRejectMatchRequest('${r.id}')">신청 거절</button>
+                <button class="btn btn-sm" style="background:rgba(220,38,38,0.12);color:var(--danger);border:1px solid rgba(220,38,38,0.3);font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700" onclick="adminRejectMatchRequest('${r.id}')">신청 거절</button>
               </div>
             </div>
           </div>`;
@@ -4951,16 +4951,16 @@ function renderAdminMatchProposals(el) {
           const statusBadge = p.status === '제안중' ? 'badge-warn' : p.status === '확정' ? 'badge-green' : p.status === '해제' ? 'badge-gray' : 'badge-gray';
           const flowBadge = p.flowType === 'admin_direct'
             ? '<span style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.04em">직접매칭</span>'
-            : '<span style="background:rgba(147,197,253,0.12);color:var(--info);border:1px solid rgba(147,197,253,0.3);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.04em">신청기반</span>';
+            : '<span style="background:rgba(59,130,246,0.12);color:var(--info);border:1px solid rgba(59,130,246,0.3);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.04em">신청기반</span>';
           const sessions = DB.sessions.filter(s => s.mentorId === p.mentorId && s.menteeId === p.menteeId);
           const completedCnt = sessions.filter(s => s.status === 'completed').length;
           const upcomingCnt = sessions.filter(s => s.status === 'upcoming' || s.status === 'pending').length;
           const activityHtml = p.status === '확정' ? `<div style="margin-top:6px;display:flex;gap:8px;align-items:center">
             ${completedCnt > 0 ? `<span style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-mono)">✅ 멘토링 ${completedCnt}회 완료</span>` : ''}
-            ${upcomingCnt > 0 ? `<span style="background:rgba(147,197,253,0.12);color:var(--info);border:1px solid rgba(147,197,253,0.3);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-mono)">📅 예정 ${upcomingCnt}건</span>` : ''}
-            ${completedCnt === 0 && upcomingCnt === 0 ? `<span style="background:rgba(253,230,138,0.12);color:var(--warning);border:1px solid rgba(253,230,138,0.3);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-mono)">⏳ 멘토링 미진행</span>` : ''}
+            ${upcomingCnt > 0 ? `<span style="background:rgba(59,130,246,0.12);color:var(--info);border:1px solid rgba(59,130,246,0.3);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-mono)">📅 예정 ${upcomingCnt}건</span>` : ''}
+            ${completedCnt === 0 && upcomingCnt === 0 ? `<span style="background:rgba(245,158,11,0.12);color:var(--warning);border:1px solid rgba(245,158,11,0.3);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-mono)">⏳ 멘토링 미진행</span>` : ''}
           </div>` : '';
-          const unmatchBtn = p.status === '확정' ? `<button class="btn btn-sm" style="background:rgba(252,165,165,0.12);color:var(--danger);border:1px solid rgba(252,165,165,0.3);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:700" onclick="adminUnmatch('${p.id}')">매칭 해제</button>` : '';
+          const unmatchBtn = p.status === '확정' ? `<button class="btn btn-sm" style="background:rgba(220,38,38,0.12);color:var(--danger);border:1px solid rgba(220,38,38,0.3);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:700" onclick="adminUnmatch('${p.id}')">매칭 해제</button>` : '';
           const safeMentorName = escapeHtml(mentor?.name || '멘토');
           const safeMenteeName = escapeHtml(mentee?.name || '멘티');
           const safeCreatedAt = escapeHtml(formatDate(p.createdAt));
