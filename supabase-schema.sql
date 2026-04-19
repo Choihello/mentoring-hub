@@ -278,17 +278,30 @@ CREATE TABLE public.notices (
 );
 
 -- ═══ 11. match_requests (매칭 신청) ═══
+-- status canonical values:
+--   '대기중'  : 신청 제출 직후
+--   '제안됨'  : 관리자가 멘토를 제안한 상태
+--   '확정'    : 멘토가 제안을 수락
+--   '거절'    : 관리자가 신청 자체를 거절
+--   '종료'    : 확정된 매칭을 관리자가 해제
+--   '취소'    : (레거시/예비) 신청 자체 취소
 CREATE TABLE public.match_requests (
   id                text PRIMARY KEY,
   mentee_id         text NOT NULL REFERENCES public.mentees(id),
   preferred_field   text DEFAULT '',
   preferred_schedule text DEFAULT '',
   request_note      text DEFAULT '',
-  status            text DEFAULT '대기중' CHECK (status IN ('대기중','제안됨','확정','취소')),
+  status            text DEFAULT '대기중' CHECK (status IN ('대기중','제안됨','확정','거절','종료','취소')),
   created_at        timestamptz DEFAULT now()
 );
 
 -- ═══ 12. match_proposals (매칭 제안) ═══
+-- status canonical values:
+--   '제안중'  : 관리자가 멘토에게 제안한 상태
+--   '확정'    : 멘토가 수락
+--   '거절'    : 멘토가 거절
+--   '취소'    : 관리자가 제안중 건을 재제안 등으로 취소
+--   '해제'    : 확정된 매칭을 관리자가 해제
 CREATE TABLE public.match_proposals (
   id              text PRIMARY KEY,
   mentor_id       text NOT NULL REFERENCES public.mentors(id),
@@ -297,7 +310,7 @@ CREATE TABLE public.match_proposals (
   flow_type       text DEFAULT 'request_based' CHECK (flow_type IN ('request_based','admin_direct')),
   mentor_response text DEFAULT '대기' CHECK (mentor_response IN ('대기','수락','거절')),
   admin_memo      text DEFAULT '',
-  status          text DEFAULT '제안중' CHECK (status IN ('제안중','확정','거절','해제')),
+  status          text DEFAULT '제안중' CHECK (status IN ('제안중','확정','거절','취소','해제')),
   created_at      timestamptz DEFAULT now()
 );
 
@@ -312,12 +325,15 @@ CREATE TABLE public.email_queue (
 );
 
 -- send_match_email RPC
+-- 인증된 mentor/mentee/admin 모두 이메일 큐에 넣을 수 있다.
+-- 브라우저에서 직접 이메일을 보내지 못하도록 send-email Edge Function 호출 경로는
+-- 프런트에서 제거하고, 이 함수(+ email_queue 테이블)가 유일한 서버측 진입점이 된다.
 CREATE OR REPLACE FUNCTION send_match_email(p_to text, p_subject text, p_body text)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
   v_role text := get_user_role();
 BEGIN
-  IF v_role NOT IN ('admin', 'mentor') THEN
+  IF v_role NOT IN ('admin', 'mentor', 'mentee') THEN
     RAISE EXCEPTION 'match email queue access denied';
   END IF;
 
@@ -329,6 +345,106 @@ BEGIN
 
   INSERT INTO public.email_queue (to_email, subject, body)
   VALUES (lower(trim(p_to)), trim(p_subject), p_body);
+END;
+$$;
+
+-- ═══════════════════════════════════════════════════════
+-- notify_match_decline(p_proposal_id)
+-- ═══════════════════════════════════════════════════════
+-- 멘토가 매칭 제안을 거절했을 때 관리자에게 자동으로 알림 이메일을 큐잉한다.
+-- 기존에는 프런트에서 users 테이블의 admin 이메일을 직접 조회해서 보냈지만,
+-- RLS 상 멘토 계정은 admin 사용자 행을 볼 수 없어서 실패하는 문제가 있었다.
+-- 이 RPC 는 SECURITY DEFINER 로 admin 이메일을 서버 측에서만 해결한다.
+CREATE OR REPLACE FUNCTION notify_match_decline(p_proposal_id text)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_role text := get_user_role();
+  v_linked_id text := get_user_linked_id();
+  v_prop record;
+  v_mentor record;
+  v_mentee record;
+  v_subject text;
+  v_body text;
+  v_admin record;
+  v_sent int := 0;
+BEGIN
+  IF v_role NOT IN ('admin', 'mentor') THEN
+    RETURN json_build_object('ok', false, 'error', 'access denied');
+  END IF;
+
+  SELECT * INTO v_prop FROM public.match_proposals WHERE id = p_proposal_id;
+  IF NOT FOUND THEN
+    RETURN json_build_object('ok', false, 'error', 'proposal not found');
+  END IF;
+
+  -- 멘토 본인만 자기 제안에 대해 호출할 수 있다 (admin 은 모두 가능).
+  IF v_role = 'mentor' AND v_prop.mentor_id <> COALESCE(v_linked_id, '') THEN
+    RETURN json_build_object('ok', false, 'error', 'not your proposal');
+  END IF;
+
+  SELECT * INTO v_mentor FROM public.mentors WHERE id = v_prop.mentor_id;
+  SELECT * INTO v_mentee FROM public.mentees WHERE id = v_prop.mentee_id;
+
+  v_subject := '[멘토링허브] 매칭 거절 알림';
+  v_body :=
+    '멘토(' || COALESCE(v_mentor.name, v_prop.mentor_id) || ')가 매칭 제안을 거절했습니다.' || E'\n\n' ||
+    '멘티: ' || COALESCE(v_mentee.name, v_prop.mentee_id) || E'\n' ||
+    '제안 ID: ' || p_proposal_id || E'\n' ||
+    '처리 시각: ' || to_char(now(), 'YYYY-MM-DD HH24:MI') || E'\n\n' ||
+    '관리자 화면에서 재배정을 진행해 주세요.';
+
+  -- 활성 관리자 계정 모두에게 큐잉
+  FOR v_admin IN
+    SELECT DISTINCT lower(u.email) AS email
+    FROM public.users u
+    WHERE u.role = 'admin'
+      AND COALESCE(u.email, '') <> ''
+  LOOP
+    INSERT INTO public.email_queue (to_email, subject, body)
+    VALUES (v_admin.email, v_subject, v_body);
+    v_sent := v_sent + 1;
+  END LOOP;
+
+  RETURN json_build_object('ok', true, 'queued', v_sent);
+END;
+$$;
+
+-- ═══════════════════════════════════════════════════════
+-- get_email_queue_stats()
+-- ═══════════════════════════════════════════════════════
+-- 관리자 전용. email_queue 테이블은 authenticated 에게 REVOKE 되어 있으므로
+-- 대시보드에서 현황을 보려면 반드시 이 RPC 를 통해야 한다.
+CREATE OR REPLACE FUNCTION get_email_queue_stats()
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER STABLE AS $$
+DECLARE
+  v_role text := get_user_role();
+  v_pending int := 0;
+  v_sent int := 0;
+  v_failed int := 0;
+  v_total int := 0;
+  v_recent timestamptz;
+BEGIN
+  IF v_role <> 'admin' THEN
+    RETURN json_build_object('ok', false, 'error', 'admin only');
+  END IF;
+
+  SELECT
+    COUNT(*) FILTER (WHERE status = '대기'),
+    COUNT(*) FILTER (WHERE status = '발송완료'),
+    COUNT(*) FILTER (WHERE status = '실패'),
+    COUNT(*),
+    MAX(created_at)
+  INTO v_pending, v_sent, v_failed, v_total, v_recent
+  FROM public.email_queue;
+
+  RETURN json_build_object(
+    'ok', true,
+    'pending', v_pending,
+    'sent', v_sent,
+    'failed', v_failed,
+    'total', v_total,
+    'lastCreatedAt', v_recent
+  );
 END;
 $$;
 
@@ -819,49 +935,134 @@ BEGIN
             is_deleted = CASE WHEN v_updates ? 'is_deleted' THEN COALESCE(NULLIF(v_updates->>'is_deleted', '')::boolean, is_deleted) ELSE is_deleted END
           WHERE id = v_id;
         WHEN 'slots' THEN
-          IF NOT (
-            v_role = 'admin'
-            OR EXISTS (
-              SELECT 1
-              FROM public.slots sl
-              WHERE sl.id = v_id
-                AND v_role = 'mentor'
-                AND sl.mentor_id = v_linked_id
-            )
-          ) THEN
-            RAISE EXCEPTION 'Only the owning mentor can update slots';
-          END IF;
-          UPDATE public.slots
-          SET
-            date = CASE WHEN v_updates ? 'date' THEN COALESCE(v_updates->>'date', '') ELSE date END,
-            time = CASE WHEN v_updates ? 'time' THEN COALESCE(v_updates->>'time', '') ELSE time END,
-            location = CASE WHEN v_updates ? 'location' THEN COALESCE(v_updates->>'location', '') ELSE location END,
-            status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', status) ELSE status END,
-            session_id = CASE WHEN v_updates ? 'session_id' THEN COALESCE(v_updates->>'session_id', '') ELSE session_id END
-          WHERE id = v_id;
+          -- 기본: 관리자 또는 해당 슬롯을 소유한 멘토만 전체 필드 수정 가능.
+          -- 예외: 멘티는 본인 세션이 연결된 슬롯을 '해제(available, session_id=\"\")'로만 되돌릴 수 있음.
+          DECLARE
+            v_is_owner_mentor boolean;
+            v_is_mentee_release boolean;
+          BEGIN
+            v_is_owner_mentor := (
+              v_role = 'mentor'
+              AND EXISTS (
+                SELECT 1 FROM public.slots sl
+                WHERE sl.id = v_id AND sl.mentor_id = v_linked_id
+              )
+            );
+            v_is_mentee_release := (
+              v_role = 'mentee'
+              AND EXISTS (
+                SELECT 1 FROM public.sessions s
+                WHERE s.slot_id = v_id AND s.mentee_id = v_linked_id
+              )
+            );
+
+            IF NOT (v_role = 'admin' OR v_is_owner_mentor OR v_is_mentee_release) THEN
+              RAISE EXCEPTION 'Only the owning mentor can update slots';
+            END IF;
+
+            IF v_is_mentee_release AND NOT v_is_owner_mentor AND v_role <> 'admin' THEN
+              -- 멘티는 date/time/location 변경 금지
+              IF v_updates ?| ARRAY['date','time','location'] THEN
+                RAISE EXCEPTION 'Mentee cannot change slot schedule/location';
+              END IF;
+              -- 해제 이외의 status 금지 (available 외는 불허)
+              IF v_updates ? 'status' AND COALESCE(v_updates->>'status', '') <> 'available' THEN
+                RAISE EXCEPTION 'Mentee can only release a slot to available';
+              END IF;
+              -- session_id 는 비우는 용도만 허용
+              IF v_updates ? 'session_id' AND COALESCE(v_updates->>'session_id', '') <> '' THEN
+                RAISE EXCEPTION 'Mentee can only clear session_id on a slot';
+              END IF;
+            END IF;
+
+            UPDATE public.slots
+            SET
+              date = CASE WHEN v_updates ? 'date' AND (v_role = 'admin' OR v_is_owner_mentor) THEN COALESCE(v_updates->>'date', '') ELSE date END,
+              time = CASE WHEN v_updates ? 'time' AND (v_role = 'admin' OR v_is_owner_mentor) THEN COALESCE(v_updates->>'time', '') ELSE time END,
+              location = CASE WHEN v_updates ? 'location' AND (v_role = 'admin' OR v_is_owner_mentor) THEN COALESCE(v_updates->>'location', '') ELSE location END,
+              status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', status) ELSE status END,
+              session_id = CASE WHEN v_updates ? 'session_id' THEN COALESCE(v_updates->>'session_id', '') ELSE session_id END
+            WHERE id = v_id;
+          END;
         WHEN 'sessions' THEN
-          IF NOT (
-            v_role = 'admin'
-            OR EXISTS (
-              SELECT 1
-              FROM public.sessions s
-              WHERE s.id = v_id
-                AND (
-                  (v_role = 'mentor' AND s.mentor_id = v_linked_id)
-                  OR (v_role = 'mentee' AND s.mentee_id = v_linked_id)
-                )
-            )
-          ) THEN
-            RAISE EXCEPTION 'Only related users can update sessions';
-          END IF;
-          UPDATE public.sessions
-          SET
-            status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', status) ELSE status END,
-            topic = CASE WHEN v_updates ? 'topic' THEN COALESCE(v_updates->>'topic', '') ELSE topic END,
-            location = CASE WHEN v_updates ? 'location' THEN COALESCE(v_updates->>'location', '') ELSE location END,
-            has_journal = CASE WHEN v_updates ? 'has_journal' THEN COALESCE(NULLIF(v_updates->>'has_journal', '')::boolean, has_journal) ELSE has_journal END,
-            has_feedback = CASE WHEN v_updates ? 'has_feedback' THEN COALESCE(NULLIF(v_updates->>'has_feedback', '')::boolean, has_feedback) ELSE has_feedback END
-          WHERE id = v_id;
+          -- 서버 측에서 필드별/역할별/상태전이 제한을 강제한다.
+          DECLARE
+            v_cur_sess record;
+            v_is_own_mentor boolean;
+            v_is_own_mentee boolean;
+            v_new_status text;
+          BEGIN
+            SELECT * INTO v_cur_sess FROM public.sessions WHERE id = v_id FOR UPDATE;
+            IF NOT FOUND THEN
+              RAISE EXCEPTION 'session not found: %', v_id;
+            END IF;
+            v_is_own_mentor := (v_role = 'mentor' AND v_cur_sess.mentor_id = v_linked_id);
+            v_is_own_mentee := (v_role = 'mentee' AND v_cur_sess.mentee_id = v_linked_id);
+
+            IF NOT (v_role = 'admin' OR v_is_own_mentor OR v_is_own_mentee) THEN
+              RAISE EXCEPTION 'Only related users can update sessions';
+            END IF;
+
+            IF v_role <> 'admin' THEN
+              -- 비관리자는 topic/location 수정 불가
+              IF v_updates ? 'topic' OR v_updates ? 'location' THEN
+                RAISE EXCEPTION 'Only admins can modify session topic/location';
+              END IF;
+              -- has_journal 은 담당 멘토만
+              IF v_updates ? 'has_journal' AND NOT v_is_own_mentor THEN
+                RAISE EXCEPTION 'Only the owning mentor can toggle has_journal';
+              END IF;
+              -- has_feedback 은 담당 멘티만
+              IF v_updates ? 'has_feedback' AND NOT v_is_own_mentee THEN
+                RAISE EXCEPTION 'Only the owning mentee can toggle has_feedback';
+              END IF;
+              -- 상태 전이 검증
+              IF v_updates ? 'status' THEN
+                v_new_status := COALESCE(v_updates->>'status', v_cur_sess.status);
+                IF v_is_own_mentor THEN
+                  IF NOT (
+                    (v_cur_sess.status = 'pending'  AND v_new_status IN ('upcoming','rejected','cancelled'))
+                    OR (v_cur_sess.status = 'upcoming' AND v_new_status IN ('cancelled','completed'))
+                    OR v_new_status = v_cur_sess.status
+                  ) THEN
+                    RAISE EXCEPTION 'Invalid session transition for mentor: % -> %',
+                      v_cur_sess.status, v_new_status;
+                  END IF;
+                ELSIF v_is_own_mentee THEN
+                  IF NOT (
+                    (v_cur_sess.status IN ('pending','upcoming') AND v_new_status = 'cancelled')
+                    OR v_new_status = v_cur_sess.status
+                  ) THEN
+                    RAISE EXCEPTION 'Invalid session transition for mentee: % -> %',
+                      v_cur_sess.status, v_new_status;
+                  END IF;
+                END IF;
+              END IF;
+            END IF;
+
+            UPDATE public.sessions
+            SET
+              status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', status) ELSE status END,
+              topic = CASE
+                WHEN v_role = 'admin' AND v_updates ? 'topic' THEN COALESCE(v_updates->>'topic', '')
+                ELSE topic
+              END,
+              location = CASE
+                WHEN v_role = 'admin' AND v_updates ? 'location' THEN COALESCE(v_updates->>'location', '')
+                ELSE location
+              END,
+              has_journal = CASE
+                WHEN v_updates ? 'has_journal' AND (v_role = 'admin' OR v_is_own_mentor)
+                  THEN COALESCE(NULLIF(v_updates->>'has_journal', '')::boolean, has_journal)
+                ELSE has_journal
+              END,
+              has_feedback = CASE
+                WHEN v_updates ? 'has_feedback' AND (v_role = 'admin' OR v_is_own_mentee)
+                  THEN COALESCE(NULLIF(v_updates->>'has_feedback', '')::boolean, has_feedback)
+                ELSE has_feedback
+              END
+            WHERE id = v_id;
+          END;
         WHEN 'journals' THEN
           IF NOT (
             v_role = 'admin'
@@ -892,28 +1093,50 @@ BEGIN
             submitted_at = CASE WHEN v_updates ? 'submitted_at' THEN COALESCE(NULLIF(v_updates->>'submitted_at', '')::timestamptz, submitted_at) ELSE submitted_at END
           WHERE id = v_id;
         WHEN 'requests' THEN
-          IF NOT (
-            v_role = 'admin'
-            OR EXISTS (
-              SELECT 1
-              FROM public.requests r
-              WHERE r.id = v_id
-                AND (
-                  r.author_id = v_linked_id
-                  OR r.receiver_id = v_linked_id
-                )
-            )
-          ) THEN
-            RAISE EXCEPTION 'Only related users can update requests';
-          END IF;
-          UPDATE public.requests
-          SET
-            status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', '') ELSE status END,
-            reply = CASE WHEN v_updates ? 'reply' THEN COALESCE(v_updates->>'reply', '') ELSE reply END,
-            reply_read = CASE WHEN v_updates ? 'reply_read' THEN COALESCE(NULLIF(v_updates->>'reply_read', '')::boolean, reply_read) ELSE reply_read END,
-            title = CASE WHEN v_updates ? 'title' THEN COALESCE(v_updates->>'title', '') ELSE title END,
-            content = CASE WHEN v_updates ? 'content' THEN COALESCE(v_updates->>'content', '') ELSE content END
-          WHERE id = v_id;
+          -- 관리자: reply/status/title/content/reply_read 전부 수정 가능
+          -- 비관리자(관련 사용자): reply_read = true 로만 읽음 처리 가능
+          DECLARE
+            v_cur_req record;
+            v_is_related boolean;
+          BEGIN
+            SELECT * INTO v_cur_req FROM public.requests WHERE id = v_id;
+            IF NOT FOUND THEN
+              RAISE EXCEPTION 'request not found: %', v_id;
+            END IF;
+
+            IF v_role = 'admin' THEN
+              UPDATE public.requests
+              SET
+                status = CASE WHEN v_updates ? 'status' THEN COALESCE(v_updates->>'status', '') ELSE status END,
+                reply = CASE WHEN v_updates ? 'reply' THEN COALESCE(v_updates->>'reply', '') ELSE reply END,
+                reply_read = CASE WHEN v_updates ? 'reply_read' THEN COALESCE(NULLIF(v_updates->>'reply_read', '')::boolean, reply_read) ELSE reply_read END,
+                title = CASE WHEN v_updates ? 'title' THEN COALESCE(v_updates->>'title', '') ELSE title END,
+                content = CASE WHEN v_updates ? 'content' THEN COALESCE(v_updates->>'content', '') ELSE content END
+              WHERE id = v_id;
+            ELSE
+              v_is_related := (
+                v_cur_req.author_id = v_linked_id
+                OR v_cur_req.receiver_id = v_linked_id
+              );
+              IF NOT v_is_related THEN
+                RAISE EXCEPTION 'Only related users can update requests';
+              END IF;
+              -- reply_read 외 다른 필드는 수정 금지
+              IF v_updates ?| ARRAY['status','reply','title','content'] THEN
+                RAISE EXCEPTION 'Only admins can modify status/reply/title/content of a request';
+              END IF;
+              -- reply_read 는 반드시 true 로만 설정 가능
+              IF NOT (v_updates ? 'reply_read') THEN
+                RAISE EXCEPTION 'No update payload (only reply_read = true is allowed)';
+              END IF;
+              IF COALESCE(NULLIF(v_updates->>'reply_read', '')::boolean, false) IS DISTINCT FROM TRUE THEN
+                RAISE EXCEPTION 'reply_read can only be set to true by non-admin users';
+              END IF;
+              UPDATE public.requests
+              SET reply_read = true
+              WHERE id = v_id;
+            END IF;
+          END;
         WHEN 'notices' THEN
           IF v_role <> 'admin' THEN
             RAISE EXCEPTION 'Only admins can update notices';
@@ -1026,11 +1249,15 @@ REVOKE ALL ON FUNCTION public.book_session(text, text, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_app_bundle() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.apply_batch_operations(jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.send_match_email(text, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.notify_match_decline(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_email_queue_stats() FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.get_my_account() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.book_session(text, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_app_bundle() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_batch_operations(jsonb) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.send_match_email(text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.notify_match_decline(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_email_queue_stats() TO authenticated;
 
 SET check_function_bodies = on;

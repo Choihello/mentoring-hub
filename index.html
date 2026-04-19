@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.6.0-20260418">
+<meta name="version" content="2.6.1-20260419">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -1220,7 +1220,7 @@ tr:hover td { background: var(--bg-2); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(220,38,38,0.08);color:var(--danger);border:1px solid rgba(220,38,38,0.25)">🚪 로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.05em">v2.6.0 · 2026-04-18</div>
+        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.05em">v2.6.1 · 2026-04-19</div>
       </div>
     </aside>
 
@@ -3742,46 +3742,27 @@ function getMenteeEmailAddress(menteeId) {
 
 async function sendHubEmail({ to, subject, body, type = 'general' }) {
   if (!to || !hasSupabaseIntegration() || isDemoMode) return;
-  const supabaseUrl = (DB.settings.supabaseUrl || '').replace(/\/+$/, '');
-  const supabaseKey = DB.settings.supabaseAnonKey || '';
-  if (!supabaseUrl || !supabaseKey) return;
-  const edgeUrl = `${supabaseUrl}/functions/v1/send-email`;
-  const edgeHeaders = {
-    'Authorization': `Bearer ${supabaseKey}`,
-    'apikey': supabaseKey,
-    'Content-Type': 'application/json; charset=utf-8'
-  };
+  // 브라우저에서 Edge Function을 직접 호출하거나 anon key를 수동으로 헤더에 실어
+  // 메일을 바로 전송하는 경로는 제거했다. 모든 발송은 반드시 서버측 큐를 통해 이뤄진다:
+  //   1) send_match_email RPC 로 email_queue 에 적재 (권한/유효성 서버 검증)
+  //   2) (선택) send-email Edge Function 의 'process' 모드를 supabase-js 로 호출하여
+  //      대기 큐를 즉시 비우도록 힌트만 전달. Edge Function 이 없으면 조용히 무시된다.
   try {
-    const res = await fetch(edgeUrl, {
-      method: 'POST',
-      headers: edgeHeaders,
-      body: JSON.stringify({ mode: 'direct', to, subject, emailBody: body })
+    const sb = getSupabase();
+    const { error: rpcErr } = await sb.rpc('send_match_email', {
+      p_to: to, p_subject: subject, p_body: body
     });
-    // 401/403 등 비정상 응답도 처리
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data?.success) {
-      console.log(`[이메일 발송 ✅] ${type} → ${to} (messageId: ${data.messageId})`);
-    } else {
-      console.warn(`[이메일 발송 ⚠️] ${type} → ${to}: ${data?.error}`);
-    }
-  } catch(e) {
-    console.warn(`[이메일 직접발송 실패] ${type} → ${to}: ${e.message} — 큐 폴백 시도`);
+    if (rpcErr) throw rpcErr;
+    console.log(`[이메일 큐 등록 ✅] ${type} → ${to}`);
+    // 큐 처리 힌트 (실패/부재해도 무방 — 관리자 화면의 '발송 처리' 버튼으로도 가능)
     try {
-      const sb = getSupabase();
-      await sb.rpc('send_match_email', { p_to: to, p_subject: subject, p_body: body });
-      console.log(`[이메일 큐 등록] ${type} → ${to}`);
-      // 큐 등록 후 즉시 처리 시도
-      fetch(edgeUrl, {
-        method: 'POST',
-        headers: edgeHeaders,
-        body: JSON.stringify({ mode: 'process' })
-      }).then(r => {
-        if (r.ok) return r.json().then(d => console.log(`[큐 처리 완료] sent: ${d.sent}`));
-      }).catch(() => {});
-    } catch(e2) {
-      console.warn(`[이메일 발송 실패] ${type} → ${to}:`, e.message, e2.message);
-    }
+      const resp = await sb.functions.invoke('send-email', { body: { mode: 'process' } });
+      if (resp && !resp.error && resp.data) {
+        console.log(`[큐 처리 nudge] sent: ${resp.data.sent || 0}, failed: ${resp.data.failed || 0}`);
+      }
+    } catch(_) { /* Edge Function 이 없거나 차단된 경우는 무시 */ }
+  } catch(e) {
+    console.warn(`[이메일 큐 등록 실패] ${type} → ${to}:`, e?.message || e);
   }
 }
 
@@ -5241,15 +5222,25 @@ async function sendMatchEmail(type, proposal) {
         body: `안녕하세요 ${mentee?.name} 멘티님,\n\n${mentor?.name} 멘토님과의 멘토링 매칭이 확정되었습니다.\n\n멘토링 허브에서 일정을 확인해주세요:\n${hubUrl}\n\n감사합니다.`
       });
     } else if (type === 'rejected') {
-      // 담당자에게 거절 알림 (admin users 테이블에서 이메일 조회)
-      const sb = getSupabase();
-      const { data: adminUsers } = await sb.from('users').select('email').eq('role', 'admin');
-      if (adminUsers?.length) {
-        const mentee = _idx.mentee[proposal.menteeId];
-        emails.push({
-          to: adminUsers[0].email, subject: '[멘토링 허브] 멘토가 매칭을 거절했습니다',
-          body: `멘토 ${mentor?.name}님이 멘티 ${mentee?.name}님과의 매칭을 거절했습니다.\n\n재매칭이 필요합니다.\n\n멘토링 허브:\n${hubUrl}`
+      // 담당자에게 거절 알림 — 관리자 이메일은 서버 측 SECURITY DEFINER RPC 가 조회/큐잉한다.
+      // (RLS 상 멘토 세션에서는 admin users 를 직접 select 할 수 없음)
+      try {
+        const sb = getSupabase();
+        const { data: rpcResp, error: rpcErr } = await sb.rpc('notify_match_decline', {
+          p_proposal_id: proposal.id
         });
+        if (rpcErr) throw rpcErr;
+        if (rpcResp && rpcResp.ok === false) {
+          console.warn('[매칭 거절 알림 서버 처리 실패]', rpcResp.error);
+        } else {
+          console.log(`[매칭 거절 알림 큐 등록] queued=${rpcResp?.queued ?? 0}`);
+          // 큐 처리 힌트 (Edge Function 이 존재하면 즉시 송신)
+          try {
+            await sb.functions.invoke('send-email', { body: { mode: 'process' } });
+          } catch(_) {}
+        }
+      } catch(e) {
+        console.warn('[매칭 거절 알림 실패]', e?.message || e);
       }
     }
 
@@ -5276,17 +5267,21 @@ async function loadEmailQueueStats() {
     return;
   }
   try {
+    // email_queue 테이블은 authenticated 에게 REVOKE 되어 있어 직접 SELECT 가 불가.
+    // 관리자 전용 SECURITY DEFINER RPC 로 집계만 받는다.
     const sb = getSupabase();
-    const { data, error } = await sb.from('email_queue').select('status, created_at');
+    const { data, error } = await sb.rpc('get_email_queue_stats');
     if (error) throw error;
-    const pending = data.filter(r => r.status === '대기').length;
-    const sending = data.filter(r => r.status === '발송중').length;
-    const sent = data.filter(r => r.status === '발송완료').length;
-    const failed = data.filter(r => r.status === '실패').length;
-    const total = data.length;
+    if (!data || data.ok === false) {
+      el.innerHTML = `<span class="text-muted" style="font-size:12px">현황 조회 실패: ${data?.error || '권한 없음'}</span>`;
+      return;
+    }
+    const pending = data.pending || 0;
+    const sent = data.sent || 0;
+    const failed = data.failed || 0;
+    const total = data.total || 0;
     el.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:13px">
       <span class="badge badge-warn">대기 ${pending}</span>
-      <span class="badge badge-blue">발송중 ${sending}</span>
       <span class="badge badge-green">완료 ${sent}</span>
       ${failed ? `<span class="badge badge-danger">실패 ${failed}</span>` : ''}
       <span class="text-muted" style="font-size:11px;align-self:center">총 ${total}건</span>
