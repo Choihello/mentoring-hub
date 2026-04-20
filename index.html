@@ -369,19 +369,19 @@ a:hover { color: var(--accent); }
   will-change: transform;
 }
 
-/* Outer halo */
+/* Outer halo — face-on, stays a perfect circle */
 .sat-glow {
   position: absolute;
   top: 50%; left: 50%;
   width: 220px; height: 220px;
   margin: -110px 0 0 -110px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(74, 222, 128, 0.28) 0%, rgba(74, 222, 128, 0.10) 45%, transparent 72%);
+  background: radial-gradient(circle, rgba(74, 222, 128, 0.30) 0%, rgba(74, 222, 128, 0.10) 45%, transparent 72%);
   filter: blur(6px);
   pointer-events: none;
 }
 
-/* Glossy green planet */
+/* Glossy green planet — face-on sphere (no parent rotation) */
 .sat-planet {
   position: absolute;
   top: 50%; left: 50%;
@@ -389,25 +389,27 @@ a:hover { color: var(--accent); }
   margin: -70px 0 0 -70px;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 22%),
-    radial-gradient(circle at 35% 35%, #86efac 0%, #4ade80 28%, #22c55e 52%, #15803d 82%, #064e3b 100%);
+    /* Top-left specular highlight */
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.70) 0%, rgba(255, 255, 255, 0) 24%),
+    /* Secondary small highlight */
+    radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 10%),
+    /* Main sphere shading */
+    radial-gradient(circle at 38% 35%, #86efac 0%, #4ade80 22%, #22c55e 48%, #16a34a 72%, #065f46 100%);
   box-shadow:
-    inset -10px -14px 28px rgba(6, 78, 59, 0.55),
-    inset 6px 6px 18px rgba(255, 255, 255, 0.22),
-    0 0 28px rgba(34, 197, 94, 0.35);
-  border: 1px solid rgba(22, 163, 74, 0.45);
-  position: absolute;
+    /* Terminator / dark side shading */
+    inset -18px -22px 40px rgba(6, 78, 59, 0.70),
+    /* Bright side glow */
+    inset 10px 8px 22px rgba(220, 252, 231, 0.30),
+    /* Outer atmospheric glow */
+    0 0 32px rgba(34, 197, 94, 0.38);
+  border: 1px solid rgba(22, 163, 74, 0.50);
 }
-.sat-planet::after {
-  /* Subtle equator gloss band */
+.sat-planet::before {
+  /* Rim-light (right side) */
   content: '';
-  position: absolute;
-  left: 6%; right: 6%;
-  top: 48%; height: 6px;
-  background: linear-gradient(90deg, transparent, rgba(187, 247, 208, 0.55), transparent);
+  position: absolute; inset: 0;
   border-radius: 50%;
-  transform: rotate(-8deg);
-  filter: blur(1.5px);
+  box-shadow: inset -2px 0 6px rgba(167, 243, 208, 0.35);
   pointer-events: none;
 }
 
@@ -483,10 +485,6 @@ a:hover { color: var(--accent); }
   to   { transform: var(--from) rotateZ(360deg); }
 }
 
-/* Circuit trace overlay (SVG colored via currentColor) */
-.sat-grid path.circuit-line { fill: none; stroke: rgba(22, 163, 74, 0.35); stroke-width: 1; }
-.sat-grid circle.circuit-node { fill: #22c55e; opacity: 0.85; }
-.sat-grid circle.circuit-node.cool { fill: #60a5fa; opacity: 0.75; }
 
 @media (max-height: 760px) {
   .lv3-satellite { width: min(280px, 50vh); margin-bottom: -20px; }
@@ -1099,13 +1097,12 @@ tr:hover td { background: var(--bg-2); }
   </div>
   <div class="lv3-corner tr mono">v2.6.3 · KST</div>
   <div class="lv3-corner bl mono">© 2026 광운대학교 NCI창업패키지사업단</div>
-  <div class="lv3-corner br mono"><a href="mailto:neo@kw.ac.kr">도움말 · 문의</a></div>
 
   <div class="lv3-center">
     <!-- Interactive Planet Logo (v2.6.3) -->
     <div class="lv3-satellite">
       <div class="sat-wrap" id="sat-wrap">
-        <!-- Circuit-trace backdrop -->
+        <!-- Soft radial fade backdrop (circuit traces removed) -->
         <svg class="sat-grid" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
           <defs>
             <radialGradient id="sat-fade" cx="50%" cy="50%" r="50%">
@@ -1115,45 +1112,16 @@ tr:hover td { background: var(--bg-2); }
             </radialGradient>
           </defs>
           <rect width="400" height="400" fill="url(#sat-fade)"/>
-          <!-- Left-side traces -->
-          <path class="circuit-line" d="M 8 90 L 78 90 L 102 114 L 142 114"/>
-          <path class="circuit-line" d="M 8 160 L 56 160 L 80 184 L 132 184"/>
-          <path class="circuit-line" d="M 8 240 L 48 240 L 72 264 L 128 264"/>
-          <path class="circuit-line" d="M 8 310 L 66 310 L 92 284 L 130 284"/>
-          <!-- Right-side traces (mirrored) -->
-          <path class="circuit-line" d="M 392 90  L 322 90  L 298 114 L 258 114"/>
-          <path class="circuit-line" d="M 392 160 L 344 160 L 320 184 L 268 184"/>
-          <path class="circuit-line" d="M 392 240 L 352 240 L 328 264 L 272 264"/>
-          <path class="circuit-line" d="M 392 310 L 334 310 L 308 284 L 270 284"/>
-          <!-- Nodes -->
-          <circle class="circuit-node"      cx="8"   cy="90"  r="3"/>
-          <circle class="circuit-node cool" cx="8"   cy="160" r="3"/>
-          <circle class="circuit-node"      cx="8"   cy="240" r="3"/>
-          <circle class="circuit-node cool" cx="8"   cy="310" r="3"/>
-          <circle class="circuit-node"      cx="392" cy="90"  r="3"/>
-          <circle class="circuit-node cool" cx="392" cy="160" r="3"/>
-          <circle class="circuit-node"      cx="392" cy="240" r="3"/>
-          <circle class="circuit-node cool" cx="392" cy="310" r="3"/>
-          <circle class="circuit-node"      cx="102" cy="114" r="2.5"/>
-          <circle class="circuit-node"      cx="80"  cy="184" r="2.5"/>
-          <circle class="circuit-node"      cx="72"  cy="264" r="2.5"/>
-          <circle class="circuit-node cool" cx="92"  cy="284" r="2.5"/>
-          <circle class="circuit-node"      cx="298" cy="114" r="2.5"/>
-          <circle class="circuit-node"      cx="320" cy="184" r="2.5"/>
-          <circle class="circuit-node"      cx="328" cy="264" r="2.5"/>
-          <circle class="circuit-node cool" cx="308" cy="284" r="2.5"/>
         </svg>
         <div class="sat-scene">
+          <!-- Planet + halo stay face-on (outside rotated object) -->
+          <div class="sat-glow"></div>
+          <div class="sat-planet"></div>
+          <!-- Orbit rings / satellites tilt with mouse -->
           <div class="sat-object" id="sat-object" style="transform:rotateX(-10deg) rotateY(0deg)">
-            <!-- Outer halo -->
-            <div class="sat-glow"></div>
-            <!-- Orbit rings -->
             <div class="sat-ring r-a"></div>
             <div class="sat-ring r-b"></div>
             <div class="sat-ring r-c"></div>
-            <!-- Glossy green planet -->
-            <div class="sat-planet"></div>
-            <!-- Orbiting amber satellites -->
             <div class="sat-orbiter o1"><div class="dot"></div></div>
             <div class="sat-orbiter o2"><div class="dot"></div></div>
             <div class="sat-orbiter o3"><div class="dot"></div></div>
