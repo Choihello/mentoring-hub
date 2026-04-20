@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.6.3-20260420">
+<meta name="version" content="2.6.4-20260420">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
-  /* ── Light theme (Mentoring Hub v2.6.3 — light-only) ── */
+  /* ── Light theme (Mentoring Hub v2.6.4 — light-only) ── */
   --bg: #f7f9fb;            /* page background — cool neutral */
   --bg-1: #ffffff;          /* card / primary surface */
   --bg-2: #f2f5f8;          /* slight-raised surface / hover bg */
@@ -339,7 +339,7 @@ a:hover { color: var(--accent); }
   text-transform: uppercase;
 }
 
-/* ====== Interactive Planet (v2.6.3) — glossy green sphere + amber orbit dots + circuit lines ====== */
+/* ====== Interactive Planet (v2.6.4) — glossy green sphere + amber orbit dots + circuit lines ====== */
 .sat-wrap {
   position: relative;
   width: 100%; height: 100%;
@@ -1095,11 +1095,11 @@ tr:hover td { background: var(--bg-2); }
     <span class="lv3-logo-mark">M</span>
     <span>멘토링허브</span>
   </div>
-  <div class="lv3-corner tr mono">v2.6.3 · KST</div>
+  <div class="lv3-corner tr mono">v2.6.4 · KST</div>
   <div class="lv3-corner bl mono">© 2026 광운대학교 NCI창업패키지사업단</div>
 
   <div class="lv3-center">
-    <!-- Interactive Planet Logo (v2.6.3) -->
+    <!-- Interactive Planet Logo (v2.6.4) -->
     <div class="lv3-satellite">
       <div class="sat-wrap" id="sat-wrap">
         <!-- Soft radial fade backdrop (circuit traces removed) -->
@@ -1230,7 +1230,7 @@ tr:hover td { background: var(--bg-2); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.10);color:var(--danger);border:1px solid rgba(239,68,68,0.30)"><span class="material-symbols-outlined" style="font-size:16px">logout</span>로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.6.3 · 2026-04-20</div>
+        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.6.4 · 2026-04-20</div>
       </div>
     </aside>
 
@@ -2425,6 +2425,19 @@ function enterAs(role, linkedId, googleName) {
   buildMobileNav();
   if (hasSupabaseIntegration() && !isDemoMode) loadData();
   startRealtime();
+
+  // v2.6.4: 로그인 후 대기 중인 이메일 큐를 1회 자동 flush (Edge Function 'process' 모드)
+  if (hasSupabaseIntegration() && !isDemoMode) {
+    setTimeout(async () => {
+      try {
+        const sb = getSupabase();
+        const { data, error } = await sb.functions.invoke('send-email', { body: { mode: 'process' } });
+        if (!error && data && (data.sent || data.processed)) {
+          console.log('[\uc774\uba54\uc77c \ud050 \uc790\ub3d9 flush] sent=' + (data.sent||0) + ' failed=' + (data.failed||0));
+        }
+      } catch(_) { /* Edge Function 부재/차단 시 조용히 무시 */ }
+    }, 1500);
+  }
 }
 
 function logout() {
@@ -2451,8 +2464,12 @@ async function fullLogout() {
 }
 
 let _autoRefreshTimer = null;
+let _backupPollTimer = null;
 let _realtimeChannel = null;
-const AUTO_REFRESH_INTERVAL = 60000; // fallback 폴링 (Realtime 실패 시)
+let _realtimeStatus = 'idle'; // 'idle' | 'connected' | 'failed'
+const AUTO_REFRESH_INTERVAL = 30000; // fallback 폴링 (Realtime 실패 시) — 60s → 30s
+const BACKUP_POLL_INTERVAL  = 45000; // Realtime 성공 시에도 45s 백업 폴링 (v2.6.4 이중화)
+const RT_DEBOUNCE_MS        = 250;   // 500ms → 250ms
 
 function startRealtime() {
   stopRealtime();
@@ -2460,7 +2477,7 @@ function startRealtime() {
   if (!sb) return;
 
   // ─── Supabase Realtime 구독 ───
-  _realtimeChannel = sb.channel('db-realtime')
+  _realtimeChannel = sb.channel('db-realtime', { config: { broadcast: { ack: true } } })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions' }, _handleRealtimeChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'slots' }, _handleRealtimeChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'requests' }, _handleRealtimeChange)
@@ -2473,27 +2490,62 @@ function startRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'feedbacks' }, _handleRealtimeChange)
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        console.log('Realtime 구독 성공');
-      } else if (status === 'CHANNEL_ERROR') {
-        console.warn('Realtime 실패 — 폴링 fallback 활성화');
+        _realtimeStatus = 'connected';
+        console.log('[Realtime] 구독 성공 — 백업 폴링 45s 병행');
+        // Realtime 성공해도 45초 백업 폴링 유지 (RLS·재연결·웹소켓 이슈 대비)
+        if (_backupPollTimer) clearInterval(_backupPollTimer);
+        _backupPollTimer = setInterval(() => _silentRefresh(), BACKUP_POLL_INTERVAL);
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        _realtimeStatus = 'failed';
+        console.warn('[Realtime] 상태 ' + status + ' — 30s 폴링 fallback 활성화');
+        if (_autoRefreshTimer) clearInterval(_autoRefreshTimer);
         _autoRefreshTimer = setInterval(() => _silentRefresh(), AUTO_REFRESH_INTERVAL);
       }
     });
+
+  // ─── 페이지 포커스·가시성 전환 시 즉시 새로고침 ───
+  _attachFocusRefresh();
 }
 
 // Realtime 변경 수신 시 데이터 재로드 (디바운스)
 let _rtDebounce = null;
-function _handleRealtimeChange(payload) {
+function _handleRealtimeChange(_payload) {
   clearTimeout(_rtDebounce);
-  _rtDebounce = setTimeout(() => _silentRefresh(), 500);
+  _rtDebounce = setTimeout(() => _silentRefresh(), RT_DEBOUNCE_MS);
+}
+
+// v2.6.4: 탭 재활성화 / 창 포커스 시 즉시 동기화 (쓰로틀 10s)
+let _lastFocusRefresh = 0;
+function _focusRefreshHandler() {
+  if (document.visibilityState === 'hidden') return;
+  const now = Date.now();
+  if (now - _lastFocusRefresh < 10000) return;
+  _lastFocusRefresh = now;
+  _silentRefresh();
+}
+let _focusAttached = false;
+function _attachFocusRefresh() {
+  if (_focusAttached) return;
+  _focusAttached = true;
+  window.addEventListener('focus', _focusRefreshHandler);
+  document.addEventListener('visibilitychange', _focusRefreshHandler);
+}
+function _detachFocusRefresh() {
+  if (!_focusAttached) return;
+  _focusAttached = false;
+  window.removeEventListener('focus', _focusRefreshHandler);
+  document.removeEventListener('visibilitychange', _focusRefreshHandler);
 }
 
 function stopRealtime() {
   if (_autoRefreshTimer) { clearInterval(_autoRefreshTimer); _autoRefreshTimer = null; }
+  if (_backupPollTimer)  { clearInterval(_backupPollTimer);  _backupPollTimer  = null; }
   if (_realtimeChannel) {
     getSupabase()?.removeChannel(_realtimeChannel);
     _realtimeChannel = null;
   }
+  _realtimeStatus = 'idle';
+  _detachFocusRefresh();
   _hideRefreshIndicator();
 }
 
