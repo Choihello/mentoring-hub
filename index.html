@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.6.8-20260422">
+<meta name="version" content="2.6.9-20260422">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
-  /* ── Light theme (Mentoring Hub v2.6.8 — light-only) ── */
+  /* ── Light theme (Mentoring Hub v2.6.9 — light-only) ── */
   --bg: #f7f9fb;            /* page background — cool neutral */
   --bg-1: #ffffff;          /* card / primary surface */
   --bg-2: #f2f5f8;          /* slight-raised surface / hover bg */
@@ -1329,8 +1329,42 @@ tr:hover td { background: var(--bg-2); }
   border: 1px solid var(--accent-light); border-left: 4px solid var(--accent);
   border-radius: var(--radius-sm); padding: 16px 18px; margin-bottom: 12px;
 }
+.confirmed-card:last-child { margin-bottom: 0; }
 .confirmed-card h5 { margin: 0 0 4px; font-size: 15px; color: var(--ink); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 .confirmed-card .meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+
+/* 신청 현황 접이식 (v2.6.9) */
+.match-status-fold {
+  margin-top: 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.match-status-fold[open] { box-shadow: var(--shadow-sm); }
+.match-status-fold-summary {
+  list-style: none; cursor: pointer;
+  padding: 12px 16px;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  user-select: none;
+  font-size: 13px; color: var(--ink-2); font-weight: 500;
+  transition: background 0.15s;
+}
+.match-status-fold-summary:hover { background: var(--bg-2); }
+.match-status-fold-summary::-webkit-details-marker { display: none; }
+.match-status-fold-summary .left { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.match-status-fold-summary .left .icon { color: var(--accent); }
+.match-status-fold-summary .left strong { color: var(--accent); font-weight: 600; }
+.match-status-fold-summary .chev { font-size: 11px; color: var(--muted); transition: transform 0.2s; }
+.match-status-fold[open] .chev { transform: rotate(180deg); }
+.match-status-fold-body {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-1);
+}
+.match-status-fold-body > div:last-child { margin-bottom: 0 !important; }
+.match-status-fold-body .match-banner { margin-bottom: 12px; }
+.match-status-fold-body .match-timeline { margin-bottom: 0; }
 
 /* ── 유틸리티 ── */
 .divider { height: 1px; background: var(--line); margin: 20px 0; }
@@ -1385,7 +1419,7 @@ tr:hover td { background: var(--bg-2); }
     <span class="lv3-logo-mark">M</span>
     <span>멘토링허브</span>
   </div>
-  <div class="lv3-corner tr mono">v2.6.8 · KST</div>
+  <div class="lv3-corner tr mono">v2.6.9 · KST</div>
   <div class="lv3-corner bl mono">© 2026 광운대학교 NCI창업패키지사업단</div>
 
   <div class="lv3-center">
@@ -1526,7 +1560,7 @@ tr:hover td { background: var(--bg-2); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.10);color:var(--danger);border:1px solid rgba(239,68,68,0.30)"><span class="material-symbols-outlined" style="font-size:16px">logout</span>로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.6.8 · 2026-04-22</div>
+        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.6.9 · 2026-04-22</div>
       </div>
     </aside>
 
@@ -5068,7 +5102,7 @@ function renderMenteeMatch() {
   const recent      = myRequests.slice(0, 3);
   const older       = myRequests.slice(3);
 
-  // ── 상단 배너 + 타임라인 ──
+  // ── 신청 현황 배너 + 타임라인 (접이식 내부에서 사용) ──
   const banner = latestReq
     ? `<div class="match-banner">
          <span class="icon material-symbols-outlined">schedule</span>
@@ -5078,16 +5112,10 @@ function renderMenteeMatch() {
          </div>
        </div>
        ${renderMatchTimeline(latestReq)}`
-    : `<div class="match-banner">
-         <span class="icon material-symbols-outlined">handshake</span>
-         <div>
-           <h5>원하는 멘토를 찾아 드릴게요</h5>
-           <p>분야와 가능 일정을 알려 주시면 담당자가 가장 적합한 멘토를 매칭해 제안해 드립니다. 평균 소요 시간은 2~3일입니다.</p>
-         </div>
-       </div>`;
+    : '';
 
   // ── 확정 매칭 카드 ──
-  const confirmedBlock = confirmed.length ? `<div style="margin-bottom:14px">
+  const confirmedBlock = confirmed.length ? `<div class="confirmed-wrap">
     ${confirmed.map(p => {
       const m = _idx.mentor[p.mentorId];
       const safeMentorName = escapeHtml(m?.name || '알 수 없음');
@@ -5206,13 +5234,30 @@ function renderMenteeMatch() {
         </details>` : ''}
     </div>` : '';
 
+  // ── 신청 현황 접이식 (폼 아래로 이동) ──
+  const statusParts = [];
+  if (latestReq)        statusParts.push(banner);
+  if (confirmed.length) statusParts.push(confirmedBlock);
+  const statusFold = statusParts.length ? `
+    <details class="match-status-fold">
+      <summary class="match-status-fold-summary">
+        <span class="left">
+          <span class="material-symbols-outlined mi mi-sm mi-plain icon">info</span>
+          신청 현황
+          ${latestReq ? ` · <strong>${escapeHtml(latestReq.status)}</strong>` : ''}
+          ${confirmed.length ? ` · 확정 매칭 <strong>${confirmed.length}건</strong>` : ''}
+        </span>
+        <span class="chev">▾</span>
+      </summary>
+      <div class="match-status-fold-body">${statusParts.join('')}</div>
+    </details>` : '';
+
   el.innerHTML = `
-    ${banner}
-    ${confirmedBlock}
     <div class="match-shell">
       <div>${formCard}</div>
       ${summary}
     </div>
+    ${statusFold}
     ${historyBlock}`;
 
   updateMatchFormUI();
