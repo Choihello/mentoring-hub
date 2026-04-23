@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.7.3-20260423">
+<meta name="version" content="2.7.4-20260424">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
-  /* ── Light theme (Mentoring Hub v2.7.3 — light-only) ── */
+  /* ── Light theme (Mentoring Hub v2.7.4 — light-only) ── */
   --bg: #f7f9fb;            /* page background — cool neutral */
   --bg-1: #ffffff;          /* card / primary surface */
   --bg-2: #f2f5f8;          /* slight-raised surface / hover bg */
@@ -1597,6 +1597,291 @@ tr:hover td { background: var(--bg-2); }
   .sess-actions { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--line); min-width: 0; }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   멘토 예약하기 페이지 v2.7.4
+   ══════════════════════════════════════════════════════════════ */
+
+/* Stepper */
+.book-stepper { display: flex; gap: 6px; align-items: center; margin: 6px 0 18px; font-size: 12px; flex-wrap: wrap; }
+.book-stepper .bs-step {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+  border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
+  background: var(--bg-1); transition: all 0.15s;
+}
+.book-stepper .bs-step .bs-num {
+  width: 18px; height: 18px; border-radius: 999px; background: var(--bg-3);
+  color: var(--muted); font-weight: 700; font-size: 10.5px; font-family: var(--font-mono);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.book-stepper .bs-step.is-done {
+  background: var(--accent-ultra); color: var(--accent-ink); border-color: var(--accent-light);
+}
+.book-stepper .bs-step.is-done .bs-num { background: var(--accent); color: #fff; }
+.book-stepper .bs-step.is-active {
+  background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
+}
+.book-stepper .bs-step.is-active .bs-num { background: #fff; color: var(--accent); }
+.book-stepper .bs-sep { flex: 0 0 18px; border-top: 1px dashed var(--line-2); align-self: center; }
+
+/* 2컬럼 그리드 */
+.book-grid { display: grid; grid-template-columns: minmax(0, 42fr) minmax(0, 58fr); gap: 20px; align-items: start; }
+@media (max-width: 1100px) { .book-grid { grid-template-columns: 1fr; } }
+
+.book-section-title {
+  font-size: 12.5px; font-weight: 700; color: var(--ink); margin: 0 0 10px;
+  display: inline-flex; align-items: center; gap: 6px; letter-spacing: 0.01em;
+}
+.book-section-title .mi { font-size: 16px !important; color: var(--accent); }
+
+/* 좌측: 멘토 카드 */
+.book-mentor-list { display: flex; flex-direction: column; gap: 10px; }
+.book-mentor-card {
+  padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius);
+  cursor: pointer; transition: all 0.15s; background: var(--bg-1); position: relative;
+}
+.book-mentor-card:hover { border-color: var(--accent-light); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.book-mentor-card.is-selected {
+  border: 2px solid var(--accent); background: var(--accent-ultra);
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.10); padding: 13px 15px;
+}
+.book-mentor-card.is-selected::before {
+  content: 'check_circle'; font-family: 'Material Symbols Outlined'; font-weight: 600;
+  position: absolute; top: 10px; right: 10px; color: var(--accent); font-size: 18px;
+}
+.book-mentor-card .bmc-head { display: flex; gap: 12px; align-items: center; }
+.book-mentor-card .bmc-avatar {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--accent-ultra);
+  color: var(--accent-ink); font-weight: 700; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; flex: 0 0 40px;
+  border: 1.5px solid var(--accent-light);
+}
+.book-mentor-card .bmc-name-row { flex: 1; min-width: 0; }
+.book-mentor-card .bmc-name { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.book-mentor-card .bmc-meta { font-size: 11.5px; color: var(--ink-2); margin-top: 2px; line-height: 1.3; }
+.book-mentor-card .bmc-field-chip {
+  display: inline-block; padding: 1px 7px; background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 999px; font-size: 10.5px; color: var(--ink-2); margin-right: 4px;
+}
+.book-mentor-card .bmc-bio {
+  font-size: 11.5px; color: var(--muted); margin-top: 8px;
+  padding-top: 8px; border-top: 1px dashed var(--line); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.book-mentor-card .bmc-stats {
+  display: flex; gap: 6px; margin-top: 8px; font-size: 10.5px; flex-wrap: wrap;
+}
+.book-mentor-card .bmc-stats span {
+  padding: 2px 8px; background: var(--bg-2); border-radius: 999px; color: var(--ink-2);
+  font-family: var(--font-mono); font-weight: 600;
+}
+.book-mentor-card .bmc-status-badge {
+  position: absolute; top: 12px; right: 12px; padding: 2px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 600; border: 1px solid transparent;
+}
+.book-mentor-card.is-selected .bmc-status-badge { display: none; }
+.book-mentor-card .bmc-status-badge.s-open   { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.book-mentor-card .bmc-status-badge.s-closed { background: var(--bg-3); color: var(--muted); border-color: var(--line); }
+.book-mentor-card .bmc-status-badge.s-wait   { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
+
+.book-list-divider {
+  font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 8px 2px 4px; font-family: var(--font-mono); font-weight: 600;
+  border-top: 1px dashed var(--line); margin-top: 4px;
+}
+
+.book-tip-card {
+  margin-top: 14px; padding: 12px 14px; border: 1px dashed var(--line-2);
+  border-radius: var(--radius-sm); background: var(--bg-2); font-size: 11.5px;
+  color: var(--ink-2); line-height: 1.6;
+}
+.book-tip-card .tip-head { font-weight: 700; color: var(--ink); display: inline-flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+.book-tip-card .tip-head .mi { font-size: 15px !important; color: var(--accent); }
+.book-tip-card ul { margin: 0; padding-left: 16px; }
+.book-tip-card li { margin-bottom: 3px; }
+.book-tip-card li:last-child { margin-bottom: 0; }
+
+/* 우측: 선택 멘토 요약 카드 */
+.book-summary-card {
+  padding: 16px 18px; border: 1px solid var(--accent-light); border-radius: var(--radius);
+  background: linear-gradient(0deg, var(--bg-1), var(--accent-ultra) 140%);
+  margin-bottom: 14px; display: flex; gap: 14px;
+}
+.book-summary-card .bsc-avatar {
+  width: 52px; height: 52px; border-radius: 50%; background: var(--accent-ultra);
+  color: var(--accent-ink); font-weight: 700; font-size: 19px;
+  display: flex; align-items: center; justify-content: center; flex: 0 0 52px;
+  border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(22,163,74,0.08);
+}
+.book-summary-card .bsc-body { flex: 1; min-width: 0; }
+.book-summary-card .bsc-name { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.book-summary-card .bsc-meta { font-size: 12px; color: var(--ink-2); margin-top: 3px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.book-summary-card .bsc-bio { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.55; }
+.book-summary-card .bsc-chips { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.book-summary-card .bsc-chips span {
+  padding: 3px 9px; background: var(--bg-1); border: 1px solid var(--accent-light);
+  border-radius: 999px; font-size: 10.5px; color: var(--accent-ink); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.book-summary-card .bsc-chips span .mi { font-size: 13px !important; }
+.book-summary-card .bsc-dday {
+  padding: 3px 9px; background: var(--accent); color: #fff; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; font-family: var(--font-mono); border: none !important;
+}
+
+/* 우측: 날짜 칩 */
+.book-right-block { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-1); margin-bottom: 12px; }
+
+.book-date-strip {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin: 0 -2px;
+  scrollbar-width: thin;
+}
+.book-date-chip {
+  flex: 0 0 auto; padding: 10px 14px; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); cursor: pointer; background: var(--bg-1);
+  text-align: center; min-width: 86px; transition: all 0.15s;
+}
+.book-date-chip:hover { border-color: var(--accent-light); transform: translateY(-1px); }
+.book-date-chip.is-selected {
+  border: 2px solid var(--accent); background: var(--accent-ultra); padding: 9px 13px;
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.08);
+}
+.book-date-chip .bdc-dow { font-size: 11px; color: var(--muted); font-weight: 600; }
+.book-date-chip.is-selected .bdc-dow { color: var(--accent-ink); }
+.book-date-chip .bdc-day { font-size: 17px; font-weight: 700; color: var(--ink); margin: 2px 0; line-height: 1.1; }
+.book-date-chip .bdc-cnt {
+  font-size: 10.5px; color: var(--accent); font-weight: 700; font-family: var(--font-mono);
+  padding: 1px 6px; background: var(--accent-ultra); border-radius: 999px; display: inline-block;
+}
+.book-date-chip.is-selected .bdc-cnt { background: var(--accent); color: #fff; }
+
+/* 우측: 시간 버튼 */
+.book-time-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  gap: 8px; margin-top: 10px;
+}
+.book-time-btn {
+  padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  cursor: pointer; background: var(--bg-1); text-align: left; transition: all 0.15s;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.book-time-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+.book-time-btn.is-selected {
+  border: 2px solid var(--accent); background: var(--accent-ultra); padding: 10px 11px;
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.08);
+}
+.book-time-btn .btb-time { font-size: 15px; font-weight: 700; color: var(--ink); font-family: var(--font-mono); }
+.book-time-btn .btb-meta {
+  font-size: 11px; color: var(--ink-2); display: flex; gap: 4px; align-items: center;
+}
+.book-time-btn .btb-meta .mi { font-size: 13px !important; }
+.book-time-hint { font-size: 11px; color: var(--muted); margin-top: 8px; font-style: italic; }
+
+/* 우측: 선택 정보 확인 */
+.book-confirm-box {
+  padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-2); margin-bottom: 12px; font-size: 13px; line-height: 1.75;
+}
+.book-confirm-box.is-empty {
+  border-style: dashed; color: var(--muted); text-align: center; padding: 22px 14px; font-size: 12.5px;
+}
+.book-confirm-box.is-empty .mi { font-size: 22px !important; color: var(--muted-2); display: block; margin-bottom: 6px; }
+.book-confirm-box .bcb-row { display: flex; gap: 8px; padding: 3px 0; align-items: flex-start; }
+.book-confirm-box .bcb-row .label {
+  min-width: 62px; font-size: 11.5px; color: var(--muted); font-weight: 600; padding-top: 2px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.book-confirm-box .bcb-row .label .mi { font-size: 14px !important; color: var(--accent); }
+.book-confirm-box .bcb-row .value { flex: 1; color: var(--ink); font-weight: 500; }
+
+/* 우측: 예약 안내 카드 */
+.book-guide-card {
+  padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm); background: var(--bg-1); font-size: 12px; margin-bottom: 12px;
+}
+.book-guide-card .guide-head {
+  font-weight: 700; color: var(--ink); display: inline-flex; align-items: center; gap: 5px;
+  margin-bottom: 6px; font-size: 12.5px;
+}
+.book-guide-card .guide-head .mi { font-size: 15px !important; color: var(--accent); }
+.book-guide-card ul { margin: 0; padding-left: 18px; color: var(--ink-2); line-height: 1.7; }
+.book-guide-card li { margin-bottom: 2px; }
+
+/* 예약 확정 버튼 */
+.book-btn-confirm {
+  width: 100%; padding: 13px; font-size: 14.5px; font-weight: 700;
+  background: var(--accent); color: #fff; border: none;
+  border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.book-btn-confirm:hover:not(:disabled) { background: var(--accent-ink); transform: translateY(-1px); }
+.book-btn-confirm:disabled { background: var(--bg-3); color: var(--muted); cursor: not-allowed; }
+.book-btn-confirm .mi { font-size: 18px !important; }
+
+/* 상태 B: 선택 멘토 슬롯 없음 */
+.book-empty-slots {
+  padding: 28px 20px; text-align: center; border: 1px dashed var(--line-2);
+  border-radius: var(--radius); background: var(--bg-2); margin-bottom: 12px;
+}
+.book-empty-slots .mi-lg { font-size: 40px !important; color: var(--muted-2); display: block; margin-bottom: 8px; }
+.book-empty-slots h4 { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.book-empty-slots p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.book-empty-actions { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.book-empty-actions .btn { padding: 8px 14px; font-size: 12.5px; }
+
+/* 상태 C: 매칭 멘토 없음 */
+.book-nomatch-panel {
+  padding: 24px 20px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-1); text-align: center;
+}
+.book-nomatch-panel .mi-xl { font-size: 52px !important; color: var(--accent); display: block; margin-bottom: 10px; }
+.book-nomatch-panel h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: var(--ink); }
+.book-nomatch-panel p { margin: 0 auto; font-size: 13px; color: var(--ink-2); line-height: 1.65; max-width: 440px; }
+.book-process-steps {
+  display: flex; gap: 10px; margin: 20px auto 4px; max-width: 520px;
+}
+.book-process-step {
+  flex: 1; padding: 14px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--bg-2); text-align: center; position: relative;
+}
+.book-process-step.is-current {
+  border: 2px solid var(--accent); background: var(--accent-ultra); padding: 13px 9px;
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.10);
+}
+.book-process-step .bps-num {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--bg-3); color: var(--muted);
+  font-weight: 700; font-size: 11px; margin: 0 auto 6px;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-mono);
+}
+.book-process-step.is-current .bps-num { background: var(--accent); color: #fff; }
+.book-process-step .bps-label { font-size: 12px; font-weight: 600; color: var(--ink); }
+.book-process-step .bps-desc { font-size: 10.5px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+.book-nomatch-actions { display: flex; gap: 8px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+
+/* 방식 칩 (Zoom/대면) */
+.book-method-chip {
+  display: inline-flex; gap: 3px; align-items: center; padding: 1px 7px;
+  border-radius: 999px; font-size: 10.5px; font-weight: 600; white-space: nowrap;
+}
+.book-method-chip .mi { font-size: 13px !important; }
+.book-method-chip.m-online  { background: #eff6ff; color: #1d4ed8; }
+.book-method-chip.m-offline { background: #fffbeb; color: #b45309; }
+.book-method-chip.m-mixed   { background: var(--bg-3); color: var(--ink-2); }
+
+/* 모바일 조정 */
+@media (max-width: 1100px) {
+  .book-grid > div:first-child { order: 2; }
+  .book-grid > div:last-child  { order: 3; }
+}
+@media (max-width: 560px) {
+  .book-stepper .bs-sep { flex: 0 0 8px; }
+  .book-stepper .bs-step { padding: 5px 9px; font-size: 11px; }
+  .book-summary-card { flex-direction: column; gap: 10px; padding: 14px; }
+  .book-time-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .book-process-steps { flex-direction: column; }
+}
+
 .match-banner {
   display: flex; gap: 14px; align-items: flex-start;
   padding: 14px 18px; border-radius: var(--radius-sm);
@@ -1733,7 +2018,7 @@ tr:hover td { background: var(--bg-2); }
     <span class="lv3-logo-mark">M</span>
     <span>멘토링허브</span>
   </div>
-  <div class="lv3-corner tr mono">v2.7.3 · KST</div>
+  <div class="lv3-corner tr mono">v2.7.4 · KST</div>
   <div class="lv3-corner bl mono">© 2026 광운대학교 NCI창업패키지사업단</div>
 
   <div class="lv3-center">
@@ -1874,7 +2159,7 @@ tr:hover td { background: var(--bg-2); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.10);color:var(--danger);border:1px solid rgba(239,68,68,0.30)"><span class="material-symbols-outlined" style="font-size:16px">logout</span>로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.7.3 · 2026-04-23</div>
+        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.7.4 · 2026-04-24</div>
       </div>
     </aside>
 
@@ -1934,20 +2219,10 @@ tr:hover td { background: var(--bg-2); }
             <h2>멘토 예약하기</h2>
             <p>원하는 멘토와 시간을 선택하세요</p>
           </div>
-          <div class="page-grid">
-            <div class="page-col">
-              <div class="card">
-                <div class="card-title"><span class="material-symbols-outlined mi">groups</span>멘토 선택</div>
-                <div id="mentor-select-list"></div>
-              </div>
-            </div>
-            <div class="page-col">
-              <div class="card" id="slot-picker-card" style="display:none">
-                <div class="card-title"><span class="material-symbols-outlined mi">schedule</span>가용 시간 선택</div>
-                <div id="mentee-slots"></div>
-              </div>
-            </div>
-          </div>
+          <div id="mentee-book-root"></div>
+          <!-- legacy IDs (후방 호환) -->
+          <div id="mentor-select-list" style="display:none"></div>
+          <div id="mentee-slots" style="display:none"></div>
         </div>
 
         <div id="page-mentee-sessions" class="page">
@@ -3740,74 +4015,375 @@ function _isFutureSlot(s) {
   return new Date(`${s.date}T${s.time}:00+09:00`) > new Date();
 }
 
-function renderMenteeBook() {
-  const el = document.getElementById('mentor-select-list');
-  // 가용 슬롯 있는 멘토 먼저 정렬 (과거 시간 제외)
-  const sorted = [...getBookableMentors()].sort((a, b) => {
-    const aSlots = getSlotsByMentor(a.id).filter(s => s.status === 'available' && _isFutureSlot(s)).length;
-    const bSlots = getSlotsByMentor(b.id).filter(s => s.status === 'available' && _isFutureSlot(s)).length;
-    return bSlots - aSlots;
+// ── v2.7.4 예약 페이지 전역 상태 ──
+let _bookSelectedDate = null;
+let _bookSelectedSlotId = null;
+
+// ── v2.7.4 helpers ──
+function _bookWeekCounts(slots) {
+  const today = new Date(localDateString(new Date()) + 'T00:00:00');
+  const dow = today.getDay();
+  // 이번 주 일요일 기준
+  const thisSunday = new Date(today); thisSunday.setDate(today.getDate() - dow);
+  const nextSunday = new Date(thisSunday); nextSunday.setDate(thisSunday.getDate() + 7);
+  const afterNext = new Date(nextSunday); afterNext.setDate(nextSunday.getDate() + 7);
+  let thisWeek = 0, nextWeek = 0;
+  slots.forEach(s => {
+    const d = new Date(s.date + 'T00:00:00');
+    if (d >= thisSunday && d < nextSunday) thisWeek++;
+    else if (d >= nextSunday && d < afterNext) nextWeek++;
   });
-  if (!sorted.length) {
-    const hasMatch = currentRole === 'mentee' && DB.matchProposals.some(p => p.menteeId === currentUser?.id && p.status === '확정');
-    const msg = currentRole === 'mentee' && !hasMatch
-      ? '<div class="empty-state"><span class="icon material-symbols-outlined">handshake</span><h4>매칭된 멘토가 없습니다</h4><p>담당자가 멘토를 매칭해주면 예약할 수 있습니다.<br>매칭 신청은 <a href="#" onclick="navigateTo(\'page-mentee-match\');return false" style="color:var(--accent);font-weight:600">매칭 신청</a> 메뉴에서 가능합니다.</p></div>'
-      : '<div class="empty-state"><span class="icon material-symbols-outlined">inbox</span><h4>예약 가능한 멘토 없음</h4><p>현재 예약 가능한 멘토가 없습니다</p></div>';
-    el.innerHTML = msg;
-    document.getElementById('slot-picker-card').style.display = 'none';
-    return;
-  }
-  el.innerHTML = sorted.map(m => {
-    const availSlots = getSlotsByMentor(m.id).filter(s => s.status === 'available' && _isFutureSlot(s));
-    const initials = m.name.slice(0, 2);
-    const bioHtml = m.bio ? `<div style="margin-top:6px;font-size:12px;color:var(--text2);line-height:1.5;border-top:1px solid var(--border);padding-top:6px">${escapeHtml(m.bio)}</div>` : '';
-    return `<div class="mentor-card ${selectedMentorId === m.id ? 'selected' : ''}" style="flex-direction:column;align-items:stretch;cursor:pointer">
-      <div style="display:flex;align-items:center;gap:12px" onclick="selectMentor('${m.id}')">
-        <div class="mentor-avatar">${escapeHtml(initials)}</div>
-        <div class="mentor-card-info" style="flex:1">
-          <div class="mentor-card-name">${escapeHtml(m.name)}</div>
-          <div class="mentor-card-meta">${escapeHtml(m.field)} · ${escapeHtml(m.org)}</div>
-        </div>
-        <span class="badge ${availSlots.length > 0 ? 'badge-green' : 'badge-gray'}">가용 ${availSlots.length}</span>
-      </div>
-      ${bioHtml}
-    </div>`;
-  }).join('');
+  return { thisWeek, nextWeek };
 }
 
-function selectMentor(id) {
-  selectedMentorId = id;
-  renderMenteeBook();
-  const slots = getSlotsByMentor(id).filter(s => s.status === 'available' && _isFutureSlot(s));
-  const card = document.getElementById('slot-picker-card');
-  const el = document.getElementById('mentee-slots');
-  card.style.display = 'block';
-  if (!slots.length) {
-    el.innerHTML = `<div class="empty-state"><span class="icon material-symbols-outlined">inbox</span><h4>예약 가능한 시간 없음</h4><p>현재 가용 슬롯이 없습니다</p></div>`;
-    return;
+function _bookMentorAvail(m) {
+  return getSlotsByMentor(m.id).filter(s => s.status === 'available' && _isFutureSlot(s));
+}
+
+function _bookResolveState() {
+  const mentors = getBookableMentors();
+  if (!mentors.length) return { state: 'C', mentors: [] };
+
+  // 정렬: 가용 많은 순 → 이름 순
+  const sorted = [...mentors].sort((a, b) => {
+    const an = _bookMentorAvail(a).length;
+    const bn = _bookMentorAvail(b).length;
+    if (bn !== an) return bn - an;
+    return (a.name || '').localeCompare(b.name || '', 'ko');
+  });
+
+  // 첫 멘토 자동 선택 (selectedMentorId가 없거나 현재 리스트에 없을 때)
+  if (!selectedMentorId || !sorted.some(m => m.id === selectedMentorId)) {
+    selectedMentorId = sorted[0].id;
+    _bookSelectedDate = null;
+    _bookSelectedSlotId = null;
   }
-  const sorted = [...slots].sort((a, b) =>
-    (a.date + a.time).localeCompare(b.date + b.time)
-  );
-  // 날짜별 그룹핑
+  const mentor = sorted.find(m => m.id === selectedMentorId);
+  const slots = _bookMentorAvail(mentor).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+  // 선택된 날짜 자동 설정 (최초 1회)
+  if (!_bookSelectedDate && slots.length) {
+    _bookSelectedDate = slots[0].date;
+  }
+
+  return {
+    state: slots.length ? 'A' : 'B',
+    mentors: sorted, mentor, slots,
+    weekCountsAll: sorted.reduce((acc, m) => { acc[m.id] = _bookWeekCounts(_bookMentorAvail(m)); return acc; }, {})
+  };
+}
+
+function _bookStepperHtml(state, hasTime) {
+  const hasMentor = state === 'A' || state === 'B';
+  const step1 = hasMentor ? 'is-done' : (state === 'C' ? 'is-active' : '');
+  const step2 = hasMentor ? (hasTime ? 'is-done' : 'is-active') : '';
+  const step3 = hasTime ? 'is-active' : '';
+  return `<div class="book-stepper">
+    <div class="bs-step ${step1}"><span class="bs-num">1</span>멘토 선택</div>
+    <div class="bs-sep"></div>
+    <div class="bs-step ${step2}"><span class="bs-num">2</span>날짜/시간 선택</div>
+    <div class="bs-sep"></div>
+    <div class="bs-step ${step3}"><span class="bs-num">3</span>예약 확인</div>
+  </div>`;
+}
+
+function _bookMentorCardHtml(m, weekCounts, isSelected) {
+  const availN = _bookMentorAvail(m).length;
+  const initial = _initial(m.name);
+  const bio = m.bio ? `<div class="bmc-bio">${escapeHtml(m.bio)}</div>` : '';
+  let statusBadge = '';
+  if (!isSelected) {
+    if (availN > 0) statusBadge = `<span class="bmc-status-badge s-open">예약 가능</span>`;
+    else statusBadge = `<span class="bmc-status-badge s-closed">일정 없음</span>`;
+  }
+  const stats = availN > 0
+    ? `<div class="bmc-stats">
+         <span>총 ${availN}</span>
+         ${weekCounts.thisWeek > 0 ? `<span>이번 주 ${weekCounts.thisWeek}</span>` : ''}
+         ${weekCounts.nextWeek > 0 ? `<span>다음 주 ${weekCounts.nextWeek}</span>` : ''}
+       </div>`
+    : '';
+  return `<div class="book-mentor-card ${isSelected ? 'is-selected' : ''}" onclick="selectBookMentor('${m.id}')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectBookMentor('${m.id}');}">
+    ${statusBadge}
+    <div class="bmc-head">
+      <div class="bmc-avatar">${escapeHtml(initial)}</div>
+      <div class="bmc-name-row">
+        <div class="bmc-name">${escapeHtml(m.name)}</div>
+        <div class="bmc-meta">
+          ${m.field ? `<span class="bmc-field-chip">${escapeHtml(m.field)}</span>` : ''}
+          ${escapeHtml(m.org || '')}
+        </div>
+      </div>
+    </div>
+    ${bio}
+    ${stats}
+  </div>`;
+}
+
+function _bookMentorTipHtml() {
+  return `<div class="book-tip-card">
+    <div class="tip-head"><span class="material-symbols-outlined mi mi-sm">lightbulb</span>멘토 선택 팁</div>
+    <ul>
+      <li>전문 분야와 한 줄 소개를 확인하고 원하는 멘토를 선택해 주세요.</li>
+      <li>선택한 멘토의 예약 가능한 일정은 오른쪽에서 확인할 수 있습니다.</li>
+    </ul>
+  </div>`;
+}
+
+function _bookSummaryCardHtml(mentor, slots) {
+  const availN = slots.length;
+  const nearest = slots[0];
+  const dday = nearest ? _daysUntil(nearest.date) : null;
+  const ddayLabel = dday === null ? '' : (dday === 0 ? 'TODAY' : (dday > 0 ? `D-${dday}` : `D+${-dday}`));
+  const stats = availN > 0
+    ? `<div class="bsc-chips">
+         <span><span class="material-symbols-outlined mi mi-sm">event_available</span>가용 ${availN}</span>
+         ${dday !== null ? `<span class="bsc-dday">${ddayLabel}</span>` : ''}
+       </div>`
+    : `<div class="bsc-chips">
+         <span style="background:var(--bg-3);color:var(--muted);border-color:var(--line)"><span class="material-symbols-outlined mi mi-sm">event_busy</span>예약 가능 시간 없음</span>
+       </div>`;
+  return `<div class="book-summary-card">
+    <div class="bsc-avatar">${escapeHtml(_initial(mentor.name))}</div>
+    <div class="bsc-body">
+      <div class="bsc-name">${escapeHtml(mentor.name)} 멘토</div>
+      <div class="bsc-meta">
+        ${mentor.field ? `<span class="bmc-field-chip">${escapeHtml(mentor.field)}</span>` : ''}
+        <span>${escapeHtml(mentor.org || '')}</span>
+      </div>
+      ${mentor.bio ? `<div class="bsc-bio">${escapeHtml(mentor.bio)}</div>` : ''}
+      ${stats}
+    </div>
+  </div>`;
+}
+
+function _bookDateStripHtml(slots, selectedDate) {
   const groups = {};
-  sorted.forEach(s => { if (!groups[s.date]) groups[s.date] = []; groups[s.date].push(s); });
-  const dayNames = ['일','월','화','수','목','금','토'];
-  el.innerHTML = Object.entries(groups).map(([date, slotList]) => {
+  slots.forEach(s => { if (!groups[s.date]) groups[s.date] = []; groups[s.date].push(s); });
+  const dow = ['일','월','화','수','목','금','토'];
+  const dates = Object.keys(groups).sort();
+  const chips = dates.map(date => {
     const d = new Date(date + 'T00:00:00');
-    const dayLabel = `${d.getMonth()+1}월 ${d.getDate()}일 (${dayNames[d.getDay()]})`;
-    const timeRows = slotList.map(s => `
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-xs);margin-bottom:6px;cursor:pointer;transition:background 0.1s" onclick="openBookModal('${s.id}')" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-        <span style="font-size:20px;font-weight:800;color:var(--accent);min-width:52px">${escapeHtml(s.time)}</span>
-        <span style="font-size:13px;color:var(--text2)">${escapeHtml(s.location)}</span>
-        <span class="badge badge-green" style="margin-left:auto">예약 가능</span>
-      </div>`).join('');
-    return `<div style="margin-bottom:16px">
-      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;padding:4px 0;border-bottom:2px solid var(--accent-light);display:flex;align-items:center;gap:6px"><span class="material-symbols-outlined mi mi-sm mi-plain">calendar_month</span>${dayLabel}</div>
-      ${timeRows}
+    const isSel = date === selectedDate;
+    return `<div class="book-date-chip ${isSel ? 'is-selected' : ''}" onclick="selectBookDate('${date}')" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectBookDate('${date}');}">
+      <div class="bdc-dow">${(d.getMonth()+1)}월 ${dow[d.getDay()]}</div>
+      <div class="bdc-day">${d.getDate()}</div>
+      <div class="bdc-cnt">${groups[date].length}개</div>
     </div>`;
   }).join('');
+  return `<div class="book-right-block">
+    <div class="book-section-title"><span class="material-symbols-outlined mi">calendar_month</span>날짜 선택</div>
+    <div class="book-date-strip">${chips}</div>
+  </div>`;
 }
+
+function _bookTimeGridHtml(slots, selectedDate, selectedSlotId) {
+  const daySlots = slots.filter(s => s.date === selectedDate);
+  const buttons = daySlots.map(s => {
+    const m = _parseMethod(s.location);
+    const { place } = _splitLocation(s.location);
+    const locLabel = place || (m.method === 'online' ? '온라인' : '장소 미정');
+    return `<button class="book-time-btn ${selectedSlotId === s.id ? 'is-selected' : ''}" onclick="selectBookTime('${s.id}')">
+      <div class="btb-time">${escapeHtml(s.time)}</div>
+      <div class="btb-meta">
+        <span class="book-method-chip m-${m.method}"><span class="material-symbols-outlined mi mi-sm">${m.icon}</span>${escapeHtml(m.label)}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${escapeHtml(locLabel)}</span>
+      </div>
+    </button>`;
+  }).join('');
+  return `<div class="book-right-block">
+    <div class="book-section-title"><span class="material-symbols-outlined mi">schedule</span>시간 선택</div>
+    <div class="book-time-grid">${buttons}</div>
+    <div class="book-time-hint">* 모든 시간은 한국 표준시(KST) 기준입니다.</div>
+  </div>`;
+}
+
+function _bookConfirmHtml(mentor, slot) {
+  if (!slot) {
+    return `<div class="book-confirm-box is-empty">
+      <span class="material-symbols-outlined mi">touch_app</span>
+      날짜와 시간을 선택하면 예약 정보가 여기에 표시됩니다.
+    </div>`;
+  }
+  const m = _parseMethod(slot.location);
+  const { link, place } = _splitLocation(slot.location);
+  const d = new Date(slot.date + 'T00:00:00');
+  const dow = ['일','월','화','수','목','금','토'][d.getDay()];
+  const dateLabel = `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${dow})`;
+  return `<div class="book-confirm-box">
+    <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">school</span>멘토</span><span class="value">${escapeHtml(mentor.name)} · ${escapeHtml(mentor.field || '')}</span></div>
+    <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">event</span>일시</span><span class="value">${escapeHtml(dateLabel)} ${escapeHtml(slot.time)}</span></div>
+    <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">${m.icon}</span>방식</span><span class="value"><span class="book-method-chip m-${m.method}">${escapeHtml(m.label)}</span></span></div>
+    <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">location_on</span>장소</span><span class="value">${escapeHtml(place || '미정')}${link ? ` · <a href="${escapeHtml(link)}" target="_blank" rel="noopener" style="color:var(--accent);word-break:break-all">${escapeHtml(link)}</a>` : ''}</span></div>
+  </div>`;
+}
+
+function _bookGuideCardHtml() {
+  return `<div class="book-guide-card">
+    <div class="guide-head"><span class="material-symbols-outlined mi mi-sm">info</span>예약 안내</div>
+    <ul>
+      <li>멘토 1인당 진행 중인 예약이 1회로 제한됩니다.</li>
+      <li>예약 변경/취소는 내 멘토링 내역에서 가능합니다.</li>
+      <li>예약 확정 후 알림이 발송됩니다.</li>
+    </ul>
+  </div>`;
+}
+
+function _bookEmptySlotsHtml() {
+  return `<div class="book-empty-slots">
+    <span class="material-symbols-outlined mi mi-lg">event_busy</span>
+    <h4>현재 예약 가능한 시간이 없습니다</h4>
+    <p>멘토가 새로운 가용 시간을 등록하면 이곳에서 확인할 수 있습니다.<br>다른 멘토를 선택하거나, 담당자에게 일정 등록을 요청할 수 있습니다.</p>
+    <div class="book-empty-actions">
+      <button class="btn btn-primary" onclick="requestMentorSchedule()"><span class="material-symbols-outlined mi mi-sm">mail</span>일정 요청하기</button>
+      <button class="btn btn-ghost" onclick="pickAnotherBookableMentor()"><span class="material-symbols-outlined mi mi-sm">swap_horiz</span>다른 멘토 보기</button>
+    </div>
+  </div>`;
+}
+
+function _bookNoMatchPanelHtml() {
+  return `<div class="book-nomatch-panel">
+    <span class="material-symbols-outlined mi mi-xl">handshake</span>
+    <h3>예약 가능한 멘토가 없습니다</h3>
+    <p>먼저 매칭 신청을 진행하면 담당자가 적합한 멘토를 매칭해드립니다.<br>매칭이 확정되면 이곳에서 예약할 수 있습니다.</p>
+    <div class="book-process-steps">
+      <div class="book-process-step is-current">
+        <div class="bps-num">1</div>
+        <div class="bps-label">매칭 신청</div>
+        <div class="bps-desc">원하는 분야 작성</div>
+      </div>
+      <div class="book-process-step">
+        <div class="bps-num">2</div>
+        <div class="bps-label">멘토 배정</div>
+        <div class="bps-desc">담당자가 매칭</div>
+      </div>
+      <div class="book-process-step">
+        <div class="bps-num">3</div>
+        <div class="bps-label">일정 예약</div>
+        <div class="bps-desc">가용 시간 예약</div>
+      </div>
+    </div>
+    <div class="book-nomatch-actions">
+      <button class="btn btn-primary" onclick="navigateTo('page-mentee-match')"><span class="material-symbols-outlined mi mi-sm">add_circle</span>매칭 신청하러 가기</button>
+    </div>
+  </div>`;
+}
+
+// ── 메인 렌더러 ──
+function renderMenteeBook() {
+  const root = document.getElementById('mentee-book-root');
+  if (!root) return;
+
+  const resolved = _bookResolveState();
+  const { state, mentors, mentor, slots } = resolved;
+
+  // 상태 C: 매칭 멘토 없음
+  if (state === 'C') {
+    root.innerHTML = `
+      ${_bookStepperHtml('C', false)}
+      <div class="book-grid">
+        <div>
+          <div class="card">
+            <div class="card-title"><span class="material-symbols-outlined mi">groups</span>멘토 선택</div>
+            <div class="empty-state"><span class="icon material-symbols-outlined">handshake</span><h4>매칭된 멘토가 없습니다</h4><p>먼저 매칭 신청을 진행해 주세요.</p></div>
+            ${_bookMentorTipHtml()}
+          </div>
+        </div>
+        <div>${_bookNoMatchPanelHtml()}${_bookGuideCardHtml()}</div>
+      </div>`;
+    return;
+  }
+
+  // 좌측 멘토 리스트
+  const openMentors   = mentors.filter(m => _bookMentorAvail(m).length > 0);
+  const closedMentors = mentors.filter(m => _bookMentorAvail(m).length === 0);
+  let mentorListHtml = openMentors.map(m => _bookMentorCardHtml(m, resolved.weekCountsAll[m.id], m.id === selectedMentorId)).join('');
+  if (closedMentors.length) {
+    mentorListHtml += `<div class="book-list-divider">일정 등록 대기</div>`;
+    mentorListHtml += closedMentors.map(m => _bookMentorCardHtml(m, resolved.weekCountsAll[m.id], m.id === selectedMentorId)).join('');
+  }
+
+  // 우측: 상태 A 또는 B
+  const selectedSlot = (state === 'A' && _bookSelectedSlotId)
+    ? slots.find(s => s.id === _bookSelectedSlotId)
+    : null;
+
+  const rightHtml = state === 'A'
+    ? `
+      ${_bookSummaryCardHtml(mentor, slots)}
+      ${_bookDateStripHtml(slots, _bookSelectedDate)}
+      ${_bookTimeGridHtml(slots, _bookSelectedDate, _bookSelectedSlotId)}
+      <div class="book-section-title" style="margin-top:6px"><span class="material-symbols-outlined mi">task_alt</span>선택 정보 확인</div>
+      ${_bookConfirmHtml(mentor, selectedSlot)}
+      ${_bookGuideCardHtml()}
+      <button class="book-btn-confirm" ${selectedSlot ? '' : 'disabled'} onclick="proceedToBookModal()">
+        <span class="material-symbols-outlined mi">check_circle</span>
+        ${selectedSlot ? '예약 확정하기' : '시간을 선택해 주세요'}
+      </button>`
+    : `
+      ${_bookSummaryCardHtml(mentor, slots)}
+      ${_bookEmptySlotsHtml()}
+      ${_bookGuideCardHtml()}`;
+
+  root.innerHTML = `
+    ${_bookStepperHtml(state, !!selectedSlot)}
+    <div class="book-grid">
+      <div>
+        <div class="card">
+          <div class="card-title"><span class="material-symbols-outlined mi">groups</span>멘토 선택 <span style="font-size:11px;color:var(--muted);font-weight:500;font-family:var(--font-mono);margin-left:auto">${mentors.length}명</span></div>
+          <div class="book-mentor-list">${mentorListHtml}</div>
+          ${_bookMentorTipHtml()}
+        </div>
+      </div>
+      <div>${rightHtml}</div>
+    </div>`;
+}
+
+// ── 이벤트 핸들러 ──
+function selectBookMentor(id) {
+  if (id === selectedMentorId) return;
+  selectedMentorId = id;
+  _bookSelectedDate = null;
+  _bookSelectedSlotId = null;
+  renderMenteeBook();
+}
+
+function selectBookDate(date) {
+  _bookSelectedDate = date;
+  _bookSelectedSlotId = null;
+  renderMenteeBook();
+}
+
+function selectBookTime(slotId) {
+  _bookSelectedSlotId = slotId;
+  renderMenteeBook();
+}
+
+function proceedToBookModal() {
+  if (!_bookSelectedSlotId) return;
+  openBookModal(_bookSelectedSlotId);
+}
+
+function requestMentorSchedule() {
+  toast('담당자에게 일정 등록을 요청하려면 운영팀(admin@mentoring-hub.local)으로 문의해 주세요.', 'info');
+}
+
+function pickAnotherBookableMentor() {
+  const mentors = getBookableMentors();
+  const firstOpen = mentors.find(m => _bookMentorAvail(m).length > 0);
+  if (firstOpen) {
+    selectBookMentor(firstOpen.id);
+    setTimeout(() => {
+      const root = document.getElementById('mentee-book-root');
+      if (root) root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  } else {
+    toast('현재 예약 가능한 시간이 있는 멘토가 없습니다', 'info');
+  }
+}
+
+// 레거시 호환: 기존 코드에서 selectMentor 호출 가능성 대비
+function selectMentor(id) { selectBookMentor(id); }
 
 let _menteeCalMonth = null; // Date object for calendar month
 
