@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.7.1-20260423">
+<meta name="version" content="2.7.2-20260423">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
-  /* ── Light theme (Mentoring Hub v2.7.1 — light-only) ── */
+  /* ── Light theme (Mentoring Hub v2.7.2 — light-only) ── */
   --bg: #f7f9fb;            /* page background — cool neutral */
   --bg-1: #ffffff;          /* card / primary surface */
   --bg-2: #f2f5f8;          /* slight-raised surface / hover bg */
@@ -1252,6 +1252,68 @@ tr:hover td { background: var(--bg-2); }
 #match-schedule-memo { min-height: 48px; }
 #match-request-note  { min-height: 72px; }
 
+/* 폼 내부 2컬럼 (v2.7.2 — 좌: 선택형, 우: 서술형) */
+.match-form-grid {
+  display: grid; grid-template-columns: 1.6fr 1fr;
+  gap: 22px; align-items: start;
+}
+@media (max-width: 960px) { .match-form-grid { grid-template-columns: 1fr; gap: 16px; } }
+.match-form-left > .match-section:last-child {
+  border-bottom: none; margin-bottom: 0; padding-bottom: 0;
+}
+.match-form-right {
+  background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 16px 18px 18px; position: relative;
+}
+.match-form-right::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  border-radius: 10px 10px 0 0;
+}
+.match-form-right .match-section {
+  margin-bottom: 0; padding-bottom: 0; border-bottom: none;
+}
+.match-section-head-emphasized { align-items: flex-start; gap: 10px; }
+.match-section-head-emphasized .sn-lg {
+  width: 28px; height: 28px; font-size: 13px;
+  background: var(--accent); color: var(--accent-ink);
+  border-radius: 999px; display: inline-flex;
+  align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-weight: 700;
+  flex-shrink: 0;
+}
+.match-section-head-emphasized .title-wrap {
+  display: flex; flex-direction: column; flex: 1; min-width: 0;
+}
+.match-section-head-emphasized .step-label {
+  font-size: 10px; color: var(--accent);
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  font-weight: 700; line-height: 1; margin-bottom: 3px;
+}
+.match-section-head-emphasized h5 { font-size: 15px; line-height: 1.2; }
+.match-section-head-emphasized .opt { align-self: center; }
+
+.textarea-wrap { position: relative; }
+.char-counter {
+  position: absolute; bottom: 8px; right: 10px;
+  font-size: 10.5px; color: var(--muted-2);
+  font-family: var(--font-mono);
+  background: var(--bg-1); padding: 1px 7px;
+  border-radius: 99px; border: 1px solid var(--line);
+  pointer-events: none; line-height: 1.4;
+}
+.char-counter.is-warn { color: #c2410c; border-color: #fdba74; }
+#match-request-note {
+  min-height: 140px !important;
+  padding-bottom: 26px;
+  background: var(--bg-1);
+}
+#match-request-note:hover { border-color: var(--ink-2); }
+
+.guide-stack { display: grid; gap: 10px; margin-top: 12px; }
+.guide-stack .guide-card { margin-top: 0; }
+
 /* 입력 가이드 카드 (v2.7.1) */
 .guide-card {
   margin-top: 10px;
@@ -1504,7 +1566,7 @@ tr:hover td { background: var(--bg-2); }
     <span class="lv3-logo-mark">M</span>
     <span>멘토링허브</span>
   </div>
-  <div class="lv3-corner tr mono">v2.7.1 · KST</div>
+  <div class="lv3-corner tr mono">v2.7.2 · KST</div>
   <div class="lv3-corner bl mono">© 2026 광운대학교 NCI창업패키지사업단</div>
 
   <div class="lv3-center">
@@ -1645,7 +1707,7 @@ tr:hover td { background: var(--bg-2); }
       <nav class="sidebar-menu" id="sidebar-nav"></nav>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.10);color:var(--danger);border:1px solid rgba(239,68,68,0.30)"><span class="material-symbols-outlined" style="font-size:16px">logout</span>로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.7.1 · 2026-04-23</div>
+        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.7.2 · 2026-04-23</div>
       </div>
     </aside>
 
@@ -5149,6 +5211,10 @@ function updateMatchFormUI() {
   const np = sel('sum-progress-n');   if (np) np.textContent = filled;
   const pp = sel('sum-progress-pct'); if (pp) pp.textContent = pct + '%';
   const pf = sel('sum-progress-fill');if (pf) pf.style.width = pct + '%';
+  // 글자 수 카운터 (요청사항)
+  const noteLen = (s.note || '').length;
+  const nc = sel('note-char');          if (nc) nc.textContent = noteLen;
+  const ncw = sel('note-char-counter'); if (ncw) ncw.classList.toggle('is-warn', noteLen > 900);
   // 제출 버튼 + 힌트
   const btn  = sel('match-submit-btn');
   const hint = sel('match-submit-hint');
@@ -5275,66 +5341,82 @@ function renderMenteeMatch() {
       <span>${lbl}</span><span class="sub">${hint}</span>
     </button>`).join('');
 
-  // ── 입력 카드 ──
+  // ── 입력 카드 (v2.7.2 — 2컬럼: 좌 선택형 / 우 서술형) ──
   const formCard = `
     <div class="card">
       ${stepper}
-      <div class="match-section">
-        <div class="match-section-head"><span class="sn">1</span><h5>희망 분야</h5><span class="req">필수</span></div>
-        <div class="match-section-hint">가장 도움받고 싶은 분야를 <strong>1개</strong> 선택해 주세요.</div>
-        <div id="match-field-tags" class="chip-group">${fieldsHtml}</div>
-      </div>
-      <div class="match-section">
-        <div class="match-section-head"><span class="sn">2</span><h5>가능 일정</h5><span class="req">필수</span></div>
-        <div class="match-section-hint">가능한 요일과 시간대를 각각 하나 이상 선택해 주세요. <strong>복수 선택 가능</strong>합니다.</div>
-        <div class="match-sub-label">요일</div>
-        <div id="match-days" class="chip-group" style="margin-bottom:10px">${daysHtml}</div>
-        <div class="match-sub-label">시간대</div>
-        <div id="match-periods" class="chip-group">${periodsHtml}</div>
-      </div>
-      <div class="match-section">
-        <div class="match-section-head"><span class="sn">3</span><h5>상세 메모</h5><span class="opt">선택</span></div>
-        <div class="match-section-hint">일정 관련 추가 제약이나 참고사항이 있다면 적어 주세요. 매칭 품질이 좋아집니다.</div>
-        <textarea id="match-schedule-memo" class="form-control" rows="2" placeholder="예: 화/목 저녁 가능, 목요일은 3시 이후 가능" oninput="updateMatchFormUI()"></textarea>
-        <div class="guide-card">
-          <div class="guide-card-head">
-            <span class="material-symbols-outlined mi mi-sm mi-plain">lightbulb</span>
-            자주 쓰는 표현 — 클릭하면 입력창에 추가됩니다
+      <div class="match-form-grid">
+        <div class="match-form-left">
+          <div class="match-section">
+            <div class="match-section-head"><span class="sn">1</span><h5>희망 분야</h5><span class="req">필수</span></div>
+            <div class="match-section-hint">가장 도움받고 싶은 분야를 <strong>1개</strong> 선택해 주세요.</div>
+            <div id="match-field-tags" class="chip-group">${fieldsHtml}</div>
           </div>
-          <div class="guide-examples">
-            <button type="button" class="example-chip" onclick="insertMatchMemoExample('화/목 저녁만 가능')">화/목 저녁만 가능</button>
-            <button type="button" class="example-chip" onclick="insertMatchMemoExample('목요일은 3시 이후 가능')">목요일은 3시 이후 가능</button>
-            <button type="button" class="example-chip" onclick="insertMatchMemoExample('토요일 오전 선호')">토요일 오전 선호</button>
-            <button type="button" class="example-chip" onclick="insertMatchMemoExample('월말 일정 변동 가능성 있음')">월말 일정 변동 가능성</button>
+          <div class="match-section">
+            <div class="match-section-head"><span class="sn">2</span><h5>가능 일정</h5><span class="req">필수</span></div>
+            <div class="match-section-hint">가능한 요일과 시간대를 각각 하나 이상 선택해 주세요. <strong>복수 선택 가능</strong>합니다.</div>
+            <div class="match-sub-label">요일</div>
+            <div id="match-days" class="chip-group" style="margin-bottom:10px">${daysHtml}</div>
+            <div class="match-sub-label">시간대</div>
+            <div id="match-periods" class="chip-group">${periodsHtml}</div>
+          </div>
+          <div class="match-section">
+            <div class="match-section-head"><span class="sn">3</span><h5>상세 메모</h5><span class="opt">선택</span></div>
+            <div class="match-section-hint">일정 관련 추가 제약이나 참고사항이 있다면 적어 주세요. 매칭 품질이 좋아집니다.</div>
+            <textarea id="match-schedule-memo" class="form-control" rows="2" placeholder="예: 화/목 저녁 가능, 목요일은 3시 이후 가능" oninput="updateMatchFormUI()"></textarea>
+            <div class="guide-card">
+              <div class="guide-card-head">
+                <span class="material-symbols-outlined mi mi-sm mi-plain">lightbulb</span>
+                자주 쓰는 표현 — 클릭하면 입력창에 추가됩니다
+              </div>
+              <div class="guide-examples">
+                <button type="button" class="example-chip" onclick="insertMatchMemoExample('화/목 저녁만 가능')">화/목 저녁만 가능</button>
+                <button type="button" class="example-chip" onclick="insertMatchMemoExample('목요일은 3시 이후 가능')">목요일은 3시 이후 가능</button>
+                <button type="button" class="example-chip" onclick="insertMatchMemoExample('토요일 오전 선호')">토요일 오전 선호</button>
+                <button type="button" class="example-chip" onclick="insertMatchMemoExample('월말 일정 변동 가능성 있음')">월말 일정 변동 가능성</button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="match-section">
-        <div class="match-section-head"><span class="sn">4</span><h5>요청사항</h5><span class="opt">선택</span></div>
-        <div class="match-section-hint">멘토에게 기대하는 방향이나 상담 희망 주제를 적어 주세요. 담당자 매칭에 도움이 됩니다.</div>
-        <textarea id="match-request-note" class="form-control" rows="3" placeholder="멘토링에 대한 구체적인 희망사항을 작성해주세요" oninput="updateMatchFormUI()"></textarea>
-        <div class="guide-card guide-card-split">
-          <div class="guide-card-col">
-            <div class="guide-card-head">
-              <span class="material-symbols-outlined mi mi-sm mi-plain">checklist</span>
-              작성 체크포인트
+        <div class="match-form-right">
+          <div class="match-section">
+            <div class="match-section-head match-section-head-emphasized">
+              <span class="sn-lg">4</span>
+              <div class="title-wrap">
+                <div class="step-label">STEP 4</div>
+                <h5>요청사항</h5>
+              </div>
+              <span class="opt">선택</span>
             </div>
-            <ul class="guide-checklist">
-              <li>어떤 주제로 멘토링을 받고 싶은지</li>
-              <li>현재 사업/서비스가 어느 단계인지</li>
-              <li>가장 막히는 부분이 무엇인지</li>
-              <li>멘토에게 기대하는 피드백 방향</li>
-            </ul>
-          </div>
-          <div class="guide-card-col">
-            <div class="guide-card-head">
-              <span class="material-symbols-outlined mi mi-sm mi-plain">text_snippet</span>
-              예시 문장 — 클릭하면 추가됩니다
+            <div class="match-section-hint">멘토에게 기대하는 방향이나 상담받고 싶은 주제를 작성해 주세요. 담당자가 적합한 멘토를 매칭하는 데 도움이 됩니다.</div>
+            <div class="textarea-wrap">
+              <textarea id="match-request-note" class="form-control" rows="6" maxlength="1000" placeholder="예: 투자유치 자료 구성 방향에 대한 피드백을 받고 싶습니다. 현재 초기 서비스 기획 단계이며 시장 검증 방향이 고민입니다." oninput="updateMatchFormUI()"></textarea>
+              <div id="note-char-counter" class="char-counter"><span id="note-char">0</span> / 1000</div>
             </div>
-            <div class="guide-examples guide-examples-col">
-              <button type="button" class="example-chip example-chip-full" onclick="insertMatchNoteExample(this)">투자유치 자료 구성 방향에 대한 피드백을 받고 싶습니다.</button>
-              <button type="button" class="example-chip example-chip-full" onclick="insertMatchNoteExample(this)">초기 서비스 기획 및 시장 검증 방향이 고민입니다.</button>
-              <button type="button" class="example-chip example-chip-full" onclick="insertMatchNoteExample(this)">마케팅 채널 우선순위 설정에 대한 조언이 필요합니다.</button>
+            <div class="guide-stack">
+              <div class="guide-card">
+                <div class="guide-card-head">
+                  <span class="material-symbols-outlined mi mi-sm mi-plain">checklist</span>
+                  작성 체크포인트
+                </div>
+                <ul class="guide-checklist">
+                  <li>어떤 주제로 멘토링을 받고 싶은지</li>
+                  <li>현재 사업/서비스가 어느 단계인지</li>
+                  <li>가장 막히는 부분이 무엇인지</li>
+                  <li>멘토에게 기대하는 피드백 방향</li>
+                </ul>
+              </div>
+              <div class="guide-card">
+                <div class="guide-card-head">
+                  <span class="material-symbols-outlined mi mi-sm mi-plain">text_snippet</span>
+                  예시 문장 — 클릭하면 추가됩니다
+                </div>
+                <div class="guide-examples guide-examples-col">
+                  <button type="button" class="example-chip example-chip-full" onclick="insertMatchNoteExample(this)">투자유치 자료 구성 방향에 대한 피드백을 받고 싶습니다.</button>
+                  <button type="button" class="example-chip example-chip-full" onclick="insertMatchNoteExample(this)">초기 서비스 기획 및 시장 검증 방향이 고민입니다.</button>
+                  <button type="button" class="example-chip example-chip-full" onclick="insertMatchNoteExample(this)">마케팅 채널 우선순위 설정에 대한 조언이 필요합니다.</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
