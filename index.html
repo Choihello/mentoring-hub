@@ -2572,6 +2572,11 @@ tr:hover td { background: var(--bg-2); }
 .am-recent-session .date { color: var(--muted); font-family: var(--font-mono); font-size: 11px; min-width: 70px; }
 .am-recent-session .mentee { font-weight: 500; color: var(--ink); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ── 매칭 관리 v2.9.5 칩 ── */
+.amh-chip{padding:5px 14px;font-size:12px;font-weight:600;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;font-family:var(--font-sans)}
+.amh-chip:hover{background:var(--surface3)}
+.amh-chip.active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
 /* ── 요청 관리 v2.9.2 레이아웃 ── */
 .arq-layout { display: flex; gap: 20px; }
 .arq-main { flex: 1; min-width: 0; }
@@ -10372,108 +10377,175 @@ function renderAdminMatch() {
   else renderAdminMatchDirect(el);
 }
 
-function renderAdminMatchRequests(el) {
-  const pending = DB.matchRequests.filter(r => r.status === '대기중').sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  const responded = DB.matchProposals.filter(p => p.mentorResponse !== '대기' && p.status === '제안중');
-  const other = DB.matchRequests.filter(r => r.status !== '대기중').sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  const alertCount = pending.length + responded.length;
+// ── 탭1 헬퍼: 필터 재렌더/초기화/더보기/상세토글 ──
+function _amhReqRerender() { _amhReqRenderContent(); }
+function _amhReqReset() {
+  ['amh-req-search','amh-req-field','amh-req-status','amh-req-date-from','amh-req-date-to'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+  _amhReqRenderContent();
+}
+function _amhToggleProcMore() {
+  const tbody = document.getElementById('amh-proc-extra');
+  const btn = document.getElementById('amh-proc-more-btn');
+  if (!tbody) return;
+  const show = tbody.style.display === 'none';
+  tbody.style.display = show ? '' : 'none';
+  if (btn) btn.innerHTML = show ? '접기 ▲' : `처리된 신청 더보기 ▼`;
+}
+function _amhToggleDetailRow(id) {
+  const row = document.getElementById(id);
+  if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+}
 
-  // ── 대기 중 신청 영역 ──
+function renderAdminMatchRequests(el) {
+  if (!document.getElementById('amh-req-content')) {
+    const allFields = [...new Set(DB.matchRequests.filter(r => r.preferredField).map(r => r.preferredField))].sort();
+    el.innerHTML = `
+      <div class="am-filter-bar" style="margin-bottom:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <div style="position:relative;flex:1;min-width:180px">
+            <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--text3)">search</span>
+            <input type="text" id="amh-req-search" class="form-control" style="padding-left:34px;font-size:13px" placeholder="신청자명, 요청내용 검색..." oninput="_amhReqRerender()">
+          </div>
+          <select id="amh-req-field" class="form-control" style="width:auto;min-width:120px;font-size:13px;padding:6px 10px" onchange="_amhReqRerender()">
+            <option value="">전체 분야</option>
+            ${allFields.map(f => `<option value="${escapeAttr(f)}">${escapeHtml(f)}</option>`).join('')}
+          </select>
+          <select id="amh-req-status" class="form-control" style="width:auto;min-width:110px;font-size:13px;padding:6px 10px" onchange="_amhReqRerender()">
+            <option value="">전체 상태</option>
+            <option value="대기중">대기중</option><option value="제안됨">제안됨</option>
+            <option value="확정">확정</option><option value="거절">거절</option><option value="종료">종료</option>
+          </select>
+          <input type="date" id="amh-req-date-from" class="form-control" style="width:auto;font-size:12px;padding:5px 8px" onchange="_amhReqRerender()" title="시작일">
+          <span style="color:var(--text3);font-size:12px">~</span>
+          <input type="date" id="amh-req-date-to" class="form-control" style="width:auto;font-size:12px;padding:5px 8px" onchange="_amhReqRerender()" title="종료일">
+          <button class="btn btn-ghost btn-sm" id="amh-req-reset-btn" onclick="_amhReqReset()" style="font-size:12px;color:var(--accent);display:none"><span class="material-symbols-outlined mi mi-sm mi-plain">close</span>초기화</button>
+        </div>
+        <div id="amh-req-summary" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+      </div>
+      <div id="amh-req-content"></div>`;
+  }
+  _amhReqRenderContent();
+}
+
+function _amhReqRenderContent() {
+  const contentEl = document.getElementById('amh-req-content');
+  if (!contentEl) return;
+  const sv = (document.getElementById('amh-req-search')?.value || '').trim().toLowerCase();
+  const fv = document.getElementById('amh-req-field')?.value || '';
+  const stv = document.getElementById('amh-req-status')?.value || '';
+  const df = document.getElementById('amh-req-date-from')?.value || '';
+  const dt = document.getElementById('amh-req-date-to')?.value || '';
+  const hasFilter = sv || fv || stv || df || dt;
+  const resetBtn = document.getElementById('amh-req-reset-btn');
+  if (resetBtn) resetBtn.style.display = hasFilter ? '' : 'none';
+
+  let allReqs = [...DB.matchRequests].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  if (sv) allReqs = allReqs.filter(r => {
+    const mentee = _idx.mentee[r.menteeId];
+    return (mentee?.name||'').toLowerCase().includes(sv) || (r.requestNote||'').toLowerCase().includes(sv) || (r.preferredField||'').toLowerCase().includes(sv);
+  });
+  if (fv) allReqs = allReqs.filter(r => r.preferredField === fv);
+  if (stv) allReqs = allReqs.filter(r => r.status === stv);
+  if (df) allReqs = allReqs.filter(r => (r.createdAt||'') >= df);
+  if (dt) allReqs = allReqs.filter(r => (r.createdAt||'').slice(0,10) <= dt);
+
+  const pending = allReqs.filter(r => r.status === '대기중');
+  const processed = allReqs.filter(r => r.status !== '대기중');
+
+  const sumEl = document.getElementById('amh-req-summary');
+  if (sumEl) sumEl.innerHTML = `전체 ${DB.matchRequests.length}건 중 ${allReqs.length}건 표시 · 대기 <strong>${pending.length}</strong>건 · 처리됨 <strong>${processed.length}</strong>건`;
+
+  // ── 대기 중 신청 ──
   let pendingHtml = '';
   if (pending.length) {
     pendingHtml = `<div class="card" style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h4 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:var(--warning)">pending_actions</span>대기 중인 신청 (${pending.length}건)</h4>
-      </div>
-      <div style="margin-bottom:8px">
-        ${pending.map((r, idx) => {
-          const mentee = _idx.mentee[r.menteeId];
-          const safeMenteeName = escapeHtml(mentee?.name || '멘티');
-          const safeTeam = escapeHtml(mentee?.team || '');
-          const safeCreatedAt = escapeHtml(formatDate(r.createdAt));
-          const safePreferredField = escapeHtml(r.preferredField || '');
-          const safePreferredSchedule = escapeHtml(r.preferredSchedule || '');
-          const safeRequestNote = escapeHtml(r.requestNote || '');
-          return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);cursor:pointer;user-select:none" onclick="toggleMatchReqDetail('mreq-${idx}')">
-              <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
-                <strong style="font-size:13px">${safeMenteeName}</strong>
-                <span class="text-muted" style="font-size:12px">(${safeTeam})</span>
-                <span class="badge badge-blue" style="font-size:11px">${safePreferredField}</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-                <span class="text-muted" style="font-size:11px">${safeCreatedAt}</span>
-                <span id="mreq-${idx}-arrow" style="font-size:11px;color:var(--text3);transition:transform 0.2s">▼</span>
-              </div>
+      <div style="margin-bottom:12px"><h4 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:var(--warning)">pending_actions</span>대기 중인 신청 (${pending.length}건)</h4></div>
+      <div>${pending.map((r, idx) => {
+        const mentee = _idx.mentee[r.menteeId];
+        const safeName = escapeHtml(mentee?.name || '멘티');
+        const safeTeam = escapeHtml(mentee?.team || '');
+        const safeDate = escapeHtml(formatDate(r.createdAt));
+        const safeField = escapeHtml(r.preferredField || '');
+        const safeSched = escapeHtml(r.preferredSchedule || '');
+        const safeNote = escapeHtml(r.requestNote || '');
+        return `<div style="border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);cursor:pointer;user-select:none" onclick="toggleMatchReqDetail('mreq-${idx}')">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+              <strong style="font-size:13px">${safeName}</strong>
+              <span class="text-muted" style="font-size:12px">(${safeTeam})</span>
+              <span class="badge badge-blue" style="font-size:11px">${safeField}</span>
             </div>
-            <div id="mreq-${idx}" style="display:none;padding:12px 14px;border-top:1px solid var(--border)">
-              <div style="font-size:13px;margin-bottom:4px">희망 분야: <strong>${safePreferredField}</strong></div>
-              <div style="font-size:13px;margin-bottom:4px">희망 일정: <strong style="white-space:pre-wrap">${safePreferredSchedule}</strong></div>
-              ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2);white-space:pre-wrap">요청사항: ${safeRequestNote}</div>` : ''}
-              <div style="display:flex;gap:8px;margin-top:8px">
-                <button class="btn btn-primary btn-sm" onclick="openMatchProposeModal('${r.id}')">멘토 선택 후 제안</button>
-                <button class="btn btn-sm" style="background:rgba(239,68,68,0.12);color:var(--danger);border:1px solid rgba(239,68,68,0.3);font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700" onclick="adminRejectMatchRequest('${r.id}')">신청 거절</button>
-              </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+              <span class="text-muted" style="font-size:11px">${safeDate}</span>
+              <span id="mreq-${idx}-arrow" style="font-size:11px;color:var(--text3);transition:transform 0.2s">▼</span>
             </div>
-          </div>`;
-        }).join('')}
-      </div>
+          </div>
+          <div id="mreq-${idx}" style="display:none;padding:12px 14px;border-top:1px solid var(--border)">
+            <div style="font-size:13px;margin-bottom:4px">희망 분야: <strong>${safeField}</strong></div>
+            <div style="font-size:13px;margin-bottom:4px">희망 일정: <strong style="white-space:pre-wrap">${safeSched}</strong></div>
+            ${r.requestNote ? `<div style="font-size:13px;margin-bottom:8px;color:var(--text2);white-space:pre-wrap">요청사항: ${safeNote}</div>` : ''}
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-primary btn-sm" onclick="openMatchProposeModal('${r.id}')">멘토 선택 후 제안</button>
+              <button class="btn btn-sm" style="background:rgba(239,68,68,0.12);color:var(--danger);border:1px solid rgba(239,68,68,0.3);font-size:12px;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700" onclick="adminRejectMatchRequest('${r.id}')">신청 거절</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}</div>
     </div>`;
-  } else {
+  } else if (!stv || stv === '대기중') {
     pendingHtml = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
       <span class="material-symbols-outlined" style="font-size:22px;color:var(--text3)">check_circle</span>
       <span style="font-size:13px;color:var(--text2)">현재 대기 중인 매칭 신청이 없습니다.</span>
     </div>`;
   }
 
-  // ── 처리된 신청 영역 (기본 펼침, 테이블 형태) ──
+  // ── 처리된 신청 (최근 10건 기본 노출 + 더보기) ──
+  const PLIMIT = 10;
   let processedHtml = '';
-  if (other.length) {
+  if (processed.length) {
+    const vis = processed.slice(0, PLIMIT);
+    const extra = processed.slice(PLIMIT);
+    const renderRow = (r, i) => {
+      const mentee = _idx.mentee[r.menteeId];
+      const stBadge = r.status==='제안됨'?'badge-blue':r.status==='확정'?'badge-green':r.status==='거절'?'badge-red':'badge-gray';
+      const safeName = escapeHtml(mentee?.name||'멘티');
+      const safeTeam = escapeHtml(mentee?.team||'');
+      const safeField = escapeHtml(r.preferredField||'—');
+      const safeSched = escapeHtml(r.preferredSchedule||'');
+      const safeDate = escapeHtml(formatDate(r.createdAt));
+      const proposal = DB.matchProposals.find(p => p.requestId === r.id);
+      let matchInfo = '<span class="text-muted" style="font-size:12px">—</span>';
+      if (proposal) { const m = _idx.mentor[proposal.mentorId]; matchInfo = `<span style="font-size:12px">${escapeHtml(m?.name||'멘토')}</span>`; }
+      return `<tr>
+        <td><strong style="font-size:13px">${safeName}</strong><div class="text-muted" style="font-size:11px">${safeTeam}</div></td>
+        <td><div style="font-size:13px">${safeField}</div>${safeSched ? `<div class="text-muted" style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeAttr(r.preferredSchedule||'')}">${safeSched}</div>`:''}</td>
+        <td style="font-size:12px;color:var(--text2)">${safeDate}</td>
+        <td><span class="badge ${stBadge}">${escapeHtml(r.status)}</span></td>
+        <td>${matchInfo}</td>
+        <td><button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px" onclick="_amhToggleDetailRow('amh-pd-${i}')">상세</button></td>
+      </tr>
+      <tr id="amh-pd-${i}" style="display:none">
+        <td colspan="6" style="padding:10px 14px;background:var(--surface2);font-size:13px;line-height:1.7">
+          ${r.preferredSchedule ? `<div>희망 일정: <strong style="white-space:pre-wrap">${escapeHtml(r.preferredSchedule)}</strong></div>`:''}
+          ${r.requestNote ? `<div style="color:var(--text2);white-space:pre-wrap">요청사항: ${escapeHtml(r.requestNote)}</div>`:''}
+          ${!r.preferredSchedule&&!r.requestNote ? '<span class="text-muted">추가 정보 없음</span>':''}
+        </td>
+      </tr>`;
+    };
     processedHtml = `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;margin-bottom:12px" onclick="toggleMatchReqProcessed()">
-        <h4 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:var(--text3)">inventory_2</span>처리된 신청 <span class="text-muted" style="font-size:13px;font-weight:400">(${other.length}건)</span></h4>
-        <span id="mreq-processed-arrow" style="font-size:12px;color:var(--text3);transition:transform 0.2s;transform:rotate(180deg)">▼</span>
+      <div style="margin-bottom:12px"><h4 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:var(--text3)">inventory_2</span>처리된 신청 (${processed.length}건)</h4></div>
+      <div style="overflow-x:auto">
+        <table class="am-table" style="width:100%">
+          <thead><tr><th style="width:110px">신청자</th><th>희망 분야/일정</th><th style="width:95px">신청일</th><th style="width:85px">처리 결과</th><th style="width:100px">매칭 정보</th><th style="width:55px">관리</th></tr></thead>
+          <tbody>${vis.map((r,i) => renderRow(r,i)).join('')}</tbody>
+          ${extra.length ? `<tbody id="amh-proc-extra" style="display:none">${extra.map((r,i) => renderRow(r,PLIMIT+i)).join('')}</tbody>`:''}
+        </table>
       </div>
-      <div id="mreq-processed-list" style="margin-top:0">
-        <div style="overflow-x:auto">
-          <table class="am-table" style="width:100%">
-            <thead><tr>
-              <th style="width:110px">신청자</th>
-              <th>희망 분야</th>
-              <th style="width:100px">신청일</th>
-              <th style="width:90px">처리 결과</th>
-              <th>매칭 정보</th>
-            </tr></thead>
-            <tbody>${other.map(r => {
-              const mentee = _idx.mentee[r.menteeId];
-              const statusBadge = r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : r.status === '거절' ? 'badge-red' : r.status === '종료' ? 'badge-gray' : 'badge-gray';
-              const safeMenteeName = escapeHtml(mentee?.name || '멘티');
-              const safeTeam = escapeHtml(mentee?.team || '');
-              const safePreferredField = escapeHtml(r.preferredField || '');
-              const safeCreatedAt = escapeHtml(formatDate(r.createdAt));
-              // 매칭 정보: 해당 request에 대한 proposal 찾기
-              const proposal = DB.matchProposals.find(p => p.requestId === r.id);
-              let matchInfo = '<span class="text-muted" style="font-size:12px">—</span>';
-              if (proposal) {
-                const mentor = _idx.mentor[proposal.mentorId];
-                const safeMentorName = escapeHtml(mentor?.name || '멘토');
-                matchInfo = `<span style="font-size:12px">${safeMentorName}</span>`;
-              }
-              return `<tr>
-                <td><strong style="font-size:13px">${safeMenteeName}</strong><div class="text-muted" style="font-size:11px">${safeTeam}</div></td>
-                <td style="font-size:13px">${safePreferredField}</td>
-                <td style="font-size:12px;color:var(--text2)">${safeCreatedAt}</td>
-                <td><span class="badge ${statusBadge}">${escapeHtml(r.status)}</span></td>
-                <td>${matchInfo}</td>
-              </tr>`;
-            }).join('')}</tbody>
-          </table>
-        </div>
-      </div>
+      ${extra.length ? `<button class="btn btn-ghost" id="amh-proc-more-btn" style="width:100%;margin-top:8px;font-size:13px;color:var(--accent)" onclick="_amhToggleProcMore()">처리된 신청 더보기 (${extra.length}건) ▼</button>`:''}
     </div>`;
   }
 
-  el.innerHTML = pendingHtml + processedHtml;
+  contentEl.innerHTML = pendingHtml + processedHtml;
 }
 
 // 공통 접기/펼치기 토글
@@ -10494,75 +10566,97 @@ function toggleMatchReqProcessed() {
   toggleCollapse('mreq-processed-list', 'mreq-processed-arrow');
 }
 
-function renderAdminMatchProposals(el) {
-  const statusFilter = document.getElementById('match-status-filter')?.value || 'all';
-  let proposals = [...DB.matchProposals].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
-  if (statusFilter !== 'all') proposals = proposals.filter(p => p.status === statusFilter);
-  el.innerHTML = `
-    <div class="card">
-      <div class="flex-between" style="margin-bottom:12px">
-        <h4 style="display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:var(--accent)">swap_horiz</span>매칭 현황 (${proposals.length}건)</h4>
-        <select id="match-status-filter" class="form-control" style="width:auto;padding:6px 12px;font-size:13px;border-radius:8px" onchange="renderAdminMatch()">
-          <option value="all" ${statusFilter==='all'?'selected':''}>전체 상태</option>
-          <option value="제안중" ${statusFilter==='제안중'?'selected':''}>제안중</option>
-          <option value="확정" ${statusFilter==='확정'?'selected':''}>확정</option>
-          <option value="거절" ${statusFilter==='거절'?'selected':''}>거절</option>
-          <option value="해제" ${statusFilter==='해제'?'selected':''}>해제</option>
-        </select>
-      </div>
-      ${(() => {
-        if (!proposals.length) return '<div class="empty-state"><span class="icon material-symbols-outlined">inbox</span><h4>매칭 기록 없음</h4></div>';
-        const PLIMIT = 5;
-        const renderProposal = p => {
-          const mentor = _idx.mentor[p.mentorId];
-          const mentee = _idx.mentee[p.menteeId];
-          const statusBadge = p.status === '제안중' ? 'badge-warn' : p.status === '확정' ? 'badge-green' : p.status === '해제' ? 'badge-gray' : 'badge-gray';
-          const flowBadge = p.flowType === 'admin_direct'
-            ? '<span style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.04em">직접매칭</span>'
-            : '<span style="background:rgba(96,165,250,0.12);color:var(--info);border:1px solid rgba(96,165,250,0.3);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.04em">신청기반</span>';
-          const sessions = DB.sessions.filter(s => s.mentorId === p.mentorId && s.menteeId === p.menteeId);
-          const completedCnt = sessions.filter(s => s.status === 'completed').length;
-          const upcomingCnt = sessions.filter(s => s.status === 'upcoming' || s.status === 'pending').length;
-          const activityHtml = p.status === '확정' ? `<div style="margin-top:6px;display:flex;gap:8px;align-items:center">
-            ${completedCnt > 0 ? `<span style="background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-mono);display:inline-flex;align-items:center;gap:4px"><span class="material-symbols-outlined mi mi-sm mi-plain">task_alt</span>멘토링 ${completedCnt}회 완료</span>` : ''}
-            ${upcomingCnt > 0 ? `<span style="background:rgba(96,165,250,0.12);color:var(--info);border:1px solid rgba(96,165,250,0.3);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-mono);display:inline-flex;align-items:center;gap:4px"><span class="material-symbols-outlined mi mi-sm mi-plain">calendar_month</span>예정 ${upcomingCnt}건</span>` : ''}
-            ${completedCnt === 0 && upcomingCnt === 0 ? `<span style="background:rgba(234,179,8,0.12);color:var(--warning);border:1px solid rgba(234,179,8,0.3);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:700;font-family:var(--font-mono);display:inline-flex;align-items:center;gap:4px"><span class="material-symbols-outlined mi mi-sm mi-plain">hourglass_empty</span>멘토링 미진행</span>` : ''}
-          </div>` : '';
-          const unmatchBtn = p.status === '확정' ? `<button class="btn btn-sm" style="background:rgba(239,68,68,0.12);color:var(--danger);border:1px solid rgba(239,68,68,0.3);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer;font-weight:700" onclick="adminUnmatch('${p.id}')">매칭 해제</button>` : '';
-          const safeMentorName = escapeHtml(mentor?.name || '멘토');
-          const safeMenteeName = escapeHtml(mentee?.name || '멘티');
-          const safeCreatedAt = escapeHtml(formatDate(p.createdAt));
-          const safeAdminMemo = escapeHtml(p.adminMemo || '');
-          return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-            <div class="flex-between">
-              <div>
-                ${flowBadge}
-                <strong style="margin-left:6px">${safeMentorName}</strong> → <strong>${safeMenteeName}</strong>
-                <span class="badge ${statusBadge}" style="margin-left:6px">${p.status}</span>
-                ${p.mentorResponse !== '대기' ? `<span class="text-muted" style="font-size:11px;margin-left:4px">(멘토: ${p.mentorResponse})</span>` : ''}
-              </div>
-              <div style="display:flex;align-items:center;gap:8px">
-                ${unmatchBtn}
-                <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
-              </div>
-            </div>
-            ${activityHtml}
-            ${p.adminMemo ? `<div class="text-muted" style="font-size:12px;margin-top:4px">메모: ${safeAdminMemo}</div>` : ''}
-          </div>`;
-        };
-        const recent = proposals.slice(0, PLIMIT);
-        const older = proposals.slice(PLIMIT);
-        let html = recent.map(renderProposal).join('');
-        if (older.length) {
-          html += `<div id="admin-proposals-more" style="display:none">${older.map(renderProposal).join('')}</div>`;
-          html += `<button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:13px;color:var(--accent)" onclick="toggleCollapse('admin-proposals-more','');var el=document.getElementById('admin-proposals-more');this.textContent=el.style.display==='none'?'이전 매칭 더보기 (${older.length}건) ▼':'접기 ▲'">이전 매칭 더보기 (${older.length}건) ▼</button>`;
-        }
-        return html;
-      })()}
-    </div>`;
+// ── 탭2: 매칭 현황 (칩 필터 + 테이블) ──
+let _amhPropChip = 'all';
+function _amhSetPropChip(chip) {
+  _amhPropChip = chip;
+  document.querySelectorAll('#amh-prop-chips .amh-chip').forEach(b => b.classList.toggle('active', b.dataset.chip === chip));
+  _amhPropRenderContent();
 }
 
-// ── 직접 매칭: 검색형 드롭다운 헬퍼 ──
+function renderAdminMatchProposals(el) {
+  if (!document.getElementById('amh-prop-content')) {
+    _amhPropChip = 'all';
+    el.innerHTML = `
+      <div id="amh-prop-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;align-items:center">
+        <button class="amh-chip active" data-chip="all" onclick="_amhSetPropChip('all')">전체</button>
+        <button class="amh-chip" data-chip="request_based" onclick="_amhSetPropChip('request_based')">신청기반</button>
+        <button class="amh-chip" data-chip="admin_direct" onclick="_amhSetPropChip('admin_direct')">직접매칭</button>
+        <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+        <button class="amh-chip" data-chip="waiting" onclick="_amhSetPropChip('waiting')">수락 대기</button>
+        <button class="amh-chip" data-chip="confirmed" onclick="_amhSetPropChip('confirmed')">확정</button>
+        <button class="amh-chip" data-chip="rejected" onclick="_amhSetPropChip('rejected')">거절/해제</button>
+      </div>
+      <div id="amh-prop-summary" style="margin-bottom:12px;font-size:12px;color:var(--text3)"></div>
+      <div id="amh-prop-content"></div>`;
+  }
+  _amhPropRenderContent();
+}
+
+function _amhPropRenderContent() {
+  const el = document.getElementById('amh-prop-content');
+  if (!el) return;
+  let proposals = [...DB.matchProposals].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  switch (_amhPropChip) {
+    case 'request_based': proposals = proposals.filter(p => p.flowType === 'request_based'); break;
+    case 'admin_direct': proposals = proposals.filter(p => p.flowType === 'admin_direct'); break;
+    case 'waiting': proposals = proposals.filter(p => p.mentorResponse === '대기' && p.status === '제안중'); break;
+    case 'confirmed': proposals = proposals.filter(p => p.status === '확정'); break;
+    case 'rejected': proposals = proposals.filter(p => p.status === '거절' || p.status === '해제' || p.status === '취소'); break;
+  }
+  const sumEl = document.getElementById('amh-prop-summary');
+  if (sumEl) sumEl.textContent = `전체 ${DB.matchProposals.length}건 중 ${proposals.length}건 표시`;
+
+  if (!proposals.length) {
+    el.innerHTML = `<div class="card"><div style="padding:32px;text-align:center;color:var(--text3)">
+      <span class="material-symbols-outlined" style="font-size:36px;display:block;margin-bottom:8px">inbox</span>
+      <span style="font-size:13px">해당 조건의 매칭 기록이 없습니다.</span>
+    </div></div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="card" style="padding:0"><div style="overflow-x:auto">
+    <table class="am-table" style="width:100%">
+      <thead><tr>
+        <th>매칭</th><th style="width:70px">방식</th><th style="width:70px">상태</th>
+        <th style="width:85px">멘토 응답</th><th style="width:90px">처리일</th>
+        <th style="max-width:150px">메모</th><th style="width:70px">관리</th>
+      </tr></thead>
+      <tbody>${proposals.map(p => {
+        const mentor = _idx.mentor[p.mentorId];
+        const mentee = _idx.mentee[p.menteeId];
+        const safeMentor = escapeHtml(mentor?.name||'멘토');
+        const safeMentee = escapeHtml(mentee?.name||'멘티');
+        const safeDate = escapeHtml(formatDate(p.createdAt));
+        const safeMemo = escapeHtml(p.adminMemo||'');
+        const flowBadge = p.flowType==='admin_direct'
+          ? '<span class="badge" style="background:rgba(168,85,247,0.12);color:#a855f7;border:1px solid rgba(168,85,247,0.3);font-size:10px">직접</span>'
+          : '<span class="badge" style="background:rgba(96,165,250,0.12);color:var(--info);border:1px solid rgba(96,165,250,0.3);font-size:10px">신청</span>';
+        const stBadge = p.status==='제안중'?'badge-warn':p.status==='확정'?'badge-green':p.status==='거절'?'badge-red':'badge-gray';
+        const rBadge = p.mentorResponse==='수락'?'badge-green':p.mentorResponse==='거절'?'badge-red':'badge-warn';
+        let actHtml = '';
+        if (p.status === '확정') {
+          const sess = DB.sessions.filter(s => s.mentorId===p.mentorId && s.menteeId===p.menteeId);
+          const done = sess.filter(s => s.status==='completed').length;
+          const up = sess.filter(s => s.status==='upcoming'||s.status==='pending').length;
+          if (done||up) actHtml = `<div style="margin-top:3px;font-size:10px;color:var(--text3)">${done?`완료 ${done}회`:''}${done&&up?' · ':''}${up?`예정 ${up}건`:''}</div>`;
+        }
+        const unmatchBtn = p.status==='확정' ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px;color:var(--danger)" onclick="adminUnmatch('${p.id}')">해제</button>` : '<span class="text-muted" style="font-size:12px">—</span>';
+        return `<tr>
+          <td><div style="font-size:13px"><strong>${safeMentor}</strong> <span style="color:var(--text3)">→</span> <strong>${safeMentee}</strong></div>${actHtml}</td>
+          <td>${flowBadge}</td>
+          <td><span class="badge ${stBadge}">${escapeHtml(p.status)}</span></td>
+          <td><span class="badge ${rBadge}">${escapeHtml(p.mentorResponse)}</span></td>
+          <td style="font-size:12px;color:var(--text2)">${safeDate}</td>
+          <td style="font-size:12px;color:var(--text2);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${safeMemo}">${safeMemo||'<span class="text-muted">—</span>'}</td>
+          <td>${unmatchBtn}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>
+  </div></div>`;
+}
+
+// ── 탭3: 직접 매칭 검색형 드롭다운 + 2컬럼 ──
 function _amhShowDropdown(type) {
   const dd = document.getElementById(`direct-${type}-dropdown`);
   if (dd) { dd.style.display = 'block'; _amhFilterDirect(type); }
@@ -10584,15 +10678,10 @@ function _amhFilterDirect(type) {
       return true;
     });
   }
-  if (!items.length) {
-    dd.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">검색 결과가 없습니다</div>';
-    return;
-  }
+  if (!items.length) { dd.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">검색 결과가 없습니다</div>'; return; }
   dd.innerHTML = items.map(m => {
     const safeName = escapeHtml(m.name);
-    const safeSub = type === 'mentor'
-      ? escapeHtml((m.field || '') + (m.org ? ' · ' + m.org : ''))
-      : escapeHtml(m.team || '');
+    const safeSub = type === 'mentor' ? escapeHtml((m.field||'')+(m.org?' · '+m.org:'')) : escapeHtml(m.team||'');
     return `<div onmousedown="_amhSelectDirect('${type}','${m.id}')" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s" onmouseenter="this.style.background='var(--surface3)'" onmouseleave="this.style.background=''">
       <div style="font-weight:600;font-size:13px;color:var(--text)">${safeName}</div>
       ${safeSub ? `<div style="font-size:11px;color:var(--text3);margin-top:1px">${safeSub}</div>` : ''}
@@ -10605,13 +10694,8 @@ function _amhSelectDirect(type, id) {
   const chipEl = document.getElementById(`direct-${type}-chip`);
   const dd = document.getElementById(`direct-${type}-dropdown`);
   let name = '', detail = '';
-  if (type === 'mentor') {
-    const m = DB.mentors.find(x => x.id === id);
-    name = m?.name || ''; detail = m?.field || '';
-  } else {
-    const m = DB.mentees.find(x => x.id === id);
-    name = m?.name || ''; detail = m?.team || '';
-  }
+  if (type === 'mentor') { const m = DB.mentors.find(x => x.id === id); name = m?.name||''; detail = m?.field||''; }
+  else { const m = DB.mentees.find(x => x.id === id); name = m?.name||''; detail = m?.team||''; }
   if (searchEl) searchEl.style.display = 'none';
   if (dd) dd.style.display = 'none';
   if (chipEl) {
@@ -10623,6 +10707,7 @@ function _amhSelectDirect(type, id) {
     </div>
     <button onclick="_amhClearDirect('${type}')" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0 2px;line-height:1;flex-shrink:0" title="선택 해제">✕</button>`;
   }
+  _amhDirectUpdatePreview();
 }
 function _amhClearDirect(type) {
   document.getElementById(`direct-${type}-select`).value = '';
@@ -10630,44 +10715,102 @@ function _amhClearDirect(type) {
   const chipEl = document.getElementById(`direct-${type}-chip`);
   if (searchEl) { searchEl.style.display = ''; searchEl.value = ''; searchEl.focus(); }
   if (chipEl) chipEl.style.display = 'none';
+  _amhDirectUpdatePreview();
+}
+function _amhDirectUpdatePreview() {
+  const body = document.getElementById('amh-direct-preview-body');
+  if (!body) return;
+  const mentorId = document.getElementById('direct-mentor-select')?.value;
+  const menteeId = document.getElementById('direct-mentee-select')?.value;
+  if (!mentorId && !menteeId) { body.innerHTML = '<span style="color:var(--text3)">멘토와 멘티를 선택하면 여기에 정보가 표시됩니다.</span>'; return; }
+  let html = '';
+  if (mentorId) {
+    const m = DB.mentors.find(x => x.id === mentorId);
+    if (m) html += `<div style="padding:10px 12px;background:var(--accent-ultra);border:1px solid var(--accent-line);border-radius:8px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;font-family:var(--font-mono)">멘토</div>
+      <div style="font-weight:700;color:var(--text)">${escapeHtml(m.name)}</div>
+      ${m.field?`<div style="font-size:12px;color:var(--text2)">${escapeHtml(m.field)}</div>`:''}
+      ${m.org?`<div style="font-size:12px;color:var(--text3)">${escapeHtml(m.org)}</div>`:''}
+    </div>`;
+  }
+  if (mentorId && menteeId) html += '<div style="text-align:center;padding:4px 0"><span class="material-symbols-outlined" style="font-size:20px;color:var(--accent)">arrow_downward</span></div>';
+  if (menteeId) {
+    const m = DB.mentees.find(x => x.id === menteeId);
+    if (m) html += `<div style="padding:10px 12px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--info);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;font-family:var(--font-mono)">멘티</div>
+      <div style="font-weight:700;color:var(--text)">${escapeHtml(m.name)}</div>
+      ${m.team?`<div style="font-size:12px;color:var(--text2)">${escapeHtml(m.team)}</div>`:''}
+    </div>`;
+  }
+  body.innerHTML = html || '<span style="color:var(--text3)">멘토와 멘티를 선택하면 여기에 정보가 표시됩니다.</span>';
 }
 
 function renderAdminMatchDirect(el) {
   const activeMentors = DB.mentors.filter(m => m.active !== false);
+  const recentDirect = DB.matchProposals.filter(p => p.flowType === 'admin_direct').sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||'')).slice(0, 5);
+  const ddStyle = 'display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.10);z-index:100';
+  const chipStyle = 'display:none;padding:8px 12px;background:var(--accent-ultra);border:1px solid var(--accent-line);border-radius:8px;align-items:center;justify-content:space-between';
   el.innerHTML = `
-    <div class="card" style="max-width:560px">
-      <h4 style="margin-bottom:4px;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:#a855f7">add_link</span>직접 매칭</h4>
-      <p class="text-muted" style="margin-bottom:20px;font-size:13px">멘토와 멘티를 직접 선택하여 매칭합니다. 제안 단계 없이 바로 확정됩니다.</p>
-      <div class="form-group">
-        <label class="form-label">멘토 선택 <span class="text-muted" style="font-weight:400;font-size:12px">(활성 ${activeMentors.length}명)</span></label>
-        <input type="hidden" id="direct-mentor-select" value="">
-        <div style="position:relative" id="direct-mentor-wrap">
-          <div id="direct-mentor-chip" style="display:none;padding:8px 12px;background:var(--accent-ultra);border:1px solid var(--accent-line);border-radius:8px;align-items:center;justify-content:space-between"></div>
-          <input type="text" id="direct-mentor-search" class="form-control" placeholder="이름, 분야, 소속으로 검색..." autocomplete="off"
-            oninput="_amhFilterDirect('mentor')"
-            onfocus="_amhShowDropdown('mentor')"
-            onblur="setTimeout(()=>{const d=document.getElementById('direct-mentor-dropdown');if(d)d.style.display='none'},180)">
-          <div id="direct-mentor-dropdown" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.10);z-index:100"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:20px">
+      <div style="flex:1;min-width:320px">
+        <div class="card">
+          <h4 style="margin-bottom:4px;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:#a855f7">add_link</span>직접 매칭</h4>
+          <p class="text-muted" style="margin-bottom:20px;font-size:13px">멘토와 멘티를 직접 선택하여 매칭합니다. 제안 단계 없이 바로 확정됩니다.</p>
+          <div class="form-group">
+            <label class="form-label">멘토 선택 <span class="text-muted" style="font-weight:400;font-size:12px">(활성 ${activeMentors.length}명)</span></label>
+            <input type="hidden" id="direct-mentor-select" value="">
+            <div style="position:relative" id="direct-mentor-wrap">
+              <div id="direct-mentor-chip" style="${chipStyle}"></div>
+              <input type="text" id="direct-mentor-search" class="form-control" placeholder="이름, 분야, 소속으로 검색..." autocomplete="off" oninput="_amhFilterDirect('mentor')" onfocus="_amhShowDropdown('mentor')" onblur="setTimeout(()=>{const d=document.getElementById('direct-mentor-dropdown');if(d)d.style.display='none'},180)">
+              <div id="direct-mentor-dropdown" style="${ddStyle}"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">멘티 선택 <span class="text-muted" style="font-weight:400;font-size:12px">(${DB.mentees.length}명)</span></label>
+            <input type="hidden" id="direct-mentee-select" value="">
+            <div style="position:relative" id="direct-mentee-wrap">
+              <div id="direct-mentee-chip" style="${chipStyle}"></div>
+              <input type="text" id="direct-mentee-search" class="form-control" placeholder="이름, 소속 기업으로 검색..." autocomplete="off" oninput="_amhFilterDirect('mentee')" onfocus="_amhShowDropdown('mentee')" onblur="setTimeout(()=>{const d=document.getElementById('direct-mentee-dropdown');if(d)d.style.display='none'},180)">
+              <div id="direct-mentee-dropdown" style="${ddStyle}"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">담당자 메모 <span class="text-muted" style="font-weight:400;font-size:12px">(선택)</span></label>
+            <textarea id="direct-admin-memo" class="form-control" rows="2" placeholder="매칭 사유나 참고사항을 입력하세요"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="adminDirectMatch()" style="width:100%;margin-top:4px"><span class="material-symbols-outlined mi mi-sm mi-plain">check</span>매칭 확정</button>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">멘티 선택 <span class="text-muted" style="font-weight:400;font-size:12px">(${DB.mentees.length}명)</span></label>
-        <input type="hidden" id="direct-mentee-select" value="">
-        <div style="position:relative" id="direct-mentee-wrap">
-          <div id="direct-mentee-chip" style="display:none;padding:8px 12px;background:var(--accent-ultra);border:1px solid var(--accent-line);border-radius:8px;align-items:center;justify-content:space-between"></div>
-          <input type="text" id="direct-mentee-search" class="form-control" placeholder="이름, 소속 기업으로 검색..." autocomplete="off"
-            oninput="_amhFilterDirect('mentee')"
-            onfocus="_amhShowDropdown('mentee')"
-            onblur="setTimeout(()=>{const d=document.getElementById('direct-mentee-dropdown');if(d)d.style.display='none'},180)">
-          <div id="direct-mentee-dropdown" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.10);z-index:100"></div>
+      <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:16px">
+        <div class="card" id="amh-direct-preview">
+          <h4 style="margin:0 0 12px;font-size:14px;display:flex;align-items:center;gap:6px"><span class="material-symbols-outlined mi mi-sm" style="color:var(--accent)">preview</span>선택 확인</h4>
+          <div id="amh-direct-preview-body" style="font-size:13px;color:var(--text2)">멘토와 멘티를 선택하면 여기에 정보가 표시됩니다.</div>
         </div>
+        <div class="card" style="background:var(--surface2)">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span class="material-symbols-outlined" style="font-size:20px;color:var(--accent);flex-shrink:0;margin-top:2px">info</span>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7">
+              <div style="font-weight:700;color:var(--text);margin-bottom:4px">직접 매칭 안내</div>
+              직접 매칭은 멘토 제안 단계 없이 <strong>즉시 확정</strong>됩니다.<br>
+              매칭 후 멘토에게 일정 등록 안내가 전송됩니다.<br>
+              매칭 해제는 매칭 현황 탭에서 가능합니다.
+            </div>
+          </div>
+        </div>
+        ${recentDirect.length ? `<div class="card">
+          <h4 style="margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:6px"><span class="material-symbols-outlined mi mi-sm" style="color:var(--text3)">history</span>최근 직접 매칭</h4>
+          ${recentDirect.map(p => {
+            const mentor = _idx.mentor[p.mentorId]; const mentee = _idx.mentee[p.menteeId];
+            const stBadge = p.status==='확정'?'badge-green':p.status==='해제'?'badge-gray':'badge-warn';
+            return `<div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <div style="font-size:12px"><strong>${escapeHtml(mentor?.name||'멘토')}</strong> → <strong>${escapeHtml(mentee?.name||'멘티')}</strong></div>
+              <div style="display:flex;align-items:center;gap:6px"><span class="badge ${stBadge}" style="font-size:10px">${escapeHtml(p.status)}</span><span class="text-muted" style="font-size:11px">${escapeHtml(formatDate(p.createdAt))}</span></div>
+            </div>`;
+          }).join('')}
+        </div>` : ''}
       </div>
-      <div class="form-group">
-        <label class="form-label">담당자 메모 <span class="text-muted" style="font-weight:400;font-size:12px">(선택)</span></label>
-        <textarea id="direct-admin-memo" class="form-control" rows="2" placeholder="매칭 사유나 참고사항을 입력하세요"></textarea>
-      </div>
-      <button class="btn btn-primary" onclick="adminDirectMatch()" style="width:100%;margin-top:4px"><span class="material-symbols-outlined mi mi-sm mi-plain">check</span>매칭 확정</button>
     </div>`;
+  _amhDirectUpdatePreview();
 }
 
 let _proposeRequestId = null;
@@ -10798,6 +10941,9 @@ async function adminDirectMatch() {
   const memo = document.getElementById('direct-admin-memo').value.trim();
   if (!mentorId || !menteeId) { toast('멘토와 멘티를 모두 선택해주세요', 'error'); return; }
   if (mentorId === menteeId) { toast('동일인을 선택할 수 없습니다', 'error'); return; }
+  const _mName = _idx.mentor[mentorId]?.name || '멘토';
+  const _tName = _idx.mentee[menteeId]?.name || '멘티';
+  if (!confirm(`${_mName} 멘토와 ${_tName} 멘티를 직접 매칭하시겠습니까?\n제안 단계 없이 바로 확정됩니다.`)) return;
   const proposal = {
     id: 'mp' + Date.now(),
     mentorId,
