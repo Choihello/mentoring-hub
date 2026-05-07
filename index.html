@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="2.9.1-20260506">
+<meta name="version" content="2.9.5-20260507">
 <title>멘토링 허브 — 광운대학교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&family=Pretendard:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
-  /* ── Light theme (Mentoring Hub v2.9.4 — light-only) ── */
+  /* ── Light theme (Mentoring Hub v2.9.5 — light-only) ── */
   --bg: #f7f9fb;            /* page background — cool neutral */
   --bg-1: #ffffff;          /* card / primary surface */
   --bg-2: #f2f5f8;          /* slight-raised surface / hover bg */
@@ -3055,7 +3055,7 @@ tr:hover td { background: var(--bg-2); }
     <span class="lv3-logo-mark">M</span>
     <span>멘토링허브</span>
   </div>
-  <div class="lv3-corner tr mono">v2.9.4 · KST</div>
+  <div class="lv3-corner tr mono">v2.9.5 · KST</div>
   <div class="lv3-corner bl mono">© 2026 광운대학교 NCI창업패키지사업단</div>
 
   <div class="lv3-center">
@@ -3202,7 +3202,7 @@ tr:hover td { background: var(--bg-2); }
       <div id="sidebar-mentee-widgets" class="sidebar-mentee-widgets" style="display:none"></div>
       <div class="sidebar-bottom">
         <button class="btn-logout" onclick="fullLogout()" style="background:rgba(239,68,68,0.10);color:var(--danger);border:1px solid rgba(239,68,68,0.30)"><span class="material-symbols-outlined" style="font-size:16px">logout</span>로그아웃</button>
-        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.9.4 · 2026-05-07</div>
+        <div style="text-align:center;font-size:10px;color:var(--muted-2);margin-top:8px;font-family:var(--font-mono);letter-spacing:0.08em;text-transform:uppercase">v2.9.5 · 2026-05-07</div>
       </div>
     </aside>
 
@@ -3532,16 +3532,27 @@ tr:hover td { background: var(--bg-2); }
           <div id="mentee-match-content"></div>
         </div>
 
-        <!-- ── 관리자: 매칭 관리 ── -->
+        <!-- ── 관리자: 매칭 관리 v2.9.5 ── -->
         <div id="page-admin-match" class="page">
           <div class="page-header flex-between">
-            <div><h2><span class="material-symbols-outlined mi">handshake</span>매칭 관리</h2><p>멘토-멘티 매칭 신청 및 현황을 관리합니다</p></div>
+            <div><h2><span class="material-symbols-outlined mi">handshake</span>매칭 관리</h2><p>멘티의 매칭 신청을 확인하고 처리 현황을 관리합니다.</p></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost" onclick="location.reload()" title="새로고침"><span class="material-symbols-outlined mi mi-sm mi-plain">refresh</span></button>
+              <button class="btn btn-primary btn-sm" onclick="setMatchTab('direct')"><span class="material-symbols-outlined mi mi-sm mi-plain">add</span>직접 매칭</button>
+            </div>
           </div>
-          <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
-            <button id="mtab-requests" class="btn btn-sm btn-primary" style="border-radius:999px" onclick="setMatchTab('requests')">멘티 신청 목록</button>
-            <button id="mtab-proposals" class="btn btn-sm btn-secondary" style="border-radius:999px" onclick="setMatchTab('proposals')">매칭 현황</button>
-            <button id="mtab-direct" class="btn btn-sm btn-secondary" style="border-radius:999px" onclick="setMatchTab('direct')">직접 매칭</button>
+
+          <!-- 요약 카드 -->
+          <div class="am-stats-grid" id="amh-stats"></div>
+
+          <!-- 탭 -->
+          <div class="arq-tabs" id="amh-tabs">
+            <button id="mtab-requests" class="arq-tab active" onclick="setMatchTab('requests')">멘티 신청 목록<span class="arq-tab-count" id="amh-tab-req-cnt">0</span></button>
+            <button id="mtab-proposals" class="arq-tab" onclick="setMatchTab('proposals')">매칭 현황<span class="arq-tab-count" id="amh-tab-prop-cnt">0</span></button>
+            <button id="mtab-direct" class="arq-tab" onclick="setMatchTab('direct')">직접 매칭</button>
           </div>
+
+          <!-- 탭 콘텐츠 -->
           <div id="admin-match-content"></div>
         </div>
 
@@ -10300,18 +10311,61 @@ function showMatchAcceptedModal(menteeName) {
   document.body.appendChild(overlay);
 }
 
-// ── 관리자: 매칭 관리 ──
+// ── 관리자: 매칭 관리 v2.9.5 ──
 let _matchTab = 'requests';
+
+function _amhComputeStats() {
+  const pending = DB.matchRequests.filter(r => r.status === '대기중').length;
+  const processed = DB.matchRequests.filter(r => r.status !== '대기중').length;
+  const confirmed = DB.matchProposals.filter(p => p.status === '확정').length;
+  const proposing = DB.matchProposals.filter(p => p.status === '제안중').length;
+  const rejected = DB.matchRequests.filter(r => r.status === '거절').length
+    + DB.matchProposals.filter(p => p.status === '거절' || p.status === '해제' || p.status === '취소').length;
+  return { pending, processed, confirmed, proposing, rejected };
+}
+
+function _amhRenderStats() {
+  const el = document.getElementById('amh-stats');
+  if (!el) return;
+  const s = _amhComputeStats();
+  el.innerHTML = `
+    <div class="am-stat-card" onclick="setMatchTab('requests')">
+      <div class="am-stat-icon" style="background:rgba(234,179,8,0.12);color:var(--warning)"><span class="material-symbols-outlined">pending_actions</span></div>
+      <div class="am-stat-body"><div class="am-stat-value">${s.pending}</div><div class="am-stat-label">대기 중 신청</div></div>
+    </div>
+    <div class="am-stat-card" onclick="setMatchTab('proposals')">
+      <div class="am-stat-icon" style="background:rgba(96,165,250,0.12);color:var(--info)"><span class="material-symbols-outlined">swap_horiz</span></div>
+      <div class="am-stat-body"><div class="am-stat-value">${s.proposing}</div><div class="am-stat-label">제안 진행 중</div></div>
+    </div>
+    <div class="am-stat-card" onclick="setMatchTab('proposals')">
+      <div class="am-stat-icon" style="background:var(--accent-soft);color:var(--accent)"><span class="material-symbols-outlined">handshake</span></div>
+      <div class="am-stat-body"><div class="am-stat-value">${s.confirmed}</div><div class="am-stat-label">확정 매칭</div></div>
+    </div>
+    <div class="am-stat-card">
+      <div class="am-stat-icon" style="background:rgba(239,68,68,0.10);color:var(--danger)"><span class="material-symbols-outlined">block</span></div>
+      <div class="am-stat-body"><div class="am-stat-value">${s.rejected}</div><div class="am-stat-label">거절 / 해제</div></div>
+    </div>
+    <div class="am-stat-card" onclick="setMatchTab('direct')" style="cursor:pointer">
+      <div class="am-stat-icon" style="background:rgba(168,85,247,0.10);color:#a855f7"><span class="material-symbols-outlined">add_link</span></div>
+      <div class="am-stat-body"><div class="am-stat-value" style="font-size:16px">직접 매칭</div><div class="am-stat-label">멘토·멘티 직접 연결</div></div>
+    </div>`;
+}
+
 function setMatchTab(tab) {
   _matchTab = tab;
-  ['requests', 'proposals', 'direct'].forEach(t => {
-    const btn = document.getElementById('mtab-' + t);
-    if (btn) { btn.className = `btn btn-sm ${t === tab ? 'btn-primary' : 'btn-secondary'}`; btn.style.borderRadius = '999px'; }
-  });
+  document.querySelectorAll('#amh-tabs .arq-tab').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById('mtab-' + tab);
+  if (activeBtn) activeBtn.classList.add('active');
   renderAdminMatch();
 }
 
 function renderAdminMatch() {
+  _amhRenderStats();
+  // 탭 배지 카운트 업데이트
+  const reqCnt = document.getElementById('amh-tab-req-cnt');
+  const propCnt = document.getElementById('amh-tab-prop-cnt');
+  if (reqCnt) reqCnt.textContent = DB.matchRequests.length;
+  if (propCnt) propCnt.textContent = DB.matchProposals.length;
   const el = document.getElementById('admin-match-content');
   if (_matchTab === 'requests') renderAdminMatchRequests(el);
   else if (_matchTab === 'proposals') renderAdminMatchProposals(el);
@@ -10323,19 +10377,13 @@ function renderAdminMatchRequests(el) {
   const responded = DB.matchProposals.filter(p => p.mentorResponse !== '대기' && p.status === '제안중');
   const other = DB.matchRequests.filter(r => r.status !== '대기중').sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
   const alertCount = pending.length + responded.length;
-  el.innerHTML = `
-    ${alertCount > 0 ? `<div style="background:var(--accent-ultra);border:1px solid var(--accent-line);border-left:3px solid var(--accent);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
-      <span class="material-symbols-outlined" style="font-size:24px;color:var(--accent)">notifications_active</span>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:14px;color:var(--text);font-family:var(--font-display)">처리 대기 ${alertCount}건</div>
-        <div style="font-size:12px;color:var(--text2);font-family:var(--font-mono)">
-          ${pending.length ? `신청 ${pending.length}건` : ''}${pending.length && responded.length ? ' · ' : ''}${responded.length ? `응답 ${responded.length}건` : ''}
-        </div>
-      </div>
-    </div>` : ''}
-    ${pending.length ? `<div class="card" style="margin-bottom:16px">
+
+  // ── 대기 중 신청 영역 ──
+  let pendingHtml = '';
+  if (pending.length) {
+    pendingHtml = `<div class="card" style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h4 style="margin:0">대기 중인 신청 (${pending.length}건)</h4>
+        <h4 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:var(--warning)">pending_actions</span>대기 중인 신청 (${pending.length}건)</h4>
       </div>
       <div style="margin-bottom:8px">
         ${pending.map((r, idx) => {
@@ -10370,26 +10418,62 @@ function renderAdminMatchRequests(el) {
           </div>`;
         }).join('')}
       </div>
-    </div>` : '<div class="card" style="margin-bottom:16px"><div class="empty-state"><span class="icon material-symbols-outlined">inbox</span><h4>대기 중인 신청 없음</h4></div></div>'}
-    ${other.length ? `<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none" onclick="toggleMatchReqProcessed()">
-        <h4 style="margin:0">처리된 신청 <span class="text-muted" style="font-size:13px;font-weight:400">(${other.length}건)</span></h4>
-        <span id="mreq-processed-arrow" style="font-size:12px;color:var(--text3);transition:transform 0.2s">▼</span>
+    </div>`;
+  } else {
+    pendingHtml = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <span class="material-symbols-outlined" style="font-size:22px;color:var(--text3)">check_circle</span>
+      <span style="font-size:13px;color:var(--text2)">현재 대기 중인 매칭 신청이 없습니다.</span>
+    </div>`;
+  }
+
+  // ── 처리된 신청 영역 (기본 펼침, 테이블 형태) ──
+  let processedHtml = '';
+  if (other.length) {
+    processedHtml = `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;margin-bottom:12px" onclick="toggleMatchReqProcessed()">
+        <h4 style="margin:0;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:var(--text3)">inventory_2</span>처리된 신청 <span class="text-muted" style="font-size:13px;font-weight:400">(${other.length}건)</span></h4>
+        <span id="mreq-processed-arrow" style="font-size:12px;color:var(--text3);transition:transform 0.2s;transform:rotate(180deg)">▼</span>
       </div>
-      <div id="mreq-processed-list" style="display:none;margin-top:12px">
-        ${other.map(r => {
-          const mentee = _idx.mentee[r.menteeId];
-          const statusBadge = r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : r.status === '거절' ? 'badge-red' : 'badge-gray';
-          const safeMenteeName = escapeHtml(mentee?.name || '멘티');
-          const safePreferredField = escapeHtml(r.preferredField || '');
-          const safeCreatedAt = escapeHtml(formatDate(r.createdAt));
-          return `<div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-            <div><strong>${safeMenteeName}</strong> — ${safePreferredField} <span class="badge ${statusBadge}">${r.status}</span></div>
-            <span class="text-muted" style="font-size:12px">${safeCreatedAt}</span>
-          </div>`;
-        }).join('')}
+      <div id="mreq-processed-list" style="margin-top:0">
+        <div style="overflow-x:auto">
+          <table class="am-table" style="width:100%">
+            <thead><tr>
+              <th style="width:110px">신청자</th>
+              <th>희망 분야</th>
+              <th style="width:100px">신청일</th>
+              <th style="width:90px">처리 결과</th>
+              <th>매칭 정보</th>
+            </tr></thead>
+            <tbody>${other.map(r => {
+              const mentee = _idx.mentee[r.menteeId];
+              const statusBadge = r.status === '제안됨' ? 'badge-blue' : r.status === '확정' ? 'badge-green' : r.status === '거절' ? 'badge-red' : r.status === '종료' ? 'badge-gray' : 'badge-gray';
+              const safeMenteeName = escapeHtml(mentee?.name || '멘티');
+              const safeTeam = escapeHtml(mentee?.team || '');
+              const safePreferredField = escapeHtml(r.preferredField || '');
+              const safeCreatedAt = escapeHtml(formatDate(r.createdAt));
+              // 매칭 정보: 해당 request에 대한 proposal 찾기
+              const proposal = DB.matchProposals.find(p => p.requestId === r.id);
+              let matchInfo = '<span class="text-muted" style="font-size:12px">—</span>';
+              if (proposal) {
+                const mentor = _idx.mentor[proposal.mentorId];
+                const safeMentorName = escapeHtml(mentor?.name || '멘토');
+                matchInfo = `<span style="font-size:12px">${safeMentorName}</span>`;
+              }
+              return `<tr>
+                <td><strong style="font-size:13px">${safeMenteeName}</strong><div class="text-muted" style="font-size:11px">${safeTeam}</div></td>
+                <td style="font-size:13px">${safePreferredField}</td>
+                <td style="font-size:12px;color:var(--text2)">${safeCreatedAt}</td>
+                <td><span class="badge ${statusBadge}">${escapeHtml(r.status)}</span></td>
+                <td>${matchInfo}</td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>
       </div>
-    </div>` : ''}`;
+    </div>`;
+  }
+
+  el.innerHTML = pendingHtml + processedHtml;
 }
 
 // 공통 접기/펼치기 토글
@@ -10417,9 +10501,9 @@ function renderAdminMatchProposals(el) {
   el.innerHTML = `
     <div class="card">
       <div class="flex-between" style="margin-bottom:12px">
-        <h4>매칭 현황 (${proposals.length}건)</h4>
-        <select id="match-status-filter" class="form-control" style="width:auto;padding:4px 10px;font-size:13px" onchange="renderAdminMatch()">
-          <option value="all" ${statusFilter==='all'?'selected':''}>전체</option>
+        <h4 style="display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:var(--accent)">swap_horiz</span>매칭 현황 (${proposals.length}건)</h4>
+        <select id="match-status-filter" class="form-control" style="width:auto;padding:6px 12px;font-size:13px;border-radius:8px" onchange="renderAdminMatch()">
+          <option value="all" ${statusFilter==='all'?'selected':''}>전체 상태</option>
           <option value="제안중" ${statusFilter==='제안중'?'selected':''}>제안중</option>
           <option value="확정" ${statusFilter==='확정'?'selected':''}>확정</option>
           <option value="거절" ${statusFilter==='거절'?'selected':''}>거절</option>
@@ -10479,29 +10563,30 @@ function renderAdminMatchProposals(el) {
 }
 
 function renderAdminMatchDirect(el) {
+  const activeMentors = DB.mentors.filter(m => m.active !== false);
   el.innerHTML = `
-    <div class="card">
-      <h4 style="margin-bottom:16px">직접 매칭</h4>
-      <p class="text-muted" style="margin-bottom:16px;font-size:13px">멘토와 멘티를 직접 선택하여 매칭합니다. 제안 단계 없이 바로 확정됩니다.</p>
+    <div class="card" style="max-width:560px">
+      <h4 style="margin-bottom:4px;display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined mi" style="color:#a855f7">add_link</span>직접 매칭</h4>
+      <p class="text-muted" style="margin-bottom:20px;font-size:13px">멘토와 멘티를 직접 선택하여 매칭합니다. 제안 단계 없이 바로 확정됩니다.</p>
       <div class="form-group">
-        <label class="form-label">멘토 선택</label>
+        <label class="form-label">멘토 선택 <span class="text-muted" style="font-weight:400;font-size:12px">(활성 ${activeMentors.length}명)</span></label>
         <select id="direct-mentor-select" class="form-control">
           <option value="">— 멘토를 선택하세요 —</option>
-          ${DB.mentors.filter(m => m.active !== false).map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.field || '')})</option>`).join('')}
+          ${activeMentors.map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.field || '')})</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">멘티 선택</label>
+        <label class="form-label">멘티 선택 <span class="text-muted" style="font-weight:400;font-size:12px">(${DB.mentees.length}명)</span></label>
         <select id="direct-mentee-select" class="form-control">
           <option value="">— 멘티를 선택하세요 —</option>
           ${DB.mentees.map(m => `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(m.team || '')})</option>`).join('')}
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">담당자 메모 (선택)</label>
-        <textarea id="direct-admin-memo" class="form-control" rows="2" placeholder="매칭 사유나 참고사항"></textarea>
+        <label class="form-label">담당자 메모 <span class="text-muted" style="font-weight:400;font-size:12px">(선택)</span></label>
+        <textarea id="direct-admin-memo" class="form-control" rows="2" placeholder="매칭 사유나 참고사항을 입력하세요"></textarea>
       </div>
-      <button class="btn btn-primary" onclick="adminDirectMatch()" style="width:100%">매칭 확정</button>
+      <button class="btn btn-primary" onclick="adminDirectMatch()" style="width:100%;margin-top:4px"><span class="material-symbols-outlined mi mi-sm mi-plain">check</span>매칭 확정</button>
     </div>`;
 }
 
