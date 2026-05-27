@@ -6527,7 +6527,7 @@ function _bookConfirmHtml(mentor, slot) {
     <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">school</span>멘토</span><span class="value">${escapeHtml(mentor.name)} · ${escapeHtml(mentor.field || '')}</span></div>
     <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">event</span>일시</span><span class="value">${escapeHtml(dateLabel)} ${escapeHtml(slot.time)}</span></div>
     <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">${m.icon}</span>방식</span><span class="value"><span class="book-method-chip m-${m.method}">${escapeHtml(m.label)}</span></span></div>
-    <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">location_on</span>장소</span><span class="value">${escapeHtml(place || '미정')}${link ? ` · <a href="${escapeHtml(link)}" target="_blank" rel="noopener" style="color:var(--accent);word-break:break-all">${escapeHtml(link)}</a>` : ''}</span></div>
+    <div class="bcb-row"><span class="label"><span class="material-symbols-outlined mi mi-sm">location_on</span>장소</span><span class="value">${escapeHtml(place || '미정')}${link ? ` · <a href="${sanitizeUrl(link)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);word-break:break-all">${escapeHtml(link)}</a>` : ''}</span></div>
   </div>`;
 }
 
@@ -6767,7 +6767,7 @@ function _menteeSessCard(s, variant) {
       <div class="sess-row-2">
         <span class="method-chip m-${mInfo.method}"><span class="material-symbols-outlined mi mi-sm mi-plain">${mInfo.icon}</span>${mInfo.label}</span>
         ${place ? `<span>${escapeHtml(place)}</span>` : ''}
-        ${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">링크 열기</a>` : ''}
+        ${link ? `<a href="${sanitizeUrl(link)}" target="_blank" rel="noopener noreferrer">링크 열기</a>` : ''}
       </div>
       ${s.topic ? `<div class="sess-row-3"><span class="material-symbols-outlined mi mi-sm mi-plain">push_pin</span>${escapeHtml(s.topic)}</div>` : ''}
     </div>
@@ -12081,7 +12081,7 @@ async function handleGoogleCredential(response) {
 
 function showLoginError(msg) {
   const el = document.getElementById('google-login-error');
-  el.innerHTML = msg;
+  el.textContent = msg;
   el.style.display = 'block';
 }
 
