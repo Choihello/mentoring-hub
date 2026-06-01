@@ -7118,13 +7118,11 @@ function renderAdminDashboard() {
   const pendingSessions = DB.sessions.filter(s => s.status === 'pending').length;
   const upcoming = DB.sessions.filter(s => s.status === 'upcoming').length;
   const completed = DB.sessions.filter(s => s.status === 'completed').length;
-  const availSlots = DB.slots.filter(s => s.status === 'available').length;
   const journalPending = DB.sessions.filter(s => s.status === 'completed' && !s.hasJournal).length;
 
   document.getElementById('admin-stats').innerHTML = [
     { label: '등록 멘토', value: DB.mentors.length },
     { label: '등록 멘티', value: DB.mentees.length },
-    { label: '가용 슬롯', value: availSlots },
     { label: '신청 대기', value: pendingSessions, warn: pendingSessions > 0 },
     { label: '확정 세션', value: upcoming },
     { label: '완료 세션', value: completed },
