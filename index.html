@@ -7054,7 +7054,7 @@ function showMenteeCalDaySessions(dateStr) {
 function renderAdminDashboard() {
   // ── Supabase 대시보드 바로가기 버튼 ──
   const dashboardBtn = document.getElementById('supabase-dashboard-btn');
-  if (hasSupabaseIntegration()) {
+  if (hasSupabaseIntegration() && !_observerMode) {  // 옵저버에겐 실제 프로젝트 링크 숨김
     dashboardBtn.style.display = 'inline-flex';
     // Supabase URL에서 프로젝트 ID 추출 → 대시보드 링크
     const projMatch = DB.settings.supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
