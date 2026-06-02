@@ -4982,7 +4982,9 @@ function _createMenuItemEl(m, isActive) {
 function buildSidebar() {
   const nav = document.getElementById('sidebar-nav');
   nav.innerHTML = '';
-  const items = menus[currentRole] || [];
+  let items = menus[currentRole] || [];
+  // 옵저버(둘러보기)는 Supabase 연동 설정 메뉴 숨김 (연결 정보 노출/설정 교란 방지)
+  if (_observerMode) items = items.filter(m => m.id !== 'page-settings');
 
   // v2.7.9: 멘토 역할은 그룹 라벨과 함께 렌더, 그 외(멘티/관리자)는 기존 평면 렌더
   if (currentRole === 'mentor') {
@@ -5199,7 +5201,9 @@ function renderPage(id) {
     case 'page-admin-journals':   renderAdminJournals(); break;
     case 'page-admin-requests':   renderAdminRequests(); break;
     case 'page-admin-notices':    renderAdminNotices(); break;
-    case 'page-settings':         renderSettings(); break;
+    case 'page-settings':
+      if (_observerMode) { navigateTo('page-admin-dashboard'); return; }  // 옵저버 직접 접근 차단
+      renderSettings(); break;
   }
 }
 
