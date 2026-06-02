@@ -351,7 +351,7 @@ a:hover { color: var(--accent); }
 .sat-wrap {
   position: relative;
   width: 100%; height: 100%;
-  perspective: 1800px;
+  perspective: 1000px;
   display: grid; place-items: center;
 }
 .sat-grid {
@@ -373,6 +373,7 @@ a:hover { color: var(--accent); }
   position: relative;
   width: 260px; height: 260px;
   transform-style: preserve-3d;
+  animation: bubble-bob 4.4s ease-in-out infinite;
   will-change: transform;
 }
 
@@ -416,22 +417,10 @@ a:hover { color: var(--accent); }
     0 16px 44px rgba(16,185,129,0.30),
     0 4px 12px rgba(6,78,59,0.16);
   border: 1px solid rgba(255,255,255,0.42);
-  animation: bubble-float 4.2s ease-in-out infinite;
+  animation: bubble-squish 4.4s ease-in-out infinite;
   will-change: transform;
 }
 
-/* top-left bright gloss blob */
-.bubble-sheen {
-  position: absolute;
-  top: 13%; left: 19%;
-  width: 44%; height: 32%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at 40% 35%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 46%, transparent 72%);
-  filter: blur(2px);
-  transform: rotate(-18deg);
-  pointer-events: none;
-  animation: sheen-breathe 4.2s ease-in-out infinite;
-}
 /* small secondary highlight */
 .bubble-hi {
   position: absolute;
@@ -443,35 +432,43 @@ a:hover { color: var(--accent); }
   pointer-events: none;
 }
 
-/* ── Eyes — white rounded capsules (mascot) ── */
-.bubble-eyes {
+/* ── Face layer — rotates in 3D toward the cursor; the body silhouette stays a perfect circle ── */
+.bubble-face {
   position: absolute;
   top: 50%; left: 50%;
-  transform: translate(calc(-50% + var(--eye-x, 0px)), calc(-32% + var(--eye-y, 0px)));
-  transition: transform 0.12s ease-out;
-  display: flex;
-  gap: 30px;
-  pointer-events: none;
+  width: 0; height: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
-.bubble-eyes .eye {
+/* each eye is placed ON the sphere surface (rotate to a longitude/latitude, then push out along Z) */
+.eye-socket {
+  position: absolute;
+  top: 0; left: 0;
+  transform-style: preserve-3d;
+}
+.eye-socket.eye-l { transform: rotateX(7deg) rotateY(-12deg) translateZ(92px); }
+.eye-socket.eye-r { transform: rotateX(7deg) rotateY(12deg)  translateZ(92px); }
+.eye-socket .eye {
+  position: absolute;
   width: 24px; height: 52px;
+  margin: -26px 0 0 -12px;
   border-radius: 999px;
   background: linear-gradient(180deg, #ffffff 0%, #eafff4 100%);
   box-shadow: 0 2px 6px rgba(6,78,59,0.22), inset 0 -3px 6px rgba(167,243,208,0.5);
   transform-origin: center;
+  backface-visibility: hidden;
   animation: eye-blink 5.6s ease-in-out infinite;
 }
 
-@keyframes bubble-float {
-  0%   { transform: translateY(0) scale(1, 1); }
-  30%  { transform: translateY(-12px) scale(0.985, 1.015); }
-  50%  { transform: translateY(-15px) scale(1.02, 0.98); }
-  70%  { transform: translateY(-12px) scale(0.99, 1.01); }
-  100% { transform: translateY(0) scale(1, 1); }
+@keyframes bubble-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-14px); }
 }
-@keyframes sheen-breathe {
-  0%, 100% { opacity: 0.9; transform: rotate(-18deg) translate(0, 0); }
-  50%      { opacity: 1;   transform: rotate(-18deg) translate(2px, -3px); }
+@keyframes bubble-squish {
+  0%, 100% { transform: scale(1, 1); }
+  30%      { transform: scale(0.99, 1.01); }
+  50%      { transform: scale(1.02, 0.98); }
+  70%      { transform: scale(1.01, 0.99); }
 }
 @keyframes bubble-aura {
   0%, 100% { opacity: 0.85; transform: scale(1); }
@@ -3023,14 +3020,13 @@ tr:hover td { background: var(--bg-2); }
           <!-- Soft aura stays face-on (outside tilted object) -->
           <div class="sat-glow"></div>
           <!-- Jelly bubble mascot tilts toward cursor (eyes stay forward) -->
-          <div class="sat-object" id="sat-object" style="transform:rotateX(-8deg) rotateY(0deg)">
+          <div class="sat-object" id="sat-object">
             <div class="sat-bubble">
-              <div class="bubble-sheen"></div>
               <div class="bubble-hi"></div>
-              <div class="bubble-eyes">
-                <span class="eye"></span>
-                <span class="eye"></span>
-              </div>
+            </div>
+            <div class="bubble-face" id="bubble-face">
+              <div class="eye-socket eye-l"><span class="eye"></span></div>
+              <div class="eye-socket eye-r"><span class="eye"></span></div>
             </div>
           </div>
         </div>
@@ -3084,47 +3080,40 @@ tr:hover td { background: var(--bg-2); }
 </div>
 
 <script>
-// ═══ Jelly bubble mascot — eyes follow cursor anywhere, gentle idle sway ═══
+// ═══ Jelly bubble mascot — the whole sphere rotates toward the cursor (round silhouette kept) ═══
 (function() {
   const el = document.getElementById('sat-wrap');
-  const obj = document.getElementById('sat-object');
-  const eyesEl = document.querySelector('.bubble-eyes');
-  if (!el || !obj) return;
-  let hover = false;
-  let tx = -8, ty = 0;   // target tilt (deg)
-  let cx = -8, cy = 0;   // current tilt (deg) — eased
-  const t0 = performance.now();
+  const face = document.getElementById('bubble-face');
+  if (!el || !face) return;
+  let tx = 0, ty = 0;   // target rotation (deg): tx=rotateX, ty=rotateY
+  let cx = 0, cy = 0;   // current rotation (deg) — eased
+  let lastMove = 0;
 
-  el.addEventListener('mouseenter', () => { hover = true; });
-  el.addEventListener('mouseleave', () => { hover = false; });
   window.addEventListener('mousemove', (e) => {
     const b = el.getBoundingClientRect();
     if (!b.width) return;
-    let dx = (e.clientX - (b.left + b.width / 2)) / (b.width / 2);
-    let dy = (e.clientY - (b.top + b.height / 2)) / (b.height / 2);
+    lastMove = performance.now();
+    // Wider reference so an off-bubble cursor still drives the full range
+    let dx = (e.clientX - (b.left + b.width / 2)) / (b.width * 0.8);
+    let dy = (e.clientY - (b.top + b.height / 2)) / (b.height * 0.8);
     dx = Math.max(-1, Math.min(1, dx));
     dy = Math.max(-1, Math.min(1, dy));
-    // Eyes follow the cursor anywhere on screen
-    if (eyesEl) {
-      eyesEl.style.setProperty('--eye-x', (dx * 7).toFixed(1) + 'px');
-      eyesEl.style.setProperty('--eye-y', (dy * 7).toFixed(1) + 'px');
-    }
-    // Bubble gently tilts toward cursor only while hovered
-    if (hover) {
-      tx = -8 - dy * 12;
-      ty = dx * 16;
-    }
+    // Sphere turns toward the cursor (surface eyes orbit to that side)
+    ty = dx * 44;    // left/right turn
+    tx = -dy * 32;   // up/down turn
   });
 
   function tick() {
-    if (!hover) {
-      const t = (performance.now() - t0) / 1000;
-      tx = -8 + Math.sin(t * 0.7) * 5;
-      ty = Math.sin(t * 0.5) * 7;
+    const now = performance.now();
+    // Idle: gentle look-around when the mouse has been still
+    if (now - lastMove > 1400) {
+      const t = now / 1000;
+      ty = Math.sin(t * 0.5) * 18;
+      tx = Math.sin(t * 0.7) * 9;
     }
-    cx += (tx - cx) * 0.08;
-    cy += (ty - cy) * 0.08;
-    obj.style.transform = `rotateX(${cx}deg) rotateY(${cy}deg)`;
+    cx += (tx - cx) * 0.1;
+    cy += (ty - cy) * 0.1;
+    face.style.transform = `rotateX(${cx.toFixed(2)}deg) rotateY(${cy.toFixed(2)}deg)`;
     requestAnimationFrame(tick);
   }
   tick();
