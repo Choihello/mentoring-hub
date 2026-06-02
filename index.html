@@ -373,172 +373,113 @@ a:hover { color: var(--accent); }
   position: relative;
   width: 260px; height: 260px;
   transform-style: preserve-3d;
-  transition: transform 0.3s cubic-bezier(.2,.8,.2,1);
   will-change: transform;
 }
 
-/* ── Outer halo — tight & subtle, confined near the object ── */
+/* ── Outer halo — soft green aura behind the bubble ── */
 .sat-glow {
   position: absolute;
   top: 50%; left: 50%;
-  width: 180px; height: 180px;
-  margin: -90px 0 0 -90px;
+  width: 224px; height: 224px;
+  margin: -112px 0 0 -112px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, rgba(74, 222, 128, 0.22) 0%, rgba(74, 222, 128, 0.06) 38%, transparent 62%);
-  filter: blur(3px);
+    radial-gradient(circle, rgba(52, 211, 153, 0.30) 0%, rgba(52, 211, 153, 0.08) 44%, transparent 68%);
+  filter: blur(10px);
   pointer-events: none;
+  animation: bubble-aura 5.6s ease-in-out infinite;
 }
 
-/* ── Brand sphere — refined SE→NW gradient, soft broad specular ── */
-.sat-planet {
+/* ── Glossy jelly bubble mascot — translucent green, soft floating ── */
+.sat-bubble {
   position: absolute;
   top: 50%; left: 50%;
-  width: 148px; height: 148px;
-  margin: -74px 0 0 -74px;
+  width: 190px; height: 190px;
+  margin: -95px 0 0 -95px;
   border-radius: 50%;
   background:
-    /* Broad feathered specular (NW) — premium, not a hot dot */
-    radial-gradient(ellipse 58% 46% at 30% 24%, rgba(255, 255, 255, 0.50) 0%, rgba(255, 255, 255, 0.16) 34%, rgba(255, 255, 255, 0) 64%),
-    /* Faint secondary sheen */
-    radial-gradient(circle at 34% 30%, rgba(236, 253, 245, 0.30) 0%, rgba(236, 253, 245, 0) 20%),
-    /* Sphere body — mint (NW) → emerald depths (SE) */
-    radial-gradient(circle at 34% 30%,
-      #a7f3d0 0%,
-      #6ee7b7 14%,
-      #34d399 30%,
-      #16a34a 58%,
-      #0f766e 82%,
-      #064e3b 100%
-    );
+    /* broad soft sheen (NW) */
+    radial-gradient(ellipse 60% 50% at 32% 26%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.30) 26%, rgba(255,255,255,0) 56%),
+    /* depth shading (SE) */
+    radial-gradient(circle at 72% 78%, rgba(6,78,59,0.40) 0%, rgba(6,78,59,0) 52%),
+    /* translucent jelly body — mint (NW) → emerald (SE) */
+    radial-gradient(circle at 36% 30%,
+      rgba(209,250,229,0.96) 0%,
+      rgba(167,243,208,0.93) 20%,
+      rgba(110,231,183,0.91) 40%,
+      rgba(52,211,153,0.93) 60%,
+      rgba(16,185,129,0.95) 78%,
+      rgba(5,150,105,0.97) 100%);
   box-shadow:
-    /* Terminator — broad, soft */
-    inset -14px -18px 34px rgba(6, 78, 59, 0.55),
-    /* Ambient fill on the dark side */
-    inset 12px 10px 26px rgba(220, 252, 231, 0.18),
-    /* Minimal atmospheric glow — no bloom */
-    0 6px 22px rgba(22, 163, 74, 0.22),
-    0 1px 3px rgba(6, 78, 59, 0.14);
-  border: 1px solid rgba(22, 163, 74, 0.35);
+    inset -14px -18px 40px rgba(6,78,59,0.24),
+    inset 0 0 36px rgba(255,255,255,0.16),
+    0 16px 44px rgba(16,185,129,0.30),
+    0 4px 12px rgba(6,78,59,0.16);
+  border: 1px solid rgba(255,255,255,0.42);
+  animation: bubble-float 4.2s ease-in-out infinite;
+  will-change: transform;
 }
-.sat-planet::before {
-  /* Right-side rim light (subtle) */
-  content: '';
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  box-shadow: inset -1px 0 4px rgba(167, 243, 208, 0.28);
-  pointer-events: none;
-}
-.sat-planet::after {
-  /* Equatorial gloss sweep — adds polish without shine */
-  content: '';
+
+/* top-left bright gloss blob */
+.bubble-sheen {
   position: absolute;
-  left: 9%; right: 9%;
-  top: 44%; height: 4px;
-  background: linear-gradient(90deg, transparent, rgba(240, 253, 244, 0.28), transparent);
+  top: 13%; left: 19%;
+  width: 44%; height: 32%;
   border-radius: 50%;
-  transform: rotate(-6deg);
+  background: radial-gradient(ellipse at 40% 35%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.34) 46%, transparent 72%);
+  filter: blur(2px);
+  transform: rotate(-18deg);
+  pointer-events: none;
+  animation: sheen-breathe 4.2s ease-in-out infinite;
+}
+/* small secondary highlight */
+.bubble-hi {
+  position: absolute;
+  top: 31%; left: 57%;
+  width: 15%; height: 11%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.85) 0%, transparent 70%);
   filter: blur(1px);
   pointer-events: none;
 }
 
-/* ── Orbit rings — crisper lines, preserve-3d handles front/back depth ── */
-.sat-ring {
+/* ── Eyes — white rounded capsules (mascot) ── */
+.bubble-eyes {
   position: absolute;
   top: 50%; left: 50%;
-  border: 1.25px solid rgba(22, 163, 74, 0.45);
-  border-radius: 50%;
+  transform: translate(calc(-50% + var(--eye-x, 0px)), calc(-32% + var(--eye-y, 0px)));
+  transition: transform 0.12s ease-out;
+  display: flex;
+  gap: 30px;
   pointer-events: none;
 }
-.sat-ring.r-a {
-  width: 210px; height: 210px;
-  margin: -105px 0 0 -105px;
-  transform: rotateX(70deg) rotateZ(0deg);
-  border-color: rgba(22, 163, 74, 0.52);
-}
-.sat-ring.r-b {
-  width: 260px; height: 260px;
-  margin: -130px 0 0 -130px;
-  transform: rotateX(66deg) rotateZ(24deg);
-  border-color: rgba(22, 163, 74, 0.32);
-  border-width: 1px;
-}
-.sat-ring.r-c {
-  width: 300px; height: 300px;
-  margin: -150px 0 0 -150px;
-  transform: rotateX(76deg) rotateZ(-18deg);
-  border-color: rgba(100, 116, 139, 0.22);
-  border-width: 1px;
-  border-style: dashed;
+.bubble-eyes .eye {
+  width: 24px; height: 52px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #eafff4 100%);
+  box-shadow: 0 2px 6px rgba(6,78,59,0.22), inset 0 -3px 6px rgba(167,243,208,0.5);
+  transform-origin: center;
+  animation: eye-blink 5.6s ease-in-out infinite;
 }
 
-/* ── Orbiting hub nodes — brand-consistent mint, smaller & crisper ── */
-.sat-orbiter {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 210px; height: 210px;
-  margin: -105px 0 0 -105px;
-  transform-style: preserve-3d;
-  pointer-events: none;
+@keyframes bubble-float {
+  0%   { transform: translateY(0) scale(1, 1); }
+  30%  { transform: translateY(-12px) scale(0.985, 1.015); }
+  50%  { transform: translateY(-15px) scale(1.02, 0.98); }
+  70%  { transform: translateY(-12px) scale(0.99, 1.01); }
+  100% { transform: translateY(0) scale(1, 1); }
 }
-.sat-orbiter .dot {
-  position: absolute;
-  top: 50%; left: 0;
-  width: 12px; height: 12px;
-  margin-top: -6px; margin-left: -6px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #ffffff 0%, #d1fae5 22%, #6ee7b7 55%, #10b981 100%);
-  box-shadow:
-    0 0 6px rgba(16, 185, 129, 0.55),
-    0 0 14px rgba(16, 185, 129, 0.22),
-    inset -1px -1px 2px rgba(4, 120, 87, 0.35);
-  border: 0.5px solid rgba(16, 185, 129, 0.45);
+@keyframes sheen-breathe {
+  0%, 100% { opacity: 0.9; transform: rotate(-18deg) translate(0, 0); }
+  50%      { opacity: 1;   transform: rotate(-18deg) translate(2px, -3px); }
 }
-.sat-orbiter.o1 { transform: rotateX(70deg) rotateZ(0deg);    animation: sat-orbit 14s linear infinite;           --from: rotateX(70deg) rotateZ(0deg); }
-.sat-orbiter.o2 {
-  width: 260px; height: 260px;
-  margin: -130px 0 0 -130px;
-  transform: rotateX(66deg) rotateZ(24deg);
-  animation: sat-orbit 20s linear infinite reverse;
-  --from: rotateX(66deg) rotateZ(24deg);
+@keyframes bubble-aura {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.06); }
 }
-.sat-orbiter.o3 {
-  width: 300px; height: 300px;
-  margin: -150px 0 0 -150px;
-  transform: rotateX(76deg) rotateZ(-18deg);
-  animation: sat-orbit 28s linear infinite;
-  --from: rotateX(76deg) rotateZ(-18deg);
-}
-.sat-orbiter.o2 .dot { width: 9px; height: 9px; margin-top: -4.5px; margin-left: -4.5px; }
-.sat-orbiter.o3 .dot { width: 7px; height: 7px; margin-top: -3.5px; margin-left: -3.5px; opacity: 0.78; }
-
-/* ── Static hub accent nodes (non-animated) — reinforce "connected hub" feel ── */
-.sat-hubs {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 210px; height: 210px;
-  margin: -105px 0 0 -105px;
-  pointer-events: none;
-  transform: rotateX(70deg) rotateZ(0deg);
-  transform-style: preserve-3d;
-}
-.sat-hubs .node {
-  position: absolute;
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #ffffff 0%, #bbf7d0 40%, #34d399 100%);
-  box-shadow: 0 0 5px rgba(52, 211, 153, 0.45);
-  border: 0.5px solid rgba(16, 185, 129, 0.45);
-  transform: translate(-50%, -50%);
-}
-.sat-hubs .node.n1 { top: 50%;  left: 0%;   }
-.sat-hubs .node.n2 { top: 50%;  left: 100%; }
-.sat-hubs .node.n3 { top: 4%;   left: 38%;  opacity: 0.65; }
-.sat-hubs .node.n4 { top: 96%;  left: 62%;  opacity: 0.65; }
-
-@keyframes sat-orbit {
-  from { transform: var(--from) rotateZ(0deg); }
-  to   { transform: var(--from) rotateZ(360deg); }
+@keyframes eye-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.12); }
 }
 
 
@@ -3079,23 +3020,18 @@ tr:hover td { background: var(--bg-2); }
           <rect width="400" height="400" fill="url(#sat-fade)"/>
         </svg>
         <div class="sat-scene">
-          <!-- Planet + halo stay face-on (outside rotated object) -->
+          <!-- Soft aura stays face-on (outside tilted object) -->
           <div class="sat-glow"></div>
-          <div class="sat-planet"></div>
-          <!-- Orbit rings / satellites / static hub nodes tilt with mouse -->
-          <div class="sat-object" id="sat-object" style="transform:rotateX(-10deg) rotateY(0deg)">
-            <div class="sat-ring r-a"></div>
-            <div class="sat-ring r-b"></div>
-            <div class="sat-ring r-c"></div>
-            <div class="sat-hubs">
-              <span class="node n1"></span>
-              <span class="node n2"></span>
-              <span class="node n3"></span>
-              <span class="node n4"></span>
+          <!-- Jelly bubble mascot tilts toward cursor (eyes stay forward) -->
+          <div class="sat-object" id="sat-object" style="transform:rotateX(-8deg) rotateY(0deg)">
+            <div class="sat-bubble">
+              <div class="bubble-sheen"></div>
+              <div class="bubble-hi"></div>
+              <div class="bubble-eyes">
+                <span class="eye"></span>
+                <span class="eye"></span>
+              </div>
             </div>
-            <div class="sat-orbiter o1"><div class="dot"></div></div>
-            <div class="sat-orbiter o2"><div class="dot"></div></div>
-            <div class="sat-orbiter o3"><div class="dot"></div></div>
           </div>
         </div>
       </div>
@@ -3148,34 +3084,47 @@ tr:hover td { background: var(--bg-2); }
 </div>
 
 <script>
-// ═══ Interactive 3D Satellite — mouse-follow + idle auto-rotation ═══
+// ═══ Jelly bubble mascot — eyes follow cursor anywhere, gentle idle sway ═══
 (function() {
   const el = document.getElementById('sat-wrap');
   const obj = document.getElementById('sat-object');
+  const eyesEl = document.querySelector('.bubble-eyes');
   if (!el || !obj) return;
   let hover = false;
-  let currentX = -12, currentY = 0;
+  let tx = -8, ty = 0;   // target tilt (deg)
+  let cx = -8, cy = 0;   // current tilt (deg) — eased
   const t0 = performance.now();
 
   el.addEventListener('mouseenter', () => { hover = true; });
   el.addEventListener('mouseleave', () => { hover = false; });
   window.addEventListener('mousemove', (e) => {
-    if (!hover) return;
     const b = el.getBoundingClientRect();
-    const dx = (e.clientX - (b.left + b.width / 2)) / (b.width / 2);
-    const dy = (e.clientY - (b.top + b.height / 2)) / (b.height / 2);
-    currentX = -12 + dy * 18;
-    currentY = dx * 50;
-    obj.style.transform = `rotateX(${currentX}deg) rotateY(${currentY}deg)`;
+    if (!b.width) return;
+    let dx = (e.clientX - (b.left + b.width / 2)) / (b.width / 2);
+    let dy = (e.clientY - (b.top + b.height / 2)) / (b.height / 2);
+    dx = Math.max(-1, Math.min(1, dx));
+    dy = Math.max(-1, Math.min(1, dy));
+    // Eyes follow the cursor anywhere on screen
+    if (eyesEl) {
+      eyesEl.style.setProperty('--eye-x', (dx * 7).toFixed(1) + 'px');
+      eyesEl.style.setProperty('--eye-y', (dy * 7).toFixed(1) + 'px');
+    }
+    // Bubble gently tilts toward cursor only while hovered
+    if (hover) {
+      tx = -8 - dy * 12;
+      ty = dx * 16;
+    }
   });
 
   function tick() {
     if (!hover) {
       const t = (performance.now() - t0) / 1000;
-      currentX = -12 + Math.sin(t * 0.4) * 6;
-      currentY = t * 16;
-      obj.style.transform = `rotateX(${currentX}deg) rotateY(${currentY}deg)`;
+      tx = -8 + Math.sin(t * 0.7) * 5;
+      ty = Math.sin(t * 0.5) * 7;
     }
+    cx += (tx - cx) * 0.08;
+    cy += (ty - cy) * 0.08;
+    obj.style.transform = `rotateX(${cx}deg) rotateY(${cy}deg)`;
     requestAnimationFrame(tick);
   }
   tick();
