@@ -10290,6 +10290,7 @@ async function respondMatchProposal(proposalId, response) {
 }
 
 function showMatchAcceptedModal(menteeName) {
+  hideToast(); // 코너에 남은 직전 토스트 제거 후 확정 모달 표시
   let overlay = document.getElementById('match-accepted-overlay');
   if (overlay) overlay.remove();
   const safeMenteeName = escapeHtml(menteeName || '멘티');
@@ -12441,6 +12442,14 @@ function toast(msg, type = '') {
   el.className = 'show' + (type ? ' ' + type : '');
   clearTimeout(window._toastTimer);
   window._toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// 직전 토스트를 즉시 숨김 (확정 모달 등 다른 피드백 표시 직전 코너 잔존 방지)
+function hideToast() {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  clearTimeout(window._toastTimer);
+  el.classList.remove('show');
 }
 
 // 오버레이 클릭 닫기
