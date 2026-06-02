@@ -3052,6 +3052,17 @@ tr:hover td { background: var(--bg-2); }
           <div id="google-login-loading" style="display:none;font-size:13px;color:var(--text2)">로그인 중...</div>
         </div>
         <div class="google-login-error" id="google-login-error"></div>
+        <!-- 옵저버(둘러보기) 코드 진입 -->
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);width:100%;text-align:center">
+          <button type="button" id="observer-toggle-btn" onclick="_toggleObserverEntry()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font-sans);display:inline-flex;align-items:center;gap:5px">
+            <span class="material-symbols-outlined" style="font-size:15px">visibility</span>옵저버 코드로 둘러보기
+          </button>
+          <div id="observer-code-row" style="display:none;gap:6px;margin-top:8px">
+            <input id="observer-code-input" type="text" class="form-control" placeholder="옵저버 코드 입력" autocomplete="off" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter')enterObserverMode()">
+            <button class="btn btn-primary btn-sm" onclick="enterObserverMode()" style="flex-shrink:0">입장</button>
+          </div>
+          <div id="observer-code-error" style="display:none;color:var(--danger);font-size:12px;margin-top:6px"></div>
+        </div>
       </div>
 
       <!-- 데모 모드 -->
@@ -4227,6 +4238,8 @@ const TEST_ACCOUNTS = {
 };
 let _adminPreviewRole = null;   // 'mentor' | 'mentee' | null
 let _adminLastPage   = null;    // 관리자 복귀 시 돌아올 페이지 ID
+let _observerMode    = false;   // 옵저버(둘러보기) 모드 — 데모 데이터 샌드박스
+const OBSERVER_ACCESS_CODE = 'ilovekwu';  // 옵저버 접속 코드 (필요 시 변경)
 
 
 function normalizeRoleKey(role) {
@@ -4322,7 +4335,8 @@ function persistSession(role, linkedId, googleName) {
       role,
       linkedId: linkedId || null,
       googleName: googleName || null,
-      isDemoMode
+      isDemoMode,
+      observerMode: _observerMode
     }));
   } catch(e) {}
 }
@@ -4574,6 +4588,7 @@ function adminPreviewAs(role) {
   document.getElementById('user-name-text').textContent = currentUser?.name || '';
   document.getElementById('user-role-text').textContent = currentUser?.field || currentUser?.team || '';
   buildSidebar();
+  if (_observerMode) _hideObserverRibbon();  // 미리보기 배너가 같은 자리를 사용
   _showPreviewBanner(role);
   document.querySelector('.main-content').style.paddingTop = '44px';
 }
@@ -4589,11 +4604,18 @@ function adminPreviewReturn() {
     _rebuildIndex();
   }
   _hidePreviewBanner();
-  document.querySelector('.main-content').style.paddingTop = '';
-  // role-badge + user-info 복원
-  document.getElementById('role-badge').textContent = '담당자';
-  document.getElementById('user-name-text').textContent = '관리자';
-  document.getElementById('user-role-text').textContent = '전체 현황 관리';
+  // role-badge + user-info 복원 (옵저버면 옵저버 표기 유지 + 리본 재표시)
+  if (_observerMode) {
+    document.getElementById('role-badge').textContent = '옵저버';
+    document.getElementById('user-name-text').textContent = '옵저버';
+    document.getElementById('user-role-text').textContent = '둘러보기 · 데모';
+    _showObserverRibbon();
+  } else {
+    document.querySelector('.main-content').style.paddingTop = '';
+    document.getElementById('role-badge').textContent = '담당자';
+    document.getElementById('user-name-text').textContent = '관리자';
+    document.getElementById('user-role-text').textContent = '전체 현황 관리';
+  }
   buildSidebar();
   // 마지막 관리자 페이지로 복귀
   const target = _adminLastPage || 'page-admin-dashboard';
@@ -4625,6 +4647,53 @@ function _showPreviewBanner(role) {
 function _hidePreviewBanner() {
   const banner = document.getElementById('admin-preview-banner');
   if (banner) banner.remove();
+}
+
+// ═══ 옵저버(둘러보기) 모드 — 데모 데이터 샌드박스, 코드 진입 ═══
+function _toggleObserverEntry() {
+  const row = document.getElementById('observer-code-row');
+  const btn = document.getElementById('observer-toggle-btn');
+  if (row) row.style.display = 'flex';
+  if (btn) btn.style.display = 'none';
+  document.getElementById('observer-code-input')?.focus();
+}
+
+function enterObserverMode() {
+  const input = document.getElementById('observer-code-input');
+  const errEl = document.getElementById('observer-code-error');
+  const code  = (input?.value || '').trim();
+  if (code !== OBSERVER_ACCESS_CODE) {
+    if (errEl) { errEl.textContent = '코드가 올바르지 않습니다. 다시 확인해주세요.'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  _observerMode = true;
+  ensureDemoData();                  // 데모 데이터 시드 + isDemoMode=true (백엔드 미접근)
+  enterAs('admin', null, '옵저버');   // 담당자 화면 진입 → 멘토/멘티 보기 전환 가능
+  // 사용자 카드/뱃지를 옵저버로 표기
+  const nm = document.getElementById('user-name-text'); if (nm) nm.textContent = '옵저버';
+  const rl = document.getElementById('user-role-text'); if (rl) rl.textContent = '둘러보기 · 데모';
+  const bd = document.getElementById('role-badge');     if (bd) bd.textContent = '옵저버';
+  _showObserverRibbon();
+}
+
+function _showObserverRibbon() {
+  let r = document.getElementById('observer-ribbon');
+  if (!r) { r = document.createElement('div'); r.id = 'observer-ribbon'; document.body.appendChild(r); }
+  r.style.cssText = 'position:fixed;top:0;left:232px;right:0;z-index:9999;background:#1d4ed8;color:#fff;height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:13px;font-weight:600;font-family:var(--font-mono);letter-spacing:.02em';
+  r.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px"><span class="material-symbols-outlined mi mi-sm mi-plain">visibility</span>옵저버 둘러보기 · 데모 데이터 — 자유롭게 체험하세요 (변경사항은 저장되지 않습니다)</span><button onclick="exitObserverMode()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.42);color:#fff;padding:3px 12px;border-radius:999px;font-size:12px;cursor:pointer;font-weight:700">나가기 ×</button>';
+  const mc = document.querySelector('.main-content'); if (mc) mc.style.paddingTop = '44px';
+}
+
+function _hideObserverRibbon() {
+  const r = document.getElementById('observer-ribbon');
+  if (r) r.remove();
+}
+
+function exitObserverMode() {
+  _observerMode = false;
+  _hideObserverRibbon();
+  logout();
 }
 
 // ═══ 역할 진입 ═══
@@ -4695,6 +4764,9 @@ function logout() {
   document.getElementById('mobile-nav').style.display = 'none';
   currentRole = null; currentUser = null; currentLinkedId = null;
   currentAuth = null; isDemoMode = false; _adminPreviewRole = null; window._adminFullDB = null;
+  _observerMode = false;
+  _hideObserverRibbon();
+  document.querySelector('.main-content').style.paddingTop = '';
   // Supabase 연결 시 완전 로그아웃 처리
   const sb = getSupabase();
   if (sb) sb.auth.signOut().catch(() => {});
@@ -12437,11 +12509,18 @@ window.addEventListener('resize', () => {
     // sessionStorage fallback (데모 모드)
     const saved = sessionStorage.getItem('mh_session');
     if (saved) {
-      const { role, linkedId, googleName, isDemoMode: savedDemo } = JSON.parse(saved);
+      const { role, linkedId, googleName, isDemoMode: savedDemo, observerMode } = JSON.parse(saved);
       if (role && (savedDemo || !hasSupabaseIntegration())) {
         initLoginScreen();
         ensureDemoData();
+        if (observerMode) _observerMode = true;
         enterAs(role, linkedId, googleName);
+        if (observerMode) {
+          document.getElementById('user-name-text').textContent = '옵저버';
+          document.getElementById('user-role-text').textContent = '둘러보기 · 데모';
+          document.getElementById('role-badge').textContent = '옵저버';
+          _showObserverRibbon();
+        }
         return;
       }
     }
