@@ -10246,11 +10246,26 @@ async function submitMatchRequest() {
   toast('매칭 신청 접수 완료 — 담당자 검토 후 알림으로 안내드립니다', 'success');
   try {
     await syncBatch([{ action: 'append', sheet: 'match_requests', data: req }]);
+    // 담당자에게 새 매칭 신청 알림 메일 (서버 RPC가 admin 이메일 조회·큐잉)
+    notifyNewMatchRequest(req.id).catch(e => console.warn('[매칭신청 알림 실패]', e?.message));
   } catch(e) {
     DB.matchRequests = DB.matchRequests.filter(r => r.id !== req.id);
     renderMenteeMatch();
     toast('매칭 신청 동기화 실패 — 복원되었습니다', 'error');
   }
+}
+
+// 멘티 매칭 신청 → 담당자 알림 메일 큐잉 (RLS 우회 SECURITY DEFINER RPC)
+async function notifyNewMatchRequest(requestId) {
+  if (!hasSupabaseIntegration() || isDemoMode) return;
+  const sb = getSupabase();
+  if (!sb) return;
+  const { data, error } = await sb.rpc('notify_match_request', { p_request_id: requestId });
+  if (error) throw new Error(error.message);
+  if (data && data.ok === false) { console.warn('[매칭신청 알림 서버 처리 실패]', data.error); return; }
+  console.log(`[매칭신청 알림 큐 등록] queued=${data?.queued ?? 0}`);
+  // 큐 즉시 처리 힌트 (Edge Function)
+  try { await sb.functions.invoke('send-email', { body: { mode: 'process' } }); } catch(_) {}
 }
 
 // ── 멘토: 매칭 응답 (v2.7.6 — 매칭 일정 관리 페이지에서 호출) ──
